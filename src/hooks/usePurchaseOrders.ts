@@ -19,6 +19,10 @@ export function usePurchaseOrders() {
   const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 15;
+
   useEffect(() => { fetchOrders(); }, []);
 
   const fetchOrders = async () => {
@@ -162,6 +166,18 @@ export function usePurchaseOrders() {
     return result;
   }, [orders, searchQuery, filters, sortBy, sortOrder]);
 
+  // Reset to page 1 on filter/search change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, filters, sortBy, sortOrder]);
+
+  const paginatedOrders = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return processedOrders.slice(start, start + pageSize);
+  }, [processedOrders, currentPage]);
+
+  const totalPages = Math.ceil(processedOrders.length / pageSize);
+
   const filterOptions = useMemo(() => ({
     statuses: Array.from(new Set(orders.map(o => o.status))),
     supplierIds: Array.from(new Set(orders.map(o => o.supplierId)))
@@ -174,7 +190,14 @@ export function usePurchaseOrders() {
     setSelectedIds(prev => prev.length === ids.length ? [] : ids);
 
   return {
-    orders: processedOrders, rawOrders: orders, loading,
+    orders: paginatedOrders,
+    allProcessedOrders: processedOrders,
+    rawOrders: orders,
+    loading,
+    currentPage,
+    setCurrentPage,
+    totalPages,
+    pageSize,
     searchQuery, setSearchQuery,
     filters, setFilters, filterOptions,
     sortBy, setSortBy, sortOrder, setSortOrder,

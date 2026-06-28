@@ -33,6 +33,10 @@ export function useSuppliers() {
   // Selection
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 15;
+
   // Undo stack
   const [undoStack, setUndoStack] = useState<Supplier[]>([]);
 
@@ -327,6 +331,18 @@ export function useSuppliers() {
     return result;
   }, [suppliers, searchQuery, searchField, filters, sortBy, sortOrder]);
 
+  // Reset to page 1 on filter/search change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, searchField, filters, sortBy, sortOrder]);
+
+  const paginatedSuppliers = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return processedSuppliers.slice(start, start + pageSize);
+  }, [processedSuppliers, currentPage]);
+
+  const totalPages = Math.ceil(processedSuppliers.length / pageSize);
+
   const filterOptions = useMemo(() => {
     const countries = Array.from(new Set(suppliers.map(s => s.country)));
     const certifications = Array.from(new Set(suppliers.flatMap(s => s.certifications)));
@@ -347,9 +363,13 @@ export function useSuppliers() {
   };
 
   return {
-    suppliers: processedSuppliers,
+    suppliers: paginatedSuppliers,
+    allProcessedSuppliers: processedSuppliers,
     rawSuppliers: suppliers,
     loading,
+    currentPage,
+    setCurrentPage,
+    totalPages,
     searchQuery,
     setSearchQuery,
     searchField,

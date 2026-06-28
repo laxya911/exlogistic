@@ -1,0 +1,486 @@
+datasource db {
+  provider = "postgresql"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// ---------------------------------------------------------------------------
+// Enums
+// ---------------------------------------------------------------------------
+enum EntityStatus { 
+  ACTIVE 
+  INACTIVE 
+  ARCHIVED 
+  DELETED 
+}
+
+enum TransactionStatus { 
+  DRAFT 
+  PENDING 
+  CONFIRMED 
+  SHIPPED 
+  CANCELLED 
+  COMPLETED 
+}
+
+enum ImageType { 
+  MAIN 
+  BANNER 
+  DOCUMENT 
+  GALLERY 
+  THUMBNAIL 
+}
+
+// ---------------------------------------------------------------------------
+// Master Data: Catalog
+// ---------------------------------------------------------------------------
+
+model Category {
+  id          String    @id @default(uuid())
+  parentId    String?
+  slug        String    @unique
+  name        String
+  path        String?   // Materialized path for quick tree queries
+  level       Int       @default(0)
+  
+  parent      Category? @relation("CategoryHierarchy", fields: [parentId], references: [id], onDelete: Restrict)
+  children    Category[] @relation("CategoryHierarchy")
+  products    ProductCategory[]
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+  createdBy   String?
+  updatedBy   String?
+  version     Int       @default(1)
+
+  @@index([slug])
+  @@index([parentId])
+}
+
+model Brand {
+  id          String    @id @default(uuid())
+  name        String
+  slug        String    @unique
+  logo        String?
+  website     String?
+
+  products    Product[]
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+  createdBy   String?
+  updatedBy   String?
+  version     Int       @default(1)
+
+  @@index([slug])
+}
+
+model Product {
+  id               String    @id @default(uuid())
+  slug             String    @unique
+  name             String
+  shortDescription String?
+  longDescription  String?
+  hsnCode          String?
+  countryOfOrigin  String?
+  seoTitle         String?
+  seoDescription   String?
+  defaultImage     String?
+  isPublished      Boolean   @default(false)
+  isFeatured       Boolean   @default(false)
+  status           EntityStatus @default(ACTIVE)
+
+  brandId          String?
+  brand            Brand?    @relation(fields: [brandId], references: [id], onDelete: Restrict)
+  
+  categories       ProductCategory[]
+  variants         ProductVariant[]
+  suppliers        ProductSupplier[]
+  documents        ProductDocument[]
+  certifications   ProductCertification[]
+
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  deletedAt        DateTime?
+  createdBy        String?
+  updatedBy        String?
+  version          Int       @default(1)
+
+  @@index([slug])
+  @@index([hsnCode])
+  @@index([status])
+}
+
+model ProductCategory {
+  productId  String
+  categoryId String
+  product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@id([productId, categoryId])
+}
+
+model ProductDocument {
+  id          String    @id @default(uuid())
+  productId   String
+  name        String
+  url         String
+  type        String
+  product     Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model ProductCertification {
+  id          String    @id @default(uuid())
+  productId   String
+  name        String
+  issuer      String?
+  validUntil  DateTime?
+  product     Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+// ---------------------------------------------------------------------------
+// Variants & Attributes
+// ---------------------------------------------------------------------------
+
+model ProductVariant {
+  id            String    @id @default(uuid())
+  productId     String
+  sku           String    @unique
+  barcode       String?   @unique
+  internalCode  String?
+  title         String    // e.g., "Black / 256GB"
+  slug          String?   @unique
+  isDefault     Boolean   @default(false)
+  
+  // Dimensions & Weight
+  weight        Float?
+  netWeight     Float?
+  grossWeight   Float?
+  volumeCBM     Float?
+  packagingType String?
+  
+  // Base Pricing (advanced pricing models can be spun off later)
+  purchasePrice Float
+  sellingPrice  Float
+  currency      String
+  
+  status        EntityStatus @default(ACTIVE)
+
+  product       Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  images        VariantImage[]
+  attributes    VariantAttribute[]
+  
+  // Transactions (Every order points to variant)
+  inventory           Inventory[]
+  inventoryTransactions InventoryTransaction[]
+  quotationItems      QuotationItem[]
+  salesOrderItems     SalesOrderItem[]
+  purchaseOrderItems  PurchaseOrderItem[]
+  shipmentItems       ShipmentItem[]
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  deletedAt     DateTime?
+  createdBy     String?
+  updatedBy     String?
+  version       Int       @default(1)
+
+  @@index([sku])
+  @@index([barcode])
+  @@index([productId])
+}
+
+model Attribute {
+  id          String    @id @default(uuid())
+  name        String    @unique // e.g., "Color", "Weight", "Storage"
+  
+  values      AttributeValue[]
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model AttributeValue {
+  id          String    @id @default(uuid())
+  attributeId String
+  value       String    // e.g., "Black", "25kg", "512GB"
+  
+  attribute   Attribute @relation(fields: [attributeId], references: [id], onDelete: Cascade)
+  variants    VariantAttribute[]
+
+  @@unique([attributeId, value])
+}
+
+model VariantAttribute {
+  variantId         String
+  attributeValueId  String
+  
+  variant           ProductVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
+  attributeValue    AttributeValue @relation(fields: [attributeValueId], references: [id], onDelete: Restrict)
+
+  @@id([variantId, attributeValueId])
+}
+
+model VariantImage {
+  id           String    @id @default(uuid())
+  variantId    String
+  url          String
+  altText      String?
+  type         ImageType @default(GALLERY)
+  displayOrder Int       @default(0)
+  isPrimary    Boolean   @default(false)
+
+  variant      ProductVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
+}
+
+// ---------------------------------------------------------------------------
+// Suppliers & CRM
+// ---------------------------------------------------------------------------
+
+model Supplier {
+  id           String    @id @default(uuid())
+  name         String
+  slug         String?   @unique
+  email        String    @unique
+  phone        String
+  address      String
+  country      String
+  
+  productLinks ProductSupplier[]
+  purchaseOrders PurchaseOrder[]
+
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  deletedAt    DateTime?
+  status       EntityStatus @default(ACTIVE)
+  version      Int       @default(1)
+}
+
+model ProductSupplier {
+  productId    String
+  supplierId   String
+  priority     Int       @default(1)
+  purchasePrice Float?
+  leadTime     Int?
+  moq          Int?
+  currency     String?
+
+  product      Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  supplier     Supplier  @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+
+  @@id([productId, supplierId])
+}
+
+model Customer {
+  id           String    @id @default(uuid())
+  name         String
+  slug         String?   @unique
+  email        String    @unique
+  phone        String
+  address      String
+  country      String
+
+  salesOrders  SalesOrder[]
+  quotations   Quotation[]
+
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  deletedAt    DateTime?
+  status       EntityStatus @default(ACTIVE)
+  version      Int       @default(1)
+}
+
+// ---------------------------------------------------------------------------
+// Inventory (Fully Decoupled)
+// ---------------------------------------------------------------------------
+
+model Warehouse {
+  id          String    @id @default(uuid())
+  name        String
+  code        String    @unique
+  
+  inventory   Inventory[]
+  transactions InventoryTransaction[]
+}
+
+model Inventory {
+  id           String    @id @default(uuid())
+  variantId    String
+  warehouseId  String
+  quantity     Float     @default(0)
+  reservedQty  Float     @default(0)
+  lotNumber    String?
+  batchNumber  String?
+  expiryDate   DateTime?
+
+  variant      ProductVariant @relation(fields: [variantId], references: [id], onDelete: Restrict)
+  warehouse    Warehouse      @relation(fields: [warehouseId], references: [id], onDelete: Restrict)
+  transactions InventoryTransaction[]
+
+  @@unique([variantId, warehouseId, lotNumber, batchNumber])
+  @@index([variantId])
+}
+
+model InventoryTransaction {
+  id           String    @id @default(uuid())
+  inventoryId  String
+  variantId    String
+  warehouseId  String
+  quantityChange Float
+  referenceType String   // e.g., "PURCHASE_ORDER", "SALES_ORDER", "ADJUSTMENT"
+  referenceId   String?  
+  timestamp    DateTime  @default(now())
+  userId       String?
+
+  inventory    Inventory @relation(fields: [inventoryId], references: [id], onDelete: Restrict)
+  variant      ProductVariant @relation(fields: [variantId], references: [id], onDelete: Restrict)
+  warehouse    Warehouse @relation(fields: [warehouseId], references: [id], onDelete: Restrict)
+
+  @@index([variantId])
+  @@index([referenceType, referenceId])
+}
+
+// ---------------------------------------------------------------------------
+// Transactions (Snippets showing Variant Links)
+// ---------------------------------------------------------------------------
+
+model Quotation {
+  id           String    @id @default(uuid())
+  quotationNo  String    @unique
+  customerId   String
+  date         DateTime
+  validityDate DateTime
+  totalValue   Float
+  status       TransactionStatus
+  
+  customer     Customer  @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  items        QuotationItem[]
+  salesOrders  SalesOrder[]
+
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+}
+
+model QuotationItem {
+  id           String    @id @default(uuid())
+  quotationId  String
+  variantId    String
+  quantity     Float
+  unitPrice    Float
+  
+  quotation    Quotation      @relation(fields: [quotationId], references: [id], onDelete: Cascade)
+  variant      ProductVariant @relation(fields: [variantId], references: [id], onDelete: Restrict)
+}
+
+model SalesOrder {
+  id           String    @id @default(uuid())
+  orderNo      String    @unique
+  customerId   String
+  quotationId  String?
+  date         DateTime
+  totalValue   Float
+  status       TransactionStatus
+
+  customer     Customer       @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  quotation    Quotation?     @relation(fields: [quotationId], references: [id], onDelete: SetNull)
+  items        SalesOrderItem[]
+  purchaseOrders PurchaseOrder[]
+  shipments    Shipment[]
+
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+}
+
+model SalesOrderItem {
+  id           String    @id @default(uuid())
+  salesOrderId String
+  variantId    String
+  quantity     Float
+  unitPrice    Float
+
+  salesOrder   SalesOrder     @relation(fields: [salesOrderId], references: [id], onDelete: Cascade)
+  variant      ProductVariant @relation(fields: [variantId], references: [id], onDelete: Restrict)
+}
+
+model PurchaseOrder {
+  id           String    @id @default(uuid())
+  poNo         String    @unique
+  supplierId   String
+  salesOrderId String?
+  date         DateTime
+  totalValue   Float
+  status       TransactionStatus
+
+  supplier     Supplier       @relation(fields: [supplierId], references: [id], onDelete: Restrict)
+  salesOrder   SalesOrder?    @relation(fields: [salesOrderId], references: [id], onDelete: SetNull)
+  items        PurchaseOrderItem[]
+
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+}
+
+model PurchaseOrderItem {
+  id              String    @id @default(uuid())
+  purchaseOrderId String
+  variantId       String
+  quantity        Float
+  unitPrice       Float
+
+  purchaseOrder   PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+  variant         ProductVariant @relation(fields: [variantId], references: [id], onDelete: Restrict)
+}
+
+model Shipment {
+  id           String    @id @default(uuid())
+  shipmentNo   String    @unique
+  salesOrderId String
+  originPortId String
+  destinationPortId String
+  etd          DateTime
+  eta          DateTime
+  status       TransactionStatus
+
+  salesOrder   SalesOrder     @relation(fields: [salesOrderId], references: [id], onDelete: Restrict)
+  items        ShipmentItem[]
+
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+}
+
+model ShipmentItem {
+  id           String    @id @default(uuid())
+  shipmentId   String
+  variantId    String
+  quantity     Float
+
+  shipment     Shipment       @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+  variant      ProductVariant @relation(fields: [variantId], references: [id], onDelete: Restrict)
+}
+
+// ---------------------------------------------------------------------------
+// Audit & System
+// ---------------------------------------------------------------------------
+
+model AuditLog {
+  id           String    @id @default(uuid())
+  entityType   String
+  entityId     String
+  action       String    // CREATE, UPDATE, DELETE, ARCHIVE
+  oldValues    String?
+  newValues    String?
+  userId       String?
+  timestamp    DateTime  @default(now())
+
+  @@index([entityType, entityId])
+  @@index([timestamp])
+}

@@ -32,6 +32,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import Link from 'next/link';
 import { useQuotations, QuotationSortField, SortOrder } from '@/hooks/useQuotations';
 import { Customer } from '@/types';
+import { Pagination } from '@/components/ui/pagination';
 
 export default function QuotationsPage() {
   const hook = useQuotations();
@@ -39,6 +40,9 @@ export default function QuotationsPage() {
     quotations,
     rawQuotations,
     loading,
+    currentPage,
+    setCurrentPage,
+    totalPages,
     searchQuery,
     setSearchQuery,
     filters,
@@ -449,6 +453,12 @@ export default function QuotationsPage() {
               </tbody>
             </table>
           </div>
+          
+          <Pagination 
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={setCurrentPage}
+          />
         </div>
       </div>
     </MasterPage>

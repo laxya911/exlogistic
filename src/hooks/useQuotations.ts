@@ -31,6 +31,10 @@ export function useQuotations() {
 
   // Selection
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 15;
 
   // Undo stack
   const [undoStack, setUndoStack] = useState<Quotation[]>([]);
@@ -344,6 +348,18 @@ export function useQuotations() {
     return result;
   }, [quotations, searchQuery, filters, sortBy, sortOrder]);
 
+  // Reset to page 1 on filter/search change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, filters, sortBy, sortOrder]);
+
+  const paginatedQuotations = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return processedQuotations.slice(start, start + pageSize);
+  }, [processedQuotations, currentPage, pageSize]);
+
+  const totalPages = Math.ceil(processedQuotations.length / pageSize);
+
   const filterOptions = useMemo(() => {
     const customerIds = Array.from(new Set(quotations.map(q => q.customerId)));
     const statuses = Array.from(new Set(quotations.map(q => q.status)));
@@ -365,9 +381,13 @@ export function useQuotations() {
   };
 
   return {
-    quotations: processedQuotations,
+    quotations: paginatedQuotations,
+    allProcessedQuotations: processedQuotations,
     rawQuotations: quotations,
     loading,
+    currentPage,
+    setCurrentPage,
+    totalPages,
     searchQuery,
     setSearchQuery,
     filters,

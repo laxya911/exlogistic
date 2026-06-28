@@ -14,44 +14,93 @@ export interface ProductTimelineEvent {
   userId: string;
 }
 
-// Master Data
-export interface Product extends BaseEntity {
-  sku: string;
+export interface Category extends BaseEntity {
   name: string;
-  description?: string;
-  category: string;
-  brand: string;
-  countryOfOrigin: string;
-  hsnCode: string;
-  uom: string;
+  slug: string;
+  parentId?: string;
+  path?: string;
+  level: number;
+}
+
+export interface Brand extends BaseEntity {
+  name: string;
+  slug: string;
+  logo?: string;
+  website?: string;
+}
+
+export interface ProductVariant extends BaseEntity {
+  productId: string;
+  sku: string;
+  barcode?: string;
+  internalCode?: string;
+  title: string; // e.g., "Black / 256GB"
+  slug?: string;
+  isDefault: boolean;
+  
+  // Dimensions & Weight
+  weight?: number;
+  netWeight?: number;
+  grossWeight?: number;
+  volumeCBM?: number;
+  packagingType?: string;
   
   // Commercial
   purchasePrice: number;
   sellingPrice: number;
   currency: string;
-  moq: number;
-  leadTime: number; // in days
+  
+  images: any[];
+  attributes: any[];
+}
 
-  // Packaging
+export interface Product extends BaseEntity {
+  slug: string;
+  name: string;
+  shortDescription?: string;
+  longDescription?: string;
+  seoTitle?: string;
+  seoDescription?: string;
+  defaultImage?: string;
+  isPublished: boolean;
+  isFeatured: boolean;
+
+  brandId?: string;
+  brandEntity?: Brand;
+
+  categories?: any[];
+  variants: ProductVariant[];
+  suppliers?: any[];
+  documents: DocumentRef[];
+  certifications: string[];
+
+  // Note: These fields are kept for backward compatibility with some UI components temporarily, 
+  // but they will be mapped from the default variant.
+  category: string;
+  brand: string;
+  sku: string;
+  description: string;
+  hsnCode: string;
+  countryOfOrigin: string;
+  purchasePrice: number;
+  sellingPrice: number;
+  currency: string;
+  uom: string;
+  moq: number;
+  leadTime: number;
   packageType: string;
   unitsPerCarton: number;
-  grossWeight: number; // in kg
-  netWeight: number; // in kg
-  cbm: number; // cubic meters
-  containerLoadingCapacity: number; // e.g. units in 20GP
-
-  // Compliance
+  grossWeight: number;
+  netWeight: number;
+  cbm: number;
+  containerLoadingCapacity: number;
   shelfLife: string;
   storageConditions: string;
-  certifications: string[];
   japanImportNotes?: string;
-
-  // Relationships
-  supplierId: string; // Default Supplier
+  supplierId: string;
   preferredForwarderId?: string;
   defaultPackagingType?: string;
   images: string[];
-  documents: DocumentRef[];
   
   // History & Tracking
   timeline: ProductTimelineEvent[];

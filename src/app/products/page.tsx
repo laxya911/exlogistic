@@ -49,12 +49,16 @@ import {
 } from 'recharts';
 import { toast } from 'sonner';
 import { useProducts, FilterState, ProductSortField, SortOrder } from '@/hooks/useProducts';
+import { Pagination } from '@/components/ui/pagination';
 
 export default function ProductMasterPage() {
   const hook = useProducts();
   const {
     products,
     loading,
+    currentPage,
+    setCurrentPage,
+    totalPages,
     searchQuery,
     setSearchQuery,
     searchField,
@@ -98,6 +102,8 @@ export default function ProductMasterPage() {
   const [salesOrders, setSalesOrders] = useState<SalesOrder[]>([]);
   const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>([]);
   const [shipments, setShipments] = useState<Shipment[]>([]);
+  const [dbCategories, setDbCategories] = useState<any[]>([]);
+  const [dbBrands, setDbBrands] = useState<any[]>([]);
 
   // Search input ref
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -138,13 +144,15 @@ export default function ProductMasterPage() {
   useEffect(() => {
     const loadSupportData = async () => {
       try {
-        const [suppData, fwdData, quoteData, soData, poData, shpData] = await Promise.all([
+        const [suppData, fwdData, quoteData, soData, poData, shpData, catData, brandData] = await Promise.all([
           fetch('/api/suppliers').then(r => r.json()),
           fetch('/api/forwarders').then(r => r?.json().catch(() => []) || []),
           fetch('/api/quotations').then(r => r.json()),
           fetch('/api/sales-orders').then(r => r.json()),
           fetch('/api/purchase-orders').then(r => r.json()),
-          fetch('/api/shipments').then(r => r.json())
+          fetch('/api/shipments').then(r => r.json()),
+          fetch('/api/categories').then(r => r.json()),
+          fetch('/api/brands').then(r => r.json())
         ]);
         setSuppliers(suppData);
         setForwarders(fwdData);
@@ -152,6 +160,8 @@ export default function ProductMasterPage() {
         setSalesOrders(soData);
         setPurchaseOrders(poData);
         setShipments(shpData);
+        setDbCategories(catData || []);
+        setDbBrands(brandData || []);
       } catch (err) {
         console.error('Failed loading related matrices data');
       }
@@ -368,7 +378,7 @@ export default function ProductMasterPage() {
                 <select 
                   value={searchField} 
                   onChange={(e) => setSearchField(e.target.value as any)}
-                  className="bg-transparent text-white/70 text-[10px] font-mono uppercase pl-4 focus:outline-none border-r border-white/10 pr-2 h-12"
+                  className="bg-transparent text-white/70 text-xs font-mono uppercase pl-4 focus:outline-none border-r border-white/10 pr-2 h-12"
                 >
                   <option value="all" className="bg-[#0b0b0b]">All Fields</option>
                   <option value="sku" className="bg-[#0b0b0b]">SKU</option>
@@ -380,7 +390,7 @@ export default function ProductMasterPage() {
                 <input 
                   type="text" 
                   placeholder="Identify Commodity..." 
-                  className="w-full bg-transparent py-3 pl-12 pr-4 text-xs focus:outline-none text-white font-mono"
+                  className="w-full bg-transparent py-3 pl-12 pr-4 text-sm focus:outline-none text-white font-mono"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   ref={searchInputRef}
@@ -397,7 +407,7 @@ export default function ProductMasterPage() {
                 <button 
                   onClick={() => setShowFilterDrawer(!showFilterDrawer)}
                   className={cn(
-                    "flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-3 border rounded-2xl text-[10px] font-mono uppercase tracking-widest transition-all",
+                    "flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-3 border rounded-2xl text-xs font-mono uppercase tracking-widest transition-all",
                     Object.values(filters).some(arr => arr.length > 0)
                       ? "bg-blue-500/10 border-blue-500 text-blue-400"
                       : "bg-white/5 border-white/10 text-white/90 hover:bg-white/10"
@@ -408,7 +418,7 @@ export default function ProductMasterPage() {
                 
                 <button 
                   onClick={openCreateForm}
-                  className="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-3 bg-blue-500 text-black rounded-2xl text-[10px] font-mono font-bold uppercase tracking-widest hover:bg-blue-400 transition-all border-none cursor-pointer"
+                  className="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-3 bg-blue-500 text-black rounded-2xl text-xs font-mono font-bold uppercase tracking-widest hover:bg-blue-400 transition-all border-none cursor-pointer"
                 >
                   <Plus size={14} /> New Product
                 </button>
@@ -424,7 +434,7 @@ export default function ProductMasterPage() {
                   exit={{ height: 0, opacity: 0 }}
                   className="overflow-hidden border-t border-white/5 pt-4"
                 >
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-6 text-[10px] font-mono">
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-6 text-xs font-mono">
                     {/* Category Filter */}
                     <div className="space-y-2">
                       <p className="text-white/70 uppercase tracking-wider">Category</p>
@@ -437,7 +447,7 @@ export default function ProductMasterPage() {
                               categories: prev.categories.includes(c) ? prev.categories.filter(x => x !== c) : [...prev.categories, c]
                             }))}
                             className={cn(
-                              "px-2.5 py-1 rounded bg-[#101010] border text-[9px]",
+                              "px-2.5 py-1 rounded bg-[#101010] border text-[11px]",
                               filters.categories.includes(c) ? "border-blue-500 text-blue-400 bg-blue-500/5" : "border-white/5 text-white/70"
                             )}
                           >
@@ -459,7 +469,7 @@ export default function ProductMasterPage() {
                               brands: prev.brands.includes(b) ? prev.brands.filter(x => x !== b) : [...prev.brands, b]
                             }))}
                             className={cn(
-                              "px-2.5 py-1 rounded bg-[#101010] border text-[9px]",
+                              "px-2.5 py-1 rounded bg-[#101010] border text-[11px]",
                               filters.brands.includes(b) ? "border-blue-500 text-blue-400 bg-blue-500/5" : "border-white/5 text-white/70"
                             )}
                           >
@@ -481,7 +491,7 @@ export default function ProductMasterPage() {
                               statuses: prev.statuses.includes(s) ? prev.statuses.filter(x => x !== s) : [...prev.statuses, s]
                             }))}
                             className={cn(
-                              "px-2.5 py-1 rounded bg-[#101010] border text-[9px]",
+                              "px-2.5 py-1 rounded bg-[#101010] border text-[11px]",
                               filters.statuses.includes(s) ? "border-blue-500 text-blue-400 bg-blue-500/5" : "border-white/5 text-white/70"
                             )}
                           >
@@ -494,7 +504,7 @@ export default function ProductMasterPage() {
                   <div className="flex justify-end gap-3 mt-6 border-t border-white/5 pt-4">
                     <button 
                       onClick={() => setFilters({ categories: [], brands: [], statuses: [], countries: [], suppliers: [], hsnCodes: [] })}
-                      className="px-4 py-2 rounded bg-white/5 text-[9px] font-mono text-white/70 hover:bg-white/10"
+                      className="px-4 py-2 rounded bg-white/5 text-[11px] font-mono text-white/70 hover:bg-white/10"
                     >
                       Clear Matrix Filters
                     </button>
@@ -513,32 +523,32 @@ export default function ProductMasterPage() {
                 exit={{ opacity: 0, y: -10 }}
                 className="flex flex-wrap items-center justify-between p-4 bg-blue-500 text-black rounded-2xl gap-3"
               >
-                <div className="flex items-center gap-3 text-xs font-mono font-bold">
+                <div className="flex items-center gap-3 text-sm font-mono font-bold">
                   <Package size={16} />
                   <span>{selectedIds.length} Nodes Selected</span>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
                   <button 
                     onClick={() => bulkArchive(selectedIds)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-black/10 hover:bg-black/20 rounded-lg text-[9px] font-mono font-bold uppercase tracking-wider border-none cursor-pointer text-black"
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-black/10 hover:bg-black/20 rounded-lg text-[11px] font-mono font-bold uppercase tracking-wider border-none cursor-pointer text-black"
                   >
                     <Archive size={12} /> Archive
                   </button>
                   <button 
                     onClick={() => bulkRestore(selectedIds)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-black/10 hover:bg-black/20 rounded-lg text-[9px] font-mono font-bold uppercase tracking-wider border-none cursor-pointer text-black"
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-black/10 hover:bg-black/20 rounded-lg text-[11px] font-mono font-bold uppercase tracking-wider border-none cursor-pointer text-black"
                   >
                     <RefreshCcw size={12} /> Restore
                   </button>
                   <button 
                     onClick={() => bulkDelete(selectedIds)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-black/10 hover:bg-black/20 rounded-lg text-[9px] font-mono font-bold uppercase tracking-wider border-none cursor-pointer text-black"
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-black/10 hover:bg-black/20 rounded-lg text-[11px] font-mono font-bold uppercase tracking-wider border-none cursor-pointer text-black"
                   >
                     <Trash2 size={12} /> Soft-Delete
                   </button>
                   <button 
                     onClick={() => bulkExportCSV(selectedIds)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-black text-white hover:bg-black/90 rounded-lg text-[9px] font-mono font-bold uppercase tracking-wider border-none cursor-pointer"
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-black text-white hover:bg-black/90 rounded-lg text-[11px] font-mono font-bold uppercase tracking-wider border-none cursor-pointer"
                   >
                     <FileDown size={12} /> Export CSV
                   </button>
@@ -550,7 +560,7 @@ export default function ProductMasterPage() {
           {/* Commodity Listing Grid */}
           <div className="glass rounded-3xl border border-white/5 overflow-hidden">
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs font-mono">
+              <table className="w-full text-left text-sm font-mono">
                 <thead className="bg-white/2 text-white/70 uppercase tracking-[0.2em] border-b border-white/5">
                   <tr>
                     <th className="py-5 px-6 w-8 text-center">
@@ -567,7 +577,7 @@ export default function ProductMasterPage() {
                           setSortBy('name');
                           setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
                         }}
-                        className="flex items-center gap-2 hover:text-white transition-colors bg-transparent border-none cursor-pointer text-white/70 text-xs font-mono uppercase"
+                        className="flex items-center gap-2 hover:text-white transition-colors bg-transparent border-none cursor-pointer text-white/70 text-sm font-mono uppercase"
                       >
                         Commodity Node {sortBy === 'name' && (sortOrder === 'asc' ? <ChevronUp size={10} /> : <ChevronDown size={10} />)}
                       </button>
@@ -578,7 +588,7 @@ export default function ProductMasterPage() {
                           setSortBy('sku');
                           setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
                         }}
-                        className="flex items-center gap-2 hover:text-white transition-colors bg-transparent border-none cursor-pointer text-white/70 text-xs font-mono uppercase"
+                        className="flex items-center gap-2 hover:text-white transition-colors bg-transparent border-none cursor-pointer text-white/70 text-sm font-mono uppercase"
                       >
                         SKU {sortBy === 'sku' && (sortOrder === 'asc' ? <ChevronUp size={10} /> : <ChevronDown size={10} />)}
                       </button>
@@ -590,7 +600,7 @@ export default function ProductMasterPage() {
                           setSortBy('price');
                           setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
                         }}
-                        className="flex items-center justify-end gap-2 hover:text-white transition-colors w-full bg-transparent border-none cursor-pointer text-white/70 text-xs font-mono uppercase"
+                        className="flex items-center justify-end gap-2 hover:text-white transition-colors w-full bg-transparent border-none cursor-pointer text-white/70 text-sm font-mono uppercase"
                       >
                         Price {sortBy === 'price' && (sortOrder === 'asc' ? <ChevronUp size={10} /> : <ChevronDown size={10} />)}
                       </button>
@@ -623,19 +633,19 @@ export default function ProductMasterPage() {
                           </div>
                           <div>
                             <p className="font-sans font-bold text-sm text-white/90 truncate max-w-[150px]">{p.name}</p>
-                            <p className="text-[9px] text-white/70 uppercase tracking-tighter">{p.brand}</p>
+                            <p className="text-[11px] text-white/70 uppercase tracking-tighter">{p.brand}</p>
                           </div>
                         </div>
                       </td>
                       <td className="py-4 px-6">
-                        <span className="px-2 py-0.5 rounded bg-white/5 border border-white/10 text-[9px] font-mono font-bold text-white/70 uppercase">
+                        <span className="px-2 py-0.5 rounded bg-white/5 border border-white/10 text-[11px] font-mono font-bold text-white/70 uppercase">
                           {p.sku}
                         </span>
                       </td>
                       <td className="py-4 px-6">
                         <div className="flex flex-col">
                           <span className="text-[11px] text-blue-400/80 font-bold">{p.category}</span>
-                          <span className="text-[9px] text-white/70">HSN: {p.hsnCode}</span>
+                          <span className="text-[11px] text-white/70">HSN: {p.hsnCode}</span>
                         </div>
                       </td>
                       <td className="py-4 px-6 text-right font-sans font-bold text-white/80">
@@ -644,14 +654,14 @@ export default function ProductMasterPage() {
                       <td className="py-4 px-6 text-right">
                         <div className="flex flex-col items-end">
                           <span className="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 text-[8px] font-mono font-bold uppercase">{p.entityStatus}</span>
-                          <span className="text-[9px] text-white/70 mt-1 uppercase">{p.uom}</span>
+                          <span className="text-[11px] text-white/70 mt-1 uppercase">{p.uom}</span>
                         </div>
                       </td>
                     </tr>
                   ))}
                   {products.length === 0 && (
                     <tr>
-                      <td colSpan={6} className="py-16 text-center text-white/70 font-mono text-xs uppercase tracking-widest">
+                      <td colSpan={6} className="py-16 text-center text-white/70 font-mono text-sm uppercase tracking-widest">
                         No Commodities Found In Active Index
                       </td>
                     </tr>
@@ -659,6 +669,12 @@ export default function ProductMasterPage() {
                 </tbody>
               </table>
             </div>
+            
+            <Pagination 
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={setCurrentPage}
+            />
           </div>
         </div>
 
@@ -743,8 +759,8 @@ export default function ProductMasterPage() {
                       </span>
                     </div>
                     <h2 className="text-2xl font-display font-medium tracking-tight text-white mb-2 truncate">{activeProduct.name}</h2>
-                    <p className="text-[10px] font-mono text-white/80 tracking-wider mb-2">HSN: {activeProduct.hsnCode} • BRAND: {activeProduct.brand} • ORIGIN: {activeProduct.countryOfOrigin}</p>
-                    <p className="text-xs text-white/70 leading-relaxed font-sans line-clamp-2">{activeProduct.description}</p>
+                    <p className="text-xs font-mono text-white/80 tracking-wider mb-2">HSN: {activeProduct.hsnCode} • BRAND: {activeProduct.brand} • ORIGIN: {activeProduct.countryOfOrigin}</p>
+                    <p className="text-sm text-white/70 leading-relaxed font-sans line-clamp-2">{activeProduct.description}</p>
                   </div>
                 </div>
 
@@ -758,7 +774,7 @@ export default function ProductMasterPage() {
                     <div key={i} className="p-4 rounded-xl bg-white/2 border border-white/5">
                       <stat.icon size={12} className={cn("mb-2 opacity-40", stat.color)} />
                       <p className="text-[8px] font-mono text-white/70 uppercase tracking-widest mb-0.5">{stat.label}</p>
-                      <p className="font-sans font-bold text-xs">{stat.value}</p>
+                      <p className="font-sans font-bold text-sm">{stat.value}</p>
                     </div>
                   ))}
                 </div>
@@ -777,7 +793,7 @@ export default function ProductMasterPage() {
                       key={tab.id}
                       onClick={() => setDetailTab(tab.id as any)}
                       className={cn(
-                        "pb-2 text-[9px] font-mono font-bold uppercase tracking-widest bg-transparent border-none cursor-pointer",
+                        "pb-2 text-[11px] font-mono font-bold uppercase tracking-widest bg-transparent border-none cursor-pointer",
                         detailTab === tab.id 
                           ? "text-blue-500 border-b-2 border-blue-500" 
                           : "text-white/70 hover:text-white/70"
@@ -798,16 +814,16 @@ export default function ProductMasterPage() {
                         <div className="flex justify-between items-center">
                           <div>
                             <h4 className="font-sans font-bold text-sm text-white/90">{productRelations.supplier.name}</h4>
-                            <p className="text-[9px] font-mono text-white/80">{productRelations.supplier.email}</p>
+                            <p className="text-[11px] font-mono text-white/80">{productRelations.supplier.email}</p>
                           </div>
                           <div className="text-right">
-                            <span className="text-[10px] font-mono font-bold text-amber-400">★ {productRelations.supplier.performanceRating}</span>
+                            <span className="text-xs font-mono font-bold text-amber-400">★ {productRelations.supplier.performanceRating}</span>
                             <p className="text-[8px] font-mono text-white/70 mt-0.5">Rating Index</p>
                           </div>
                         </div>
                       </div>
                     ) : (
-                      <div className="p-4 rounded-xl bg-white/2 border border-white/5 text-center text-white/70 text-xs">
+                      <div className="p-4 rounded-xl bg-white/2 border border-white/5 text-center text-white/70 text-sm">
                         No default supplier mapped to this matrix node.
                       </div>
                     )}
@@ -816,7 +832,7 @@ export default function ProductMasterPage() {
                     <div className="grid grid-cols-2 gap-4">
                       <div className="p-5 rounded-2xl bg-white/2 border border-white/5 space-y-2">
                         <p className="text-[8px] font-mono text-white/70 uppercase tracking-wider">Packaging Specs</p>
-                        <div className="space-y-1 text-[10px] font-mono">
+                        <div className="space-y-1 text-xs font-mono">
                           <div className="flex justify-between"><span className="text-white/70">Type:</span> <span>{activeProduct.packageType}</span></div>
                           <div className="flex justify-between"><span className="text-white/70">Carton Units:</span> <span>{activeProduct.unitsPerCarton}</span></div>
                           <div className="flex justify-between"><span className="text-white/70">CBM (Vol):</span> <span>{activeProduct.cbm} cbm</span></div>
@@ -825,7 +841,7 @@ export default function ProductMasterPage() {
                       
                       <div className="p-5 rounded-2xl bg-white/2 border border-white/5 space-y-2">
                         <p className="text-[8px] font-mono text-white/70 uppercase tracking-wider">Loading metrics</p>
-                        <div className="space-y-1 text-[10px] font-mono">
+                        <div className="space-y-1 text-xs font-mono">
                           <div className="flex justify-between"><span className="text-white/70">Gross Wt:</span> <span>{activeProduct.grossWeight} kg</span></div>
                           <div className="flex justify-between"><span className="text-white/70">Net Wt:</span> <span>{activeProduct.netWeight} kg</span></div>
                           <div className="flex justify-between"><span className="text-white/70">20GP Load:</span> <span>{activeProduct.containerLoadingCapacity} {activeProduct.uom}</span></div>
@@ -836,7 +852,7 @@ export default function ProductMasterPage() {
                     {/* Compliance Information */}
                     <div className="p-5 rounded-2xl bg-white/2 border border-white/5 space-y-4">
                       <p className="text-[8px] font-mono text-white/70 uppercase tracking-wider">Compliance Rules & Certifications</p>
-                      <div className="space-y-2 text-[10px] font-mono">
+                      <div className="space-y-2 text-xs font-mono">
                         <div className="flex justify-between"><span className="text-white/70">Shelf Life Index:</span> <span>{activeProduct.shelfLife}</span></div>
                         <div className="flex justify-between"><span className="text-white/70">Storage Parameters:</span> <span>{activeProduct.storageConditions}</span></div>
                         <div>
@@ -850,7 +866,7 @@ export default function ProductMasterPage() {
                         {activeProduct.japanImportNotes && (
                           <div className="border-t border-white/5 pt-3">
                             <span className="text-white/70 block mb-1">Japan Customs Quarantine Directive:</span>
-                            <p className="text-[9px] text-white/70 leading-relaxed font-sans">{activeProduct.japanImportNotes}</p>
+                            <p className="text-[11px] text-white/70 leading-relaxed font-sans">{activeProduct.japanImportNotes}</p>
                           </div>
                         )}
                       </div>
@@ -863,88 +879,88 @@ export default function ProductMasterPage() {
                   <div className="space-y-6 max-h-[350px] overflow-y-auto custom-scrollbar pr-2">
                     {/* Quotation history */}
                     <div>
-                      <p className="text-[9px] font-mono text-white/70 uppercase tracking-wider mb-3">Linked Quotation history</p>
+                      <p className="text-[11px] font-mono text-white/70 uppercase tracking-wider mb-3">Linked Quotation history</p>
                       <div className="space-y-2">
                         {productRelations.relatedQuotes.map(q => (
-                          <div key={q.id} className="flex justify-between items-center p-3 bg-white/2 border border-white/5 rounded-xl text-[10px] font-mono">
+                          <div key={q.id} className="flex justify-between items-center p-3 bg-white/2 border border-white/5 rounded-xl text-xs font-mono">
                             <div>
                               <p className="font-bold text-white/80">{q.quotationNo}</p>
                               <p className="text-[8px] text-white/70">{formatDate(q.date)}</p>
                             </div>
                             <div className="text-right">
                               <span className="px-2 py-0.5 rounded bg-blue-500/10 text-blue-400 text-[8px]">{q.status}</span>
-                              <p className="text-[10px] font-sans font-bold text-white/80 mt-1">{formatCurrency(q.totalValue)}</p>
+                              <p className="text-xs font-sans font-bold text-white/80 mt-1">{formatCurrency(q.totalValue)}</p>
                             </div>
                           </div>
                         ))}
                         {productRelations.relatedQuotes.length === 0 && (
-                          <p className="text-center py-4 text-white/10 text-[9px] uppercase">No Quotation logs available</p>
+                          <p className="text-center py-4 text-white/10 text-[11px] uppercase">No Quotation logs available</p>
                         )}
                       </div>
                     </div>
 
                     {/* Sales Order history */}
                     <div>
-                      <p className="text-[9px] font-mono text-white/70 uppercase tracking-wider mb-3">Linked Sales Orders</p>
+                      <p className="text-[11px] font-mono text-white/70 uppercase tracking-wider mb-3">Linked Sales Orders</p>
                       <div className="space-y-2">
                         {productRelations.relatedSalesOrders.map(so => (
-                          <div key={so.id} className="flex justify-between items-center p-3 bg-white/2 border border-white/5 rounded-xl text-[10px] font-mono">
+                          <div key={so.id} className="flex justify-between items-center p-3 bg-white/2 border border-white/5 rounded-xl text-xs font-mono">
                             <div>
                               <p className="font-bold text-white/80">{so.orderNo}</p>
                               <p className="text-[8px] text-white/70">{formatDate(so.date)}</p>
                             </div>
                             <div className="text-right">
                               <span className="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 text-[8px]">{so.status}</span>
-                              <p className="text-[10px] font-sans font-bold text-white/80 mt-1">{formatCurrency(so.totalValue)}</p>
+                              <p className="text-xs font-sans font-bold text-white/80 mt-1">{formatCurrency(so.totalValue)}</p>
                             </div>
                           </div>
                         ))}
                         {productRelations.relatedSalesOrders.length === 0 && (
-                          <p className="text-center py-4 text-white/10 text-[9px] uppercase">No Sales logs available</p>
+                          <p className="text-center py-4 text-white/10 text-[11px] uppercase">No Sales logs available</p>
                         )}
                       </div>
                     </div>
 
                     {/* Purchase Order history */}
                     <div>
-                      <p className="text-[9px] font-mono text-white/70 uppercase tracking-wider mb-3">Linked Purchase Orders</p>
+                      <p className="text-[11px] font-mono text-white/70 uppercase tracking-wider mb-3">Linked Purchase Orders</p>
                       <div className="space-y-2">
                         {productRelations.relatedPurchaseOrders.map(po => (
-                          <div key={po.id} className="flex justify-between items-center p-3 bg-white/2 border border-white/5 rounded-xl text-[10px] font-mono">
+                          <div key={po.id} className="flex justify-between items-center p-3 bg-white/2 border border-white/5 rounded-xl text-xs font-mono">
                             <div>
                               <p className="font-bold text-white/80">{po.poNo}</p>
                               <p className="text-[8px] text-white/70">{formatDate(po.date)}</p>
                             </div>
                             <div className="text-right">
                               <span className="px-2 py-0.5 rounded bg-amber-500/10 text-amber-400 text-[8px]">{po.status}</span>
-                              <p className="text-[10px] font-sans font-bold text-white/80 mt-1">{formatCurrency(po.totalValue)}</p>
+                              <p className="text-xs font-sans font-bold text-white/80 mt-1">{formatCurrency(po.totalValue)}</p>
                             </div>
                           </div>
                         ))}
                         {productRelations.relatedPurchaseOrders.length === 0 && (
-                          <p className="text-center py-4 text-white/10 text-[9px] uppercase">No Purchase logs available</p>
+                          <p className="text-center py-4 text-white/10 text-[11px] uppercase">No Purchase logs available</p>
                         )}
                       </div>
                     </div>
 
                     {/* Shipment history */}
                     <div>
-                      <p className="text-[9px] font-mono text-white/70 uppercase tracking-wider mb-3">Linked Shipment logs</p>
+                      <p className="text-[11px] font-mono text-white/70 uppercase tracking-wider mb-3">Linked Shipment logs</p>
                       <div className="space-y-2">
                         {productRelations.relatedShipments.map(shp => (
-                          <div key={shp.id} className="flex justify-between items-center p-3 bg-white/2 border border-white/5 rounded-xl text-[10px] font-mono">
+                          <div key={shp.id} className="flex justify-between items-center p-3 bg-white/2 border border-white/5 rounded-xl text-xs font-mono">
                             <div>
                               <p className="font-bold text-white/80">{shp.shipmentNo}</p>
                               <p className="text-[8px] text-white/70">DISPATCH: {formatDate(shp.etd)}</p>
                             </div>
                             <div className="text-right">
                               <span className="px-2 py-0.5 rounded bg-indigo-500/10 text-indigo-400 text-[8px]">{shp.status}</span>
-                              <p className="text-[10px] font-mono text-white/70 mt-1">{shp.destinationPortId}</p>
+                              <p className="text-xs font-mono text-white/70 mt-1">{shp.destinationPortId}</p>
                             </div>
                           </div>
                         ))}
                         {productRelations.relatedShipments.length === 0 && (
-                          <p className="text-center py-4 text-white/10 text-[9px] uppercase">No Logistics logs available</p>
+                          <p className="text-center py-4 text-white/10 text-[11px] uppercase">No Logistics logs available</p>
                         )}
                       </div>
                     </div>
@@ -976,7 +992,7 @@ export default function ProductMasterPage() {
 
                     {/* Historical Pricing Line Chart */}
                     <div className="space-y-3">
-                      <p className="text-[9px] font-mono text-white/70 uppercase tracking-wider flex items-center gap-1.5">
+                      <p className="text-[11px] font-mono text-white/70 uppercase tracking-wider flex items-center gap-1.5">
                         <Activity size={10} /> Market Pricing Index
                       </p>
                       <div className="h-[200px] w-full">
@@ -1008,12 +1024,12 @@ export default function ProductMasterPage() {
                           {item.type === 'SUPPLIER_CHANGED' && <ArrowLeftRight size={10} />}
                         </div>
                         <p className="text-[8px] font-mono text-white/70 uppercase mb-0.5">{formatDate(item.date)}</p>
-                        <p className="text-xs font-bold text-white/90 mb-0.5">{item.title}</p>
-                        <p className="text-[10px] text-white/70 leading-relaxed font-sans">{item.description}</p>
+                        <p className="text-sm font-bold text-white/90 mb-0.5">{item.title}</p>
+                        <p className="text-xs text-white/70 leading-relaxed font-sans">{item.description}</p>
                       </div>
                     ))}
                     {(activeProduct.timeline || []).length === 0 && (
-                      <p className="text-center py-8 text-white/10 text-[9px] uppercase font-mono pl-8">No Activity Log found</p>
+                      <p className="text-center py-8 text-white/10 text-[11px] uppercase font-mono pl-8">No Activity Log found</p>
                     )}
                   </div>
                 )}
@@ -1045,10 +1061,10 @@ export default function ProductMasterPage() {
               {/* Errors Panel */}
               {formErrors.length > 0 && (
                 <div className="p-4 bg-rose-500/10 border border-rose-500/20 rounded-2xl mb-6 space-y-1">
-                  <p className="text-xs font-mono font-bold text-rose-400 flex items-center gap-2">
+                  <p className="text-sm font-mono font-bold text-rose-400 flex items-center gap-2">
                     <AlertCircle size={14} /> Validation Constraints Violated:
                   </p>
-                  <ul className="list-disc list-inside text-[10px] font-mono text-rose-300">
+                  <ul className="list-disc list-inside text-xs font-mono text-rose-300">
                     {formErrors.map((err, idx) => (
                       <li key={idx}>{err}</li>
                     ))}
@@ -1057,7 +1073,7 @@ export default function ProductMasterPage() {
               )}
 
               {/* Form Navigation Tabs */}
-              <div className="flex gap-4 border-b border-white/5 mb-6 overflow-x-auto whitespace-nowrap pb-2 text-[9px] font-mono font-bold uppercase">
+              <div className="flex gap-4 border-b border-white/5 mb-6 overflow-x-auto whitespace-nowrap pb-2 text-[11px] font-mono font-bold uppercase">
                 {[
                   { id: 'general', label: '1. General Info' },
                   { id: 'commercial', label: '2. Commercials' },
@@ -1087,24 +1103,24 @@ export default function ProductMasterPage() {
                   <div className="space-y-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div className="space-y-2">
-                        <label className="text-[9px] font-mono text-white/80 uppercase tracking-wider block">SKU Code (Unique)</label>
+                        <label className="text-[11px] font-mono text-white/80 uppercase tracking-wider block">SKU Code (Unique)</label>
                         <input 
                           type="text" 
                           required
                           value={sku}
                           onChange={(e) => setSku(e.target.value)}
-                          className="w-full bg-[#0b0b0b] border border-white/10 rounded-xl py-3 px-4 text-xs font-mono text-white focus:outline-none focus:border-blue-500/50" 
+                          className="w-full bg-[#0b0b0b] border border-white/10 rounded-xl py-3 px-4 text-sm font-mono text-white focus:outline-none focus:border-blue-500/50" 
                           placeholder="e.g. BMR-1121"
                         />
                       </div>
                       <div className="space-y-2">
-                        <label className="text-[9px] font-mono text-white/80 uppercase tracking-wider block">Product Name</label>
+                        <label className="text-[11px] font-mono text-white/80 uppercase tracking-wider block">Product Name</label>
                         <input 
                           type="text" 
                           required
                           value={name}
                           onChange={(e) => setName(e.target.value)}
-                          className="w-full bg-[#0b0b0b] border border-white/10 rounded-xl py-3 px-4 text-xs font-mono text-white focus:outline-none focus:border-blue-500/50"
+                          className="w-full bg-[#0b0b0b] border border-white/10 rounded-xl py-3 px-4 text-sm font-mono text-white focus:outline-none focus:border-blue-500/50"
                           placeholder="e.g. Premium Basmati Rice"
                         />
                       </div>
@@ -1112,59 +1128,65 @@ export default function ProductMasterPage() {
 
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                       <div className="space-y-2">
-                        <label className="text-[9px] font-mono text-white/80 uppercase tracking-wider block">Category</label>
+                        <label className="text-[11px] font-mono text-white/80 uppercase tracking-wider block">Category</label>
                         <select 
                           value={category}
                           onChange={(e) => setCategory(e.target.value)}
-                          className="w-full bg-[#0b0b0b] border border-white/10 rounded-xl py-3 px-4 text-xs font-mono text-white focus:outline-none focus:border-blue-500/50"
+                          className="w-full bg-[#0b0b0b] border border-white/10 rounded-xl py-3 px-4 text-sm font-mono text-white focus:outline-none focus:border-blue-500/50"
                         >
-                          <option value="Rice">Rice</option>
-                          <option value="Dals">Dals / Lentils</option>
-                          <option value="Snacks">Snacks & Processed</option>
-                          <option value="Millets">Millets</option>
-                          <option value="Spices">Spices</option>
+                          {dbCategories.map(cat => (
+                            <option key={cat.id} value={cat.name}>{cat.name}</option>
+                          ))}
                         </select>
                       </div>
                       <div className="space-y-2">
-                        <label className="text-[9px] font-mono text-white/80 uppercase tracking-wider block">Brand</label>
-                        <input 
-                          type="text" 
+                        <label className="text-[11px] font-mono text-white/80 uppercase tracking-wider block">Brand</label>
+                        <select 
                           required
                           value={brand}
                           onChange={(e) => setBrand(e.target.value)}
-                          className="w-full bg-[#0b0b0b] border border-white/10 rounded-xl py-3 px-4 text-xs font-mono text-white focus:outline-none"
-                        />
+                          className="w-full bg-[#0b0b0b] border border-white/10 rounded-xl py-3 px-4 text-sm font-mono text-white focus:outline-none"
+                        >
+                          <option value="">Select Brand</option>
+                          {dbBrands.map(b => (
+                            <option key={b.id} value={b.name}>{b.name}</option>
+                          ))}
+                        </select>
                       </div>
                       <div className="space-y-2">
-                        <label className="text-[9px] font-mono text-white/80 uppercase tracking-wider block">Country of Origin</label>
-                        <input 
-                          type="text" 
+                        <label className="text-[11px] font-mono text-white/80 uppercase tracking-wider block">Country of Origin</label>
+                        <select 
                           required
                           value={countryOfOrigin}
                           onChange={(e) => setCountryOfOrigin(e.target.value)}
-                          className="w-full bg-[#0b0b0b] border border-white/10 rounded-xl py-3 px-4 text-xs font-mono text-white focus:outline-none"
-                        />
+                          className="w-full bg-[#0b0b0b] border border-white/10 rounded-xl py-3 px-4 text-sm font-mono text-white focus:outline-none"
+                        >
+                          <option value="">Select Country</option>
+                          {['India', 'China', 'USA', 'Vietnam', 'Brazil', 'Thailand', 'Indonesia', 'UAE', 'Singapore', 'Japan', 'Malaysia', 'Germany'].map(c => (
+                            <option key={c} value={c}>{c}</option>
+                          ))}
+                        </select>
                       </div>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div className="space-y-2">
-                        <label className="text-[9px] font-mono text-white/80 uppercase tracking-wider block">HS Code (6-10 digits)</label>
+                        <label className="text-[11px] font-mono text-white/80 uppercase tracking-wider block">HS Code (6-10 digits)</label>
                         <input 
                           type="text" 
                           required
                           value={hsnCode}
                           onChange={(e) => setHsnCode(e.target.value)}
-                          className="w-full bg-[#0b0b0b] border border-white/10 rounded-xl py-3 px-4 text-xs font-mono text-white focus:outline-none"
+                          className="w-full bg-[#0b0b0b] border border-white/10 rounded-xl py-3 px-4 text-sm font-mono text-white focus:outline-none"
                           placeholder="e.g. 10063020"
                         />
                       </div>
                       <div className="space-y-2">
-                        <label className="text-[9px] font-mono text-white/80 uppercase tracking-wider block">Standard UOM</label>
+                        <label className="text-[11px] font-mono text-white/80 uppercase tracking-wider block">Standard UOM</label>
                         <select 
                           value={uom}
                           onChange={(e) => setUom(e.target.value)}
-                          className="w-full bg-[#0b0b0b] border border-white/10 rounded-xl py-3 px-4 text-xs font-mono text-white focus:outline-none"
+                          className="w-full bg-[#0b0b0b] border border-white/10 rounded-xl py-3 px-4 text-sm font-mono text-white focus:outline-none"
                         >
                           <option value="BAG">BAG (bags)</option>
                           <option value="CRT">CRT (cartons)</option>
@@ -1176,11 +1198,11 @@ export default function ProductMasterPage() {
                     </div>
 
                     <div className="space-y-2">
-                      <label className="text-[9px] font-mono text-white/80 uppercase tracking-wider block">Description / Specifications</label>
+                      <label className="text-[11px] font-mono text-white/80 uppercase tracking-wider block">Description / Specifications</label>
                       <textarea 
                         value={description}
                         onChange={(e) => setDescription(e.target.value)}
-                        className="w-full bg-[#0b0b0b] border border-white/10 rounded-xl py-3 px-4 text-xs font-mono text-white focus:outline-none min-h-[80px]" 
+                        className="w-full bg-[#0b0b0b] border border-white/10 rounded-xl py-3 px-4 text-sm font-mono text-white focus:outline-none min-h-[80px]" 
                       />
                     </div>
                   </div>
@@ -1191,28 +1213,28 @@ export default function ProductMasterPage() {
                   <div className="space-y-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div className="space-y-2">
-                        <label className="text-[9px] font-mono text-white/80 uppercase block">Purchase Cost per Unit (FOB)</label>
+                        <label className="text-[11px] font-mono text-white/80 uppercase block">Purchase Cost per Unit (FOB)</label>
                         <div className="relative">
-                          <span className="absolute left-4 top-1/2 -translate-y-1/2 text-white/70 text-xs">$</span>
+                          <span className="absolute left-4 top-1/2 -translate-y-1/2 text-white/70 text-sm">$</span>
                           <input 
                             type="number" 
                             step="0.01"
                             value={purchasePrice}
                             onChange={(e) => setPurchasePrice(Number(e.target.value))}
-                            className="w-full bg-[#0b0b0b] border border-white/10 rounded-xl py-3 pl-8 pr-4 text-xs font-mono text-white focus:outline-none"
+                            className="w-full bg-[#0b0b0b] border border-white/10 rounded-xl py-3 pl-8 pr-4 text-sm font-mono text-white focus:outline-none"
                           />
                         </div>
                       </div>
                       <div className="space-y-2">
-                        <label className="text-[9px] font-mono text-white/80 uppercase block">Standard Selling Price per Unit</label>
+                        <label className="text-[11px] font-mono text-white/80 uppercase block">Standard Selling Price per Unit</label>
                         <div className="relative">
-                          <span className="absolute left-4 top-1/2 -translate-y-1/2 text-white/70 text-xs">$</span>
+                          <span className="absolute left-4 top-1/2 -translate-y-1/2 text-white/70 text-sm">$</span>
                           <input 
                             type="number" 
                             step="0.01"
                             value={sellingPrice}
                             onChange={(e) => setSellingPrice(Number(e.target.value))}
-                            className="w-full bg-[#0b0b0b] border border-white/10 rounded-xl py-3 pl-8 pr-4 text-xs font-mono text-white focus:outline-none"
+                            className="w-full bg-[#0b0b0b] border border-white/10 rounded-xl py-3 pl-8 pr-4 text-sm font-mono text-white focus:outline-none"
                           />
                         </div>
                       </div>
@@ -1220,30 +1242,33 @@ export default function ProductMasterPage() {
 
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                       <div className="space-y-2">
-                        <label className="text-[9px] font-mono text-white/80 uppercase block">Currency</label>
-                        <input 
-                          type="text" 
-                          readOnly
+                        <label className="text-[11px] font-mono text-white/80 uppercase block">Currency</label>
+                        <select 
                           value={currency}
-                          className="w-full bg-[#0b0b0b] border border-white/10 rounded-xl py-3 px-4 text-xs font-mono text-white/70 focus:outline-none"
-                        />
+                          onChange={(e) => setCurrency(e.target.value)}
+                          className="w-full bg-[#0b0b0b] border border-white/10 rounded-xl py-3 px-4 text-sm font-mono text-white focus:outline-none"
+                        >
+                          {['USD', 'EUR', 'GBP', 'INR', 'AED', 'SGD', 'CNY', 'JPY'].map(cur => (
+                            <option key={cur} value={cur}>{cur}</option>
+                          ))}
+                        </select>
                       </div>
                       <div className="space-y-2">
-                        <label className="text-[9px] font-mono text-white/80 uppercase block">Minimum Order Qty (MOQ)</label>
+                        <label className="text-[11px] font-mono text-white/80 uppercase block">Minimum Order Qty (MOQ)</label>
                         <input 
                           type="number" 
                           value={moq}
                           onChange={(e) => setMoq(Number(e.target.value))}
-                          className="w-full bg-[#0b0b0b] border border-white/10 rounded-xl py-3 px-4 text-xs font-mono text-white focus:outline-none"
+                          className="w-full bg-[#0b0b0b] border border-white/10 rounded-xl py-3 px-4 text-sm font-mono text-white focus:outline-none"
                         />
                       </div>
                       <div className="space-y-2">
-                        <label className="text-[9px] font-mono text-white/80 uppercase block">Lead Time (Days)</label>
+                        <label className="text-[11px] font-mono text-white/80 uppercase block">Lead Time (Days)</label>
                         <input 
                           type="number" 
                           value={leadTime}
                           onChange={(e) => setLeadTime(Number(e.target.value))}
-                          className="w-full bg-[#0b0b0b] border border-white/10 rounded-xl py-3 px-4 text-xs font-mono text-white focus:outline-none"
+                          className="w-full bg-[#0b0b0b] border border-white/10 rounded-xl py-3 px-4 text-sm font-mono text-white focus:outline-none"
                         />
                       </div>
                     </div>
@@ -1255,36 +1280,36 @@ export default function ProductMasterPage() {
                   <div className="space-y-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div className="space-y-2">
-                        <label className="text-[9px] font-mono text-white/80 uppercase block">Package Type</label>
+                        <label className="text-[11px] font-mono text-white/80 uppercase block">Package Type</label>
                         <input 
                           type="text" 
                           value={packageType}
                           onChange={(e) => setPackageType(e.target.value)}
-                          className="w-full bg-[#0b0b0b] border border-white/10 rounded-xl py-3 px-4 text-xs font-mono text-white focus:outline-none"
+                          className="w-full bg-[#0b0b0b] border border-white/10 rounded-xl py-3 px-4 text-sm font-mono text-white focus:outline-none"
                           placeholder="e.g. PP Woven Bag, Carton Box"
                         />
                       </div>
                       <div className="space-y-2">
-                        <label className="text-[9px] font-mono text-white/80 uppercase block">Units per Carton</label>
+                        <label className="text-[11px] font-mono text-white/80 uppercase block">Units per Carton</label>
                         <input 
                           type="number" 
                           value={unitsPerCarton}
                           onChange={(e) => setUnitsPerCarton(Number(e.target.value))}
-                          className="w-full bg-[#0b0b0b] border border-white/10 rounded-xl py-3 px-4 text-xs font-mono text-white focus:outline-none"
+                          className="w-full bg-[#0b0b0b] border border-white/10 rounded-xl py-3 px-4 text-sm font-mono text-white focus:outline-none"
                         />
                       </div>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                       <div className="space-y-2 col-span-2">
-                        <label className="text-[9px] font-mono text-white/80 uppercase block">Gross Weight / Net Weight (KG)</label>
+                        <label className="text-[11px] font-mono text-white/80 uppercase block">Gross Weight / Net Weight (KG)</label>
                         <div className="flex gap-2">
                           <input 
                             type="number" 
                             step="0.01"
                             value={grossWeight}
                             onChange={(e) => setGrossWeight(Number(e.target.value))}
-                            className="w-1/2 bg-[#0b0b0b] border border-white/10 rounded-xl py-3 px-4 text-xs font-mono text-white focus:outline-none"
+                            className="w-1/2 bg-[#0b0b0b] border border-white/10 rounded-xl py-3 px-4 text-sm font-mono text-white focus:outline-none"
                             placeholder="Gross"
                           />
                           <input 
@@ -1292,28 +1317,28 @@ export default function ProductMasterPage() {
                             step="0.01"
                             value={netWeight}
                             onChange={(e) => setNetWeight(Number(e.target.value))}
-                            className="w-1/2 bg-[#0b0b0b] border border-white/10 rounded-xl py-3 px-4 text-xs font-mono text-white focus:outline-none"
+                            className="w-1/2 bg-[#0b0b0b] border border-white/10 rounded-xl py-3 px-4 text-sm font-mono text-white focus:outline-none"
                             placeholder="Net"
                           />
                         </div>
                       </div>
                       <div className="space-y-2">
-                        <label className="text-[9px] font-mono text-white/80 uppercase block">CBM (Vol)</label>
+                        <label className="text-[11px] font-mono text-white/80 uppercase block">CBM (Vol)</label>
                         <input 
                           type="number" 
                           step="0.001"
                           value={cbm}
                           onChange={(e) => setCbm(Number(e.target.value))}
-                          className="w-full bg-[#0b0b0b] border border-white/10 rounded-xl py-3 px-4 text-xs font-mono text-white focus:outline-none"
+                          className="w-full bg-[#0b0b0b] border border-white/10 rounded-xl py-3 px-4 text-sm font-mono text-white focus:outline-none"
                         />
                       </div>
                       <div className="space-y-2">
-                        <label className="text-[9px] font-mono text-white/80 uppercase block">20GP Max load</label>
+                        <label className="text-[11px] font-mono text-white/80 uppercase block">20GP Max load</label>
                         <input 
                           type="number" 
                           value={containerLoadingCapacity}
                           onChange={(e) => setContainerLoadingCapacity(Number(e.target.value))}
-                          className="w-full bg-[#0b0b0b] border border-white/10 rounded-xl py-3 px-4 text-xs font-mono text-white focus:outline-none"
+                          className="w-full bg-[#0b0b0b] border border-white/10 rounded-xl py-3 px-4 text-sm font-mono text-white focus:outline-none"
                         />
                       </div>
                     </div>
@@ -1325,27 +1350,27 @@ export default function ProductMasterPage() {
                   <div className="space-y-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div className="space-y-2">
-                        <label className="text-[9px] font-mono text-white/80 uppercase block">Shelf Life</label>
+                        <label className="text-[11px] font-mono text-white/80 uppercase block">Shelf Life</label>
                         <input 
                           type="text" 
                           value={shelfLife}
                           onChange={(e) => setShelfLife(e.target.value)}
-                          className="w-full bg-[#0b0b0b] border border-white/10 rounded-xl py-3 px-4 text-xs font-mono text-white focus:outline-none"
+                          className="w-full bg-[#0b0b0b] border border-white/10 rounded-xl py-3 px-4 text-sm font-mono text-white focus:outline-none"
                         />
                       </div>
                       <div className="space-y-2">
-                        <label className="text-[9px] font-mono text-white/80 uppercase block">Storage Conditions</label>
+                        <label className="text-[11px] font-mono text-white/80 uppercase block">Storage Conditions</label>
                         <input 
                           type="text" 
                           value={storageConditions}
                           onChange={(e) => setStorageConditions(e.target.value)}
-                          className="w-full bg-[#0b0b0b] border border-white/10 rounded-xl py-3 px-4 text-xs font-mono text-white focus:outline-none"
+                          className="w-full bg-[#0b0b0b] border border-white/10 rounded-xl py-3 px-4 text-sm font-mono text-white focus:outline-none"
                         />
                       </div>
                     </div>
 
                     <div className="space-y-2">
-                      <span className="text-[9px] font-mono text-white/80 uppercase block mb-2">Required Certifications</span>
+                      <span className="text-[11px] font-mono text-white/80 uppercase block mb-2">Required Certifications</span>
                       <div className="flex flex-wrap gap-2">
                         {['FSSAI', 'HACCP', 'Phytosanitary Certificate', 'FDA Approved', 'Halal Certified', 'ISO 22000'].map(cert => (
                           <button
@@ -1353,7 +1378,7 @@ export default function ProductMasterPage() {
                             type="button"
                             onClick={() => handleToggleCert(cert)}
                             className={cn(
-                              "px-3 py-1.5 rounded-lg border text-[10px] font-mono",
+                              "px-3 py-1.5 rounded-lg border text-xs font-mono",
                               certifications.includes(cert) ? "bg-blue-500/10 border-blue-500 text-blue-400" : "bg-white/5 border-white/10 text-white/70"
                             )}
                           >
@@ -1364,11 +1389,11 @@ export default function ProductMasterPage() {
                     </div>
 
                     <div className="space-y-2">
-                      <label className="text-[9px] font-mono text-white/80 uppercase block">Japan Quarantine Regulations / Import Notes</label>
+                      <label className="text-[11px] font-mono text-white/80 uppercase block">Japan Quarantine Regulations / Import Notes</label>
                       <textarea 
                         value={japanImportNotes}
                         onChange={(e) => setJapanImportNotes(e.target.value)}
-                        className="w-full bg-[#0b0b0b] border border-white/10 rounded-xl py-3 px-4 text-xs font-mono text-white focus:outline-none min-h-[80px]" 
+                        className="w-full bg-[#0b0b0b] border border-white/10 rounded-xl py-3 px-4 text-sm font-mono text-white focus:outline-none min-h-[80px]" 
                       />
                     </div>
                   </div>
@@ -1379,11 +1404,11 @@ export default function ProductMasterPage() {
                   <div className="space-y-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div className="space-y-2">
-                        <label className="text-[9px] font-mono text-white/80 uppercase block">Default Supplier Partner</label>
+                        <label className="text-[11px] font-mono text-white/80 uppercase block">Default Supplier Partner</label>
                         <select 
                           value={supplierId}
                           onChange={(e) => setSupplierId(e.target.value)}
-                          className="w-full bg-[#0b0b0b] border border-white/10 rounded-xl py-3 px-4 text-xs font-mono text-white focus:outline-none"
+                          className="w-full bg-[#0b0b0b] border border-white/10 rounded-xl py-3 px-4 text-sm font-mono text-white focus:outline-none"
                         >
                           {suppliers.map(s => (
                             <option key={s.id} value={s.id} className="bg-[#0c0c0c]">{s.name} ({s.country})</option>
@@ -1392,11 +1417,11 @@ export default function ProductMasterPage() {
                       </div>
                       
                       <div className="space-y-2">
-                        <label className="text-[9px] font-mono text-white/80 uppercase block">Preferred Forwarder Node</label>
+                        <label className="text-[11px] font-mono text-white/80 uppercase block">Preferred Forwarder Node</label>
                         <select 
                           value={preferredForwarderId}
                           onChange={(e) => setPreferredForwarderId(e.target.value)}
-                          className="w-full bg-[#0b0b0b] border border-white/10 rounded-xl py-3 px-4 text-xs font-mono text-white focus:outline-none"
+                          className="w-full bg-[#0b0b0b] border border-white/10 rounded-xl py-3 px-4 text-sm font-mono text-white focus:outline-none"
                         >
                           {forwarders.map(f => (
                             <option key={f.id} value={f.id} className="bg-[#0c0c0c]">{f.name}</option>
@@ -1406,12 +1431,12 @@ export default function ProductMasterPage() {
                     </div>
 
                     <div className="space-y-2">
-                      <label className="text-[9px] font-mono text-white/80 uppercase block">Default Packaging Specification</label>
+                      <label className="text-[11px] font-mono text-white/80 uppercase block">Default Packaging Specification</label>
                       <input 
                         type="text" 
                         value={defaultPackagingType}
                         onChange={(e) => setDefaultPackagingType(e.target.value)}
-                        className="w-full bg-[#0b0b0b] border border-white/10 rounded-xl py-3 px-4 text-xs font-mono text-white focus:outline-none"
+                        className="w-full bg-[#0b0b0b] border border-white/10 rounded-xl py-3 px-4 text-sm font-mono text-white focus:outline-none"
                         placeholder="e.g. 25KG Double Layer PP Bag"
                       />
                     </div>
@@ -1422,13 +1447,13 @@ export default function ProductMasterPage() {
                   <button 
                     type="button" 
                     onClick={() => setShowFormDrawer(false)}
-                    className="px-6 py-3 bg-white/5 border border-white/10 rounded-xl text-[10px] font-mono uppercase tracking-widest hover:bg-white/10 border-none cursor-pointer text-white"
+                    className="px-6 py-3 bg-white/5 border border-white/10 rounded-xl text-xs font-mono uppercase tracking-widest hover:bg-white/10 border-none cursor-pointer text-white"
                   >
                     Cancel
                   </button>
                   <button 
                     type="submit" 
-                    className="px-8 py-3 bg-blue-500 text-black font-bold rounded-xl text-[10px] font-mono uppercase tracking-widest hover:bg-blue-400 border-none cursor-pointer"
+                    className="px-8 py-3 bg-blue-500 text-black font-bold rounded-xl text-xs font-mono uppercase tracking-widest hover:bg-blue-400 border-none cursor-pointer"
                   >
                     {formMode === 'create' ? 'Register Commodity' : 'Save Attributes'}
                   </button>

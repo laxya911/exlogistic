@@ -66,3 +66,4 @@ scripts/
 # Ignore custom maintenance scripts
 bump_contrast.js
 fix_tailwind.js
+/src/generated/prisma
