@@ -5,7 +5,8 @@ import {
   purchaseOrderRepository, 
   shipmentRepository,
   taskRepository,
-  calendarEventRepository
+  calendarEventRepository,
+  auditLogRepository
 } from '@/repositories/repository';
 
 export async function GET() {
@@ -16,14 +17,16 @@ export async function GET() {
       purchaseOrders,
       shipments,
       tasks,
-      events
+      events,
+      auditLogs
     ] = await Promise.all([
       quotationRepository.getAll(),
       salesOrderRepository.getAll(),
       purchaseOrderRepository.getAll(),
       shipmentRepository.getAll(),
       taskRepository.getAll(),
-      calendarEventRepository.getAll()
+      calendarEventRepository.getAll(),
+      auditLogRepository.getAll()
     ]);
 
     const stats = {
@@ -50,11 +53,24 @@ export async function GET() {
       { month: 'Jun', revenue: 720000, profit: 144000 },
     ];
 
+    const countryDist = shipments.reduce((acc: any, shp) => {
+      // Assuming originPortId or destinationPortId format is "US LAX". We extract the first two letters.
+      const countryCode = shp.destinationPortId.split(' ')[0] || 'Unknown';
+      acc[countryCode] = (acc[countryCode] || 0) + 1;
+      return acc;
+    }, {});
+
+    const countryDistribution = Object.keys(countryDist).map(key => ({
+      name: key,
+      value: countryDist[key]
+    })).sort((a, b) => b.value - a.value).slice(0, 5); // Top 5
+
     return NextResponse.json({
       stats,
       recentQuotations: quotations.slice(0, 5),
       recentShipments: shipments.slice(0, 5),
       pendingTasks: tasks.filter(t => !t.isCompleted).slice(0, 5),
+      auditLogs: auditLogs.slice(0, 5),
       charts: {
         revenueTrend: monthlyData,
         shipmentStatus: [
@@ -63,7 +79,7 @@ export async function GET() {
           { name: 'Delivered', value: shipments.filter(s => s.status === 'DELIVERED').length },
           { name: 'Stuffing', value: shipments.filter(s => s.status === 'STUFFING').length },
         ],
-        countryDistribution: [
+        countryDistribution: countryDistribution.length > 0 ? countryDistribution : [
           { name: 'USA', value: 40 },
           { name: 'Germany', value: 25 },
           { name: 'UAE', value: 20 },

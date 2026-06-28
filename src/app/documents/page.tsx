@@ -1,243 +1,520 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { MasterPage } from '@/components/layout/master-page';
 import { 
-  FileText, 
-  Download, 
-  Printer, 
-  Eye, 
-  Search, 
-  CheckCircle2, 
-  Clock, 
-  FileCode,
-  FileBox,
-  FileCheck,
-  FileType,
-  XCircle
+  FileText, Download, Printer, Eye, Search, CheckCircle2, 
+  Clock, FileCode, FileBox, FileCheck, FileType, XCircle,
+  Archive, Trash2, Edit3, ShieldCheck, Ship, Box, Anchor,
+  Filter, AlertCircle, FileSearch, ArrowRight
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { cn } from '@/lib/utils';
+import { cn, formatCurrency } from '@/lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
+import { ERPDocument } from '@/types';
+
+// ──────────────────────────────────────────
+// Helper Icons for Document Types
+// ──────────────────────────────────────────
+const getDocIcon = (type: string) => {
+  switch (type) {
+    case 'Commercial Invoice': return <FileText size={18} className="text-blue-400" />;
+    case 'Packing List': return <FileBox size={18} className="text-emerald-400" />;
+    case 'Proforma Invoice': return <FileCode size={18} className="text-amber-400" />;
+    case 'Bill of Lading': return <Ship size={18} className="text-indigo-400" />;
+    case 'Certificate of Origin': return <FileType size={18} className="text-rose-400" />;
+    case 'Phytosanitary Certificate': return <FileCheck size={18} className="text-green-500" />;
+    case 'Quality Certificate': return <ShieldCheck size={18} className="text-cyan-400" />;
+    case 'Insurance Certificate': return <AlertCircle size={18} className="text-violet-400" />;
+    case 'Shipping Instruction': return <Anchor size={18} className="text-orange-400" />;
+    case 'Purchase Order': return <Box size={18} className="text-fuchsia-400" />;
+    default: return <FileText size={18} className="text-white/80" />;
+  }
+};
+
+const getStatusColor = (status: string) => {
+  switch (status) {
+    case 'SIGNED': return 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20';
+    case 'DRAFT': return 'text-amber-400 bg-amber-500/10 border-amber-500/20';
+    case 'ARCHIVED': return 'text-white/70 bg-white/5 border-white/10';
+    default: return 'text-white/90 bg-white/10 border-white/20';
+  }
+};
 
 export default function DocumentCenterPage() {
+  const [docs, setDocs] = useState<ERPDocument[]>([]);
+  const [loading, setLoading] = useState(true);
+  
+  // Selection & Viewing
+  const [selectedDocId, setSelectedDocId] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
+  // Filters
   const [search, setSearch] = useState('');
-  const [selectedDoc, setSelectedDoc] = useState<any>(null);
+  const [typeFilter, setTypeFilter] = useState('ALL');
+  const [statusFilter, setStatusFilter] = useState('ALL');
+  
+  // Active Action State
+  const [isProcessing, setIsProcessing] = useState(false);
 
-  const docTypes = [
-    { name: 'Commercial Invoice', icon: FileText, count: 45, color: 'text-blue-400' },
-    { name: 'Packing List', icon: FileBox, count: 42, color: 'text-emerald-400' },
-    { name: 'Proforma Invoice', icon: FileCode, count: 28, color: 'text-amber-400' },
-    { name: 'Shipping Instruction', icon: FileCheck, count: 15, color: 'text-violet-400' },
-    { name: 'Certificate of Origin', icon: FileType, count: 12, color: 'text-rose-400' },
-  ];
+  useEffect(() => {
+    fetchDocs();
+  }, []);
 
-  const recentDocs = Array.from({ length: 10 }).map((_, i) => ({
-    id: `DOC-${1000 + i}`,
-    name: `${i % 2 === 0 ? 'Invoice' : 'Packing List'} #INV-2025-00${i + 1}`,
-    type: i % 2 === 0 ? 'Commercial Invoice' : 'Packing List',
-    date: new Date().toLocaleDateString(),
-    size: '1.2 MB',
-    status: 'SIGNED'
-  }));
+  const fetchDocs = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch('/api/documents');
+      const data = await res.json();
+      setDocs(data);
+    } catch (e) {
+      toast.error('Failed to load documents');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const selectedDoc = docs.find(d => d.id === selectedDocId);
+
+  // Stats
+  const docTypes = useMemo(() => {
+    const counts = docs.reduce((acc, doc) => {
+      acc[doc.type] = (acc[doc.type] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+    return Object.entries(counts).sort((a, b) => b[1] - a[1]);
+  }, [docs]);
+
+  const signedCount = docs.filter(d => d.status === 'SIGNED').length;
+  const draftCount = docs.filter(d => d.status === 'DRAFT').length;
+
+  // Filtering
+  const filteredDocs = docs.filter(doc => {
+    const matchSearch = doc.name.toLowerCase().includes(search.toLowerCase()) || 
+                        doc.type.toLowerCase().includes(search.toLowerCase()) ||
+                        doc.relatedId?.toLowerCase().includes(search.toLowerCase());
+    const matchType = typeFilter === 'ALL' || doc.type === typeFilter;
+    const matchStatus = statusFilter === 'ALL' || doc.status === statusFilter;
+    return matchSearch && matchType && matchStatus;
+  });
+
+  // Actions
+  const handleAction = async (id: string, action: 'sign' | 'archive' | 'restore') => {
+    try {
+      setIsProcessing(true);
+      const res = await fetch(`/api/documents/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action })
+      });
+      if (!res.ok) throw new Error('Action failed');
+      const updated = await res.json();
+      setDocs(prev => prev.map(d => d.id === id ? updated : d));
+      toast.success(`Document ${action}ed successfully`);
+    } catch (e: any) {
+      toast.error(e.message);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm('Move document to trash?')) return;
+    try {
+      setIsProcessing(true);
+      const res = await fetch(`/api/documents/${id}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error('Delete failed');
+      setDocs(prev => prev.filter(d => d.id !== id));
+      if (selectedDocId === id) setSelectedDocId(null);
+      toast.success('Document deleted');
+    } catch (e: any) {
+      toast.error(e.message);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const toggleSelection = (id: string) => {
+    const newSet = new Set(selectedIds);
+    if (newSet.has(id)) newSet.delete(id);
+    else newSet.add(id);
+    setSelectedIds(newSet);
+  };
+
+  const toggleAll = () => {
+    if (selectedIds.size === filteredDocs.length) setSelectedIds(new Set());
+    else setSelectedIds(new Set(filteredDocs.map(d => d.id)));
+  };
 
   return (
     <MasterPage 
-      title="Document Repository" 
-      subtitle="Digital Asset & Compliance Archive"
-      searchValue={search}
-      onSearchChange={setSearch}
+      title="Document Vault" 
+      subtitle="Digital Trade Asset & Compliance Archive"
+      loading={loading}
     >
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        <div className={cn("space-y-12", selectedDoc ? "lg:col-span-7" : "lg:col-span-12")}>
-          {/* Category Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-6">
-            {docTypes.map((type, i) => (
-              <motion.div 
-                key={i}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.05 }}
-                className="glass p-6 rounded-2xl border border-white/5 hover:border-white/20 transition-all cursor-pointer group"
-              >
-                <div className={cn("w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center mb-4 transition-transform group-hover:scale-110", type.color)}>
-                  <type.icon size={20} />
-                </div>
-                <p className="text-xs font-medium text-white/80 mb-1">{type.name}</p>
-                <p className="text-[10px] font-mono text-white/20 uppercase tracking-widest">{type.count} Documents</p>
-              </motion.div>
-            ))}
+      <div className="space-y-6">
+        
+        {/* Top KPIs */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="glass p-5 rounded-3xl border border-white/5">
+            <div className="flex justify-between items-start mb-2">
+              <p className="text-[10px] font-mono text-white/70 uppercase tracking-widest">Total Assets</p>
+              <FileSearch size={14} className="text-blue-400" />
+            </div>
+            <p className="font-sans font-bold text-2xl text-white">{docs.length}</p>
           </div>
-
-          {/* Recent Documents */}
-          <div className="glass p-8 rounded-[2.5rem] border border-white/5">
-            <div className="flex justify-between items-center mb-8">
-              <h3 className="text-lg font-display font-medium">Recent Assets</h3>
+          <div className="glass p-5 rounded-3xl border border-emerald-500/20 bg-emerald-500/5">
+            <div className="flex justify-between items-start mb-2">
+              <p className="text-[10px] font-mono text-emerald-400/60 uppercase tracking-widest">Signed & Executed</p>
+              <CheckCircle2 size={14} className="text-emerald-400" />
             </div>
-
-            <div className="space-y-2">
-              {recentDocs.map((doc, i) => (
-                <div 
-                  key={i} 
-                  className={cn(
-                    "flex items-center justify-between p-4 rounded-xl hover:bg-white/[0.02] transition-colors group cursor-pointer",
-                    selectedDoc?.id === doc.id && "bg-white/5 border border-white/10"
-                  )}
-                  onClick={() => setSelectedDoc(doc)}
-                >
-                  <div className="flex items-center gap-4">
-                    <div className="w-8 h-8 rounded bg-white/5 flex items-center justify-center text-white/20 group-hover:text-blue-500 transition-colors">
-                      <FileText size={14} />
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-white/80">{doc.name}</p>
-                      <p className="text-[10px] font-mono text-white/20 uppercase tracking-widest">{doc.type} • {doc.date}</p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-8">
-                    <span className="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 text-[9px] font-mono font-bold uppercase tracking-widest border border-emerald-500/10">
-                      {doc.status}
-                    </span>
-                    <button className="p-2 rounded hover:bg-white/5 text-white/40 hover:text-white transition-opacity opacity-0 group-hover:opacity-100">
-                      <Download size={16} />
-                    </button>
-                  </div>
-                </div>
-              ))}
+            <p className="font-sans font-bold text-2xl text-emerald-400">{signedCount}</p>
+          </div>
+          <div className="glass p-5 rounded-3xl border border-amber-500/20 bg-amber-500/5">
+            <div className="flex justify-between items-start mb-2">
+              <p className="text-[10px] font-mono text-amber-400/60 uppercase tracking-widest">Pending Drafts</p>
+              <Edit3 size={14} className="text-amber-400" />
             </div>
+            <p className="font-sans font-bold text-2xl text-amber-400">{draftCount}</p>
+          </div>
+          <div className="glass p-5 rounded-3xl border border-white/5 flex flex-col justify-center">
+            <button className="flex items-center justify-center gap-2 w-full py-3 bg-blue-500 text-black text-[10px] font-mono font-bold uppercase tracking-widest rounded-xl hover:bg-blue-400 transition-colors border-none cursor-pointer">
+              <FileText size={14} /> Upload Document
+            </button>
           </div>
         </div>
 
-        {/* Document Preview */}
-        <AnimatePresence>
-          {selectedDoc && (
-            <motion.div 
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: 20 }}
-              className="lg:col-span-5"
-            >
-              <div className="glass p-1 rounded-[2.5rem] border border-white/10 h-full min-h-[800px] flex flex-col">
-                <div className="p-8 border-b border-white/5 flex justify-between items-center bg-white/[0.02] rounded-t-[2.4rem]">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-[800px]">
+          
+          {/* LEFT: Document List */}
+          <div className={cn("glass rounded-4xl border border-white/5 flex flex-col overflow-hidden transition-all duration-300", selectedDocId ? "lg:col-span-5" : "lg:col-span-12")}>
+            {/* Filters */}
+            <div className="p-6 border-b border-white/5 bg-white/2 space-y-4">
+              <div className="flex gap-4">
+                <div className="relative flex-1">
+                  <Search size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-white/80" />
+                  <input 
+                    type="text" 
+                    placeholder="Search documents, references..." 
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-10 pr-4 text-xs font-mono focus:outline-none focus:border-blue-500/50 text-white"
+                  />
+                </div>
+                <select 
+                  value={typeFilter} 
+                  onChange={(e) => setTypeFilter(e.target.value)}
+                  className="bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-xs font-mono text-white focus:outline-none focus:border-blue-500/50 cursor-pointer w-48"
+                >
+                  <option value="ALL" className="bg-[#0c0c0c]">All Types</option>
+                  {docTypes.map(([type, count]) => (
+                    <option key={type} value={type} className="bg-[#0c0c0c]">{type} ({count})</option>
+                  ))}
+                </select>
+                <select 
+                  value={statusFilter} 
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                  className="bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-xs font-mono text-white focus:outline-none focus:border-blue-500/50 cursor-pointer w-32"
+                >
+                  <option value="ALL" className="bg-[#0c0c0c]">All Status</option>
+                  <option value="SIGNED" className="bg-[#0c0c0c]">Signed</option>
+                  <option value="DRAFT" className="bg-[#0c0c0c]">Draft</option>
+                  <option value="ARCHIVED" className="bg-[#0c0c0c]">Archived</option>
+                </select>
+              </div>
+              
+              {/* Bulk Actions Bar */}
+              <AnimatePresence>
+                {selectedIds.size > 0 && (
+                  <motion.div 
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: 'auto', opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    className="flex justify-between items-center py-2 px-4 bg-blue-500/10 border border-blue-500/20 rounded-xl overflow-hidden"
+                  >
+                    <span className="text-xs font-mono text-blue-400">{selectedIds.size} selected</span>
+                    <div className="flex gap-2">
+                      <button className="px-3 py-1.5 bg-blue-500 text-black text-[10px] font-mono font-bold uppercase rounded hover:bg-blue-400 cursor-pointer border-none flex items-center gap-1"><Download size={12}/> Download</button>
+                      <button className="px-3 py-1.5 bg-white/10 text-white text-[10px] font-mono font-bold uppercase rounded hover:bg-white/20 cursor-pointer border-none flex items-center gap-1"><Archive size={12}/> Archive</button>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+
+            {/* List */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-2 custom-scrollbar">
+              <div className="flex items-center px-4 py-2 text-[9px] font-mono text-white/80 uppercase tracking-widest">
+                <input 
+                  type="checkbox" 
+                  checked={selectedIds.size === filteredDocs.length && filteredDocs.length > 0}
+                  onChange={toggleAll}
+                  className="mr-4 accent-blue-500 cursor-pointer"
+                />
+                <span className="flex-1">Document Details</span>
+                {!selectedDocId && <span className="w-24 text-right">Size</span>}
+                <span className="w-24 text-right">Status</span>
+              </div>
+              
+              {filteredDocs.map(doc => (
+                <div 
+                  key={doc.id}
+                  onClick={(e) => {
+                    if ((e.target as HTMLElement).tagName !== 'INPUT') {
+                      setSelectedDocId(doc.id === selectedDocId ? null : doc.id);
+                    }
+                  }}
+                  className={cn(
+                    "flex items-center px-4 py-3 rounded-xl hover:bg-white/5 transition-colors cursor-pointer group border",
+                    selectedDocId === doc.id ? "bg-white/5 border-white/20" : "border-transparent"
+                  )}
+                >
+                  <input 
+                    type="checkbox" 
+                    checked={selectedIds.has(doc.id)}
+                    onChange={() => toggleSelection(doc.id)}
+                    className="mr-4 accent-blue-500 cursor-pointer"
+                    onClick={(e) => e.stopPropagation()}
+                  />
+                  <div className="w-10 h-10 rounded-lg bg-white/5 flex items-center justify-center mr-4 shrink-0">
+                    {getDocIcon(doc.type)}
+                  </div>
+                  <div className="flex-1 min-w-0 pr-4">
+                    <p className="text-sm font-bold text-white/90 truncate">{doc.name}</p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="text-[10px] font-mono text-white/70 uppercase truncate">{doc.type}</span>
+                      <span className="text-white/70 text-[10px]">•</span>
+                      <span className="text-[10px] font-mono text-blue-400/70 hover:text-blue-400 truncate">
+                        {doc.relatedId}
+                      </span>
+                    </div>
+                  </div>
+                  
+                  {!selectedDocId && (
+                    <span className="w-24 text-right text-xs font-mono text-white/70 shrink-0">
+                      {doc.size}
+                    </span>
+                  )}
+                  
+                  <div className="w-24 text-right shrink-0 flex justify-end">
+                    <span className={cn("px-2 py-0.5 rounded text-[9px] font-mono font-bold uppercase tracking-widest border", getStatusColor(doc.status))}>
+                      {doc.status}
+                    </span>
+                  </div>
+                </div>
+              ))}
+              
+              {filteredDocs.length === 0 && (
+                <div className="py-20 text-center">
+                  <FileSearch size={32} className="mx-auto text-white/10 mb-4" />
+                  <p className="text-xs font-mono text-white/80 uppercase tracking-widest">No documents found</p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* RIGHT: Document Viewer */}
+          <AnimatePresence>
+            {selectedDoc && (
+              <motion.div 
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 20 }}
+                className="lg:col-span-7 h-full flex flex-col glass rounded-4xl border border-white/10 overflow-hidden relative"
+              >
+                {/* Header Actions */}
+                <div className="p-6 border-b border-white/5 bg-white/2 flex justify-between items-start shrink-0">
                   <div>
-                    <h3 className="font-display font-medium">{selectedDoc.name}</h3>
-                    <p className="text-[10px] font-mono text-white/20 uppercase tracking-widest">PREVIEW MODE • READ ONLY</p>
+                    <h3 className="font-display font-medium text-lg mb-1">{selectedDoc.name}</h3>
+                    <div className="flex items-center gap-3 text-[10px] font-mono uppercase tracking-widest">
+                      <span className="text-white/70">{selectedDoc.type}</span>
+                      <span className="text-white/70">•</span>
+                      <span className="text-white/70">{new Date(selectedDoc.createdAt).toLocaleDateString()}</span>
+                      <span className="text-white/70">•</span>
+                      <span className="text-blue-400">{selectedDoc.relatedId}</span>
+                    </div>
                   </div>
                   <div className="flex gap-2">
-                    <button className="p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-colors">
-                      <Printer size={18} className="text-white/40" />
+                    {selectedDoc.status === 'DRAFT' && (
+                      <button onClick={() => handleAction(selectedDoc.id, 'sign')} disabled={isProcessing} className="p-2.5 rounded-xl bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 cursor-pointer border-none" title="Sign & Execute">
+                        <CheckCircle2 size={16} />
+                      </button>
+                    )}
+                    {selectedDoc.status === 'ARCHIVED' ? (
+                      <button onClick={() => handleAction(selectedDoc.id, 'restore')} disabled={isProcessing} className="p-2.5 rounded-xl bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 cursor-pointer border-none" title="Restore">
+                        <ArrowRight size={16} />
+                      </button>
+                    ) : (
+                      <button onClick={() => handleAction(selectedDoc.id, 'archive')} disabled={isProcessing} className="p-2.5 rounded-xl bg-white/5 text-white/70 hover:text-white hover:bg-white/10 cursor-pointer border-none" title="Archive">
+                        <Archive size={16} />
+                      </button>
+                    )}
+                    <button className="p-2.5 rounded-xl bg-white/5 text-white/70 hover:text-white hover:bg-white/10 cursor-pointer border-none" title="Print">
+                      <Printer size={16} />
                     </button>
-                    <button className="p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-colors" onClick={() => setSelectedDoc(null)}>
-                      <XCircle size={18} className="text-white/40" />
+                    <button onClick={() => handleDelete(selectedDoc.id)} disabled={isProcessing} className="p-2.5 rounded-xl bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 cursor-pointer border-none" title="Delete">
+                      <Trash2 size={16} />
+                    </button>
+                    <button onClick={() => setSelectedDocId(null)} className="p-2.5 rounded-xl bg-white/5 text-white/70 hover:text-white hover:bg-white/10 cursor-pointer border-none ml-2">
+                      <XCircle size={16} />
                     </button>
                   </div>
                 </div>
 
-                <div className="flex-1 bg-white p-12 overflow-y-auto m-6 rounded-2xl shadow-inner">
-                  {/* Mock Professional Document Layout */}
-                  <div className="text-black font-sans space-y-12">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <h1 className="text-3xl font-bold tracking-tighter mb-2">EXLOGIS</h1>
-                        <p className="text-xs uppercase font-bold tracking-widest text-gray-400">Global ERP Matrix</p>
+                {/* PDF Viewer Mockup */}
+                <div className="flex-1 overflow-y-auto p-4 md:p-8 bg-[#f5f5f5] custom-scrollbar">
+                  <div className="bg-white min-h-full shadow-2xl p-8 md:p-12 font-serif text-black max-w-[800px] mx-auto relative">
+                    
+                    {/* Watermarks based on status */}
+                    {selectedDoc.status === 'DRAFT' && (
+                      <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0 overflow-hidden">
+                        <div className="text-black/5 text-[150px] font-black -rotate-45 whitespace-nowrap select-none">DRAFT ONLY</div>
                       </div>
-                      <div className="text-right">
-                        <h2 className="text-xl font-bold uppercase mb-1">{selectedDoc.type}</h2>
-                        <p className="text-xs text-gray-500">Ref: {selectedDoc.id}</p>
-                        <p className="text-xs text-gray-500">Date: {selectedDoc.date}</p>
+                    )}
+                    {selectedDoc.status === 'ARCHIVED' && (
+                      <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0 overflow-hidden">
+                        <div className="text-red-900/5 text-[150px] font-black -rotate-45 whitespace-nowrap select-none">VOID / ARCHIVED</div>
                       </div>
-                    </div>
+                    )}
 
-                    <div className="grid grid-cols-2 gap-12 pt-8 border-t border-gray-100">
-                      <div>
-                        <p className="text-[10px] font-bold text-gray-400 uppercase mb-4">Shipper / Exporter</p>
-                        <div className="text-sm font-medium">
-                          ExLogis Industrial Solutions<br />
-                          100 Matrix Tower, Global Hub<br />
-                          Singapore 018989<br />
-                          Tel: +65 6777 8888
-                        </div>
-                      </div>
-                      <div>
-                        <p className="text-[10px] font-bold text-gray-400 uppercase mb-4">Consignee / Buyer</p>
-                        <div className="text-sm font-medium">
-                          Global Trade Solutions Inc.<br />
-                          450 Business Blvd, Suite 100<br />
-                          Los Angeles, CA 90001, USA<br />
-                          Tel: +1 555 0199
-                        </div>
-                      </div>
-                    </div>
-
-                    <table className="w-full text-left text-sm border-collapse">
-                      <thead>
-                        <tr className="border-y-2 border-black">
-                          <th className="py-4 font-bold">DESCRIPTION</th>
-                          <th className="py-4 font-bold text-center">QTY</th>
-                          <th className="py-4 font-bold text-right">PRICE</th>
-                          <th className="py-4 font-bold text-right">TOTAL</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-100">
-                        {Array.from({ length: 4 }).map((_, i) => (
-                          <tr key={i}>
-                            <td className="py-6">
-                              <p className="font-bold">Industrial Motor Control Sensor X{i+1}</p>
-                              <p className="text-[10px] text-gray-400">HSN: 8481.1000 • Origin: Singapore</p>
-                            </td>
-                            <td className="py-6 text-center">150 PCS</td>
-                            <td className="py-6 text-right">$45.00</td>
-                            <td className="py-6 text-right">$6,750.00</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                      <tfoot>
-                        <tr className="border-t-2 border-black font-bold">
-                          <td colSpan={3} className="py-6 text-right">TOTAL NET VALUE</td>
-                          <td className="py-6 text-right">$27,000.00</td>
-                        </tr>
-                        <tr className="text-gray-400 italic">
-                          <td colSpan={4} className="py-2 text-xs">Say: TWENTY-SEVEN THOUSAND US DOLLARS ONLY</td>
-                        </tr>
-                      </tfoot>
-                    </table>
-
-                    <div className="pt-12 border-t-2 border-gray-100">
-                      <div className="grid grid-cols-2 gap-12">
+                    <div className="relative z-10 space-y-10">
+                      {/* Standard Document Header */}
+                      <div className="flex justify-between items-start border-b-2 border-black pb-6">
                         <div>
-                          <p className="text-[10px] font-bold text-gray-400 uppercase mb-2">Incoterms</p>
-                          <p className="text-sm font-bold">FOB TOKYO PORT</p>
+                          <h1 className="text-3xl font-black tracking-tighter mb-1 uppercase font-sans">EXLOGIS</h1>
+                          <p className="text-[9px] uppercase font-bold tracking-widest text-gray-500 font-sans">Global Trade Management Matrix</p>
+                        </div>
+                        <div className="text-right">
+                          <h2 className="text-2xl font-bold uppercase mb-2 font-sans">{selectedDoc.type}</h2>
+                          <div className="text-xs space-y-1 font-sans">
+                            <p><span className="text-gray-500 mr-2 w-16 inline-block">Doc Ref:</span> <span className="font-bold">{selectedDoc.name}</span></p>
+                            <p><span className="text-gray-500 mr-2 w-16 inline-block">Date:</span> <span className="font-bold">{new Date(selectedDoc.createdAt).toLocaleDateString()}</span></p>
+                            <p><span className="text-gray-500 mr-2 w-16 inline-block">Order Ref:</span> <span className="font-bold">{selectedDoc.relatedId}</span></p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Parties */}
+                      <div className="grid grid-cols-2 gap-12 text-sm font-sans">
+                        <div>
+                          <p className="text-[10px] font-bold text-gray-500 uppercase mb-2">Shipper / Exporter</p>
+                          <p className="font-bold">{selectedDoc.shipper}</p>
+                          <p className="text-gray-600 mt-1">100 Matrix Tower, Global Hub<br/>Mumbai, MH 400001, India</p>
                         </div>
                         <div>
-                          <p className="text-[10px] font-bold text-gray-400 uppercase mb-2">Payment Terms</p>
-                          <p className="text-sm font-bold">30 DAYS NET</p>
+                          <p className="text-[10px] font-bold text-gray-500 uppercase mb-2">Consignee</p>
+                          <p className="font-bold">{selectedDoc.consignee}</p>
+                          <p className="text-gray-600 mt-1 whitespace-pre-line">{(selectedDoc as any).consigneeAddress || 'Address on file'}</p>
                         </div>
                       </div>
-                    </div>
 
-                    <div className="pt-24 text-center">
-                      <div className="inline-block border-t border-black px-12 py-2">
-                        <p className="text-[10px] font-bold uppercase">Authorized Signatory</p>
+                      {/* Terms (if applicable) */}
+                      {(selectedDoc.incoterm || selectedDoc.paymentTerms) && (
+                        <div className="grid grid-cols-3 gap-6 py-4 border-y border-gray-200 text-sm font-sans bg-gray-50 px-4">
+                          {selectedDoc.incoterm && (
+                            <div>
+                              <p className="text-[9px] font-bold text-gray-500 uppercase">Incoterms</p>
+                              <p className="font-bold">{selectedDoc.incoterm}</p>
+                            </div>
+                          )}
+                          {selectedDoc.paymentTerms && (
+                            <div>
+                              <p className="text-[9px] font-bold text-gray-500 uppercase">Payment Terms</p>
+                              <p className="font-bold">{selectedDoc.paymentTerms}</p>
+                            </div>
+                          )}
+                          {selectedDoc.containerType && (
+                            <div>
+                              <p className="text-[9px] font-bold text-gray-500 uppercase">Equip / Mode</p>
+                              <p className="font-bold">{selectedDoc.containerType}</p>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Items / Content Area */}
+                      {selectedDoc.items && selectedDoc.items.length > 0 ? (
+                        <div className="font-sans">
+                          <table className="w-full text-left text-sm border-collapse">
+                            <thead>
+                              <tr className="border-b-2 border-black">
+                                <th className="py-3 font-bold">No. & Description of Goods</th>
+                                <th className="py-3 font-bold text-right">Qty</th>
+                                <th className="py-3 font-bold text-right">Unit Price</th>
+                                <th className="py-3 font-bold text-right">Total Amount</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-200">
+                              {selectedDoc.items.map((it: any, i: number) => (
+                                <tr key={i}>
+                                  <td className="py-4 pr-4">
+                                    <p className="font-bold">{it.description}</p>
+                                    <p className="text-xs text-gray-500 mt-1">HSN: {it.hsn} | Origin: {it.origin}</p>
+                                  </td>
+                                  <td className="py-4 text-right whitespace-nowrap">{it.qty} {it.unit}</td>
+                                  <td className="py-4 text-right whitespace-nowrap">{formatCurrency(it.unitPrice, selectedDoc.currency)}</td>
+                                  <td className="py-4 text-right font-bold whitespace-nowrap">{formatCurrency(it.totalPrice, selectedDoc.currency)}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                            <tfoot>
+                              <tr className="border-t-2 border-black text-lg font-bold">
+                                <td colSpan={3} className="py-4 text-right">TOTAL VALUE ({selectedDoc.currency})</td>
+                                <td className="py-4 text-right">{formatCurrency(selectedDoc.totalValue || 0, selectedDoc.currency)}</td>
+                              </tr>
+                            </tfoot>
+                          </table>
+                        </div>
+                      ) : (
+                        <div className="min-h-[300px] border border-gray-200 bg-gray-50 p-8 flex items-center justify-center text-gray-400 text-sm font-sans uppercase tracking-widest text-center leading-relaxed">
+                          [ STANDARD FORMAT FOR {selectedDoc.type.toUpperCase()} ]<br/><br/>
+                          REFER TO ATTACHED SPECIFICATIONS<br/>
+                          AND RELATED TRANSACTION {selectedDoc.relatedId}
+                        </div>
+                      )}
+
+                      {/* Remarks */}
+                      {selectedDoc.remarks && (
+                        <div className="text-sm font-sans pt-4">
+                          <p className="font-bold text-[10px] uppercase text-gray-500 mb-1">Remarks / Declarations</p>
+                          <p>{selectedDoc.remarks}</p>
+                        </div>
+                      )}
+
+                      {/* Signatures */}
+                      <div className="pt-20 grid grid-cols-2 gap-12 font-sans">
+                        <div className="text-center">
+                          <div className="border-b border-black w-48 mx-auto mb-2 relative h-12">
+                            {selectedDoc.status === 'SIGNED' && (
+                              <div className="absolute bottom-1 left-0 right-0 text-blue-800 italic text-2xl font-serif opacity-80 transform -rotate-3">Authorized Signatory</div>
+                            )}
+                          </div>
+                          <p className="text-[10px] font-bold uppercase">For Shipper / Exporter</p>
+                        </div>
+                        <div className="text-center">
+                          <div className="border-b border-black w-48 mx-auto mb-2 h-12"></div>
+                          <p className="text-[10px] font-bold uppercase">For Consignee / Buyer</p>
+                        </div>
                       </div>
+
                     </div>
                   </div>
                 </div>
 
-                <div className="p-6 bg-white/5 rounded-b-[2.4rem] border-t border-white/5 flex justify-center gap-4">
-                  <button className="px-8 py-3 bg-blue-500 text-black rounded-xl text-[10px] font-mono font-bold uppercase tracking-widest hover:bg-blue-400 transition-all flex items-center gap-2">
-                    <Download size={14} /> Download Secure PDF
+                {/* Footer Action */}
+                <div className="p-4 border-t border-white/5 bg-white/5 shrink-0 flex justify-end gap-3">
+                  <button className="px-6 py-2.5 bg-white/10 text-white rounded-xl text-xs font-mono font-bold uppercase hover:bg-white/20 transition-colors border-none cursor-pointer">
+                    Share Link
                   </button>
-                  <button className="px-8 py-3 bg-white/5 border border-white/10 rounded-xl text-[10px] font-mono font-bold uppercase tracking-widest hover:bg-white/10 transition-all">
-                    Share Matrix Link
+                  <button className="px-6 py-2.5 bg-blue-500 text-black rounded-xl text-xs font-mono font-bold uppercase hover:bg-blue-400 transition-colors border-none cursor-pointer flex items-center gap-2">
+                    <Download size={14} /> Download PDF
                   </button>
                 </div>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
       </div>
     </MasterPage>
   );
 }
-

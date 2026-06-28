@@ -66,3 +66,5 @@ export const taskRepository = new Repository(db.tasks);
 export const calendarEventRepository = new Repository(db.calendarEvents);
 export const notificationRepository = new Repository(db.notifications);
 export const auditLogRepository = new Repository(db.auditLogs);
+export const documentRepository = new Repository(db.documents);
+export const costingScenarioRepository = new Repository(db.costingScenarios);

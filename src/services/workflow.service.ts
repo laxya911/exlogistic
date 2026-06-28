@@ -56,7 +56,14 @@ class WorkflowService {
       eta: new Date(Date.now() + 21 * 86400000).toISOString(),
       containerType: '20GP',
       status: 'BOOKING',
-      timeline: [{ status: 'BOOKING', date: new Date().toISOString(), comment: 'Initial booking created' }]
+      timeline: [{
+        id: `EV-${Math.random().toString(36).substr(2, 9)}`,
+        date: new Date().toISOString(),
+        type: 'BOOKING' as const,
+        title: 'Shipment Booking Created',
+        description: 'Initial booking created from Sales Order.',
+        userId: 'USR-001'
+      }]
     };
 
     return shipmentRepository.create(shipmentData);

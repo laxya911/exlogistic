@@ -9,12 +9,48 @@
 :root {
   --background: #080808;
   --foreground: #ffffff;
+  
+  --text-primary: #ffffff;
+  --text-secondary: rgba(255, 255, 255, 0.7);
+  --text-muted: rgba(255, 255, 255, 0.5);
+  
+  --btn-primary-bg: #3b82f6;
+  --btn-primary-text: #000000;
+  
+  --link-color: #3b82f6;
+  --link-hover: #60a5fa;
 }
 
 body {
   background: var(--background);
-  color: var(--foreground);
+  color: var(--text-primary);
   font-family: var(--font-sans);
+}
+
+@layer components {
+  .btn-primary {
+    @apply px-6 py-2.5 rounded-xl text-[10px] font-mono font-bold uppercase tracking-widest transition-all cursor-pointer border-none;
+    background-color: var(--btn-primary-bg);
+    color: var(--btn-primary-text);
+  }
+  .btn-primary:hover {
+    opacity: 0.9;
+  }
+  .link {
+    color: var(--link-color);
+    text-decoration: none;
+    transition: color 0.2s;
+  }
+  .link:hover {
+    color: var(--link-hover);
+    text-decoration: underline;
+  }
+  .text-muted {
+    color: var(--text-muted);
+  }
+  .text-secondary {
+    color: var(--text-secondary);
+  }
 }
 
 .glass {

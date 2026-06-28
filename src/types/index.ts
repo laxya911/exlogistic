@@ -2,7 +2,16 @@ export interface BaseEntity {
   id: string;
   createdAt: string;
   updatedAt: string;
-  entityStatus: 'ACTIVE' | 'INACTIVE' | 'ARCHIVED';
+  entityStatus: 'ACTIVE' | 'INACTIVE' | 'ARCHIVED' | 'DELETED';
+}
+
+export interface ProductTimelineEvent {
+  id: string;
+  date: string;
+  type: 'CREATED' | 'UPDATED' | 'ARCHIVED' | 'RESTORED' | 'PRICE_CHANGED' | 'SUPPLIER_CHANGED' | 'DOCUMENT_ADDED' | 'IMAGE_UPDATED';
+  title: string;
+  description: string;
+  userId: string;
 }
 
 // Master Data
@@ -11,19 +20,45 @@ export interface Product extends BaseEntity {
   name: string;
   description?: string;
   category: string;
-  uom: string;
-  hsnCode?: string;
-  weight: number; // kg
-  volume: number; // cbm
   brand: string;
-  supplierId: string;
-  shelfLife?: string;
+  countryOfOrigin: string;
+  hsnCode: string;
+  uom: string;
+  
+  // Commercial
+  purchasePrice: number;
+  sellingPrice: number;
+  currency: string;
+  moq: number;
+  leadTime: number; // in days
+
+  // Packaging
+  packageType: string;
+  unitsPerCarton: number;
+  grossWeight: number; // in kg
+  netWeight: number; // in kg
+  cbm: number; // cubic meters
+  containerLoadingCapacity: number; // e.g. units in 20GP
+
+  // Compliance
+  shelfLife: string;
+  storageConditions: string;
+  certifications: string[];
+  japanImportNotes?: string;
+
+  // Relationships
+  supplierId: string; // Default Supplier
+  preferredForwarderId?: string;
+  defaultPackagingType?: string;
   images: string[];
+  documents: DocumentRef[];
+  
+  // History & Tracking
+  timeline: ProductTimelineEvent[];
   purchaseHistory: PurchaseHistoryEntry[];
   sellingHistory: SellingHistoryEntry[];
   inventorySummary: InventoryLocation[];
   pricingHistory: PricingHistoryEntry[];
-  documents: DocumentRef[];
   notes?: string;
 }
 
@@ -71,10 +106,10 @@ export interface Contact {
   isPrimary: boolean;
 }
 
-export interface TimelineEvent {
+export interface CustomerTimelineEvent {
   id: string;
   date: string;
-  type: 'CALL' | 'EMAIL' | 'MEETING' | 'NOTE';
+  type: 'CREATED' | 'UPDATED' | 'CREDIT_LIMIT_CHANGED' | 'STATUS_CHANGED' | 'COMMUNICATION_LOGGED' | 'DOCUMENT_ADDED' | 'ARCHIVED' | 'RESTORED';
   title: string;
   description: string;
   userId: string;
@@ -89,10 +124,25 @@ export interface Customer extends BaseEntity {
   contacts: Contact[];
   creditLimit: number;
   paymentTerms: string;
-  communicationTimeline: TimelineEvent[];
   notes?: string;
   website?: string;
   taxId?: string;
+  
+  // Custom Additions for CRM & Compliance
+  segment: 'PREMIUM' | 'STANDARD' | 'LOW_VOLUME';
+  accountManagerId: string; // e.g. operator ID
+  preferredDischargePortId: string; // Port ID from ports index
+  documents: DocumentRef[];
+  timeline: CustomerTimelineEvent[];
+}
+
+export interface SupplierTimelineEvent {
+  id: string;
+  date: string;
+  type: 'CREATED' | 'UPDATED' | 'LEAD_TIME_CHANGED' | 'RATING_CHANGED' | 'STATUS_CHANGED' | 'COMMUNICATION_LOGGED' | 'DOCUMENT_ADDED' | 'ARCHIVED' | 'RESTORED';
+  title: string;
+  description: string;
+  userId: string;
 }
 
 export interface Supplier extends BaseEntity {
@@ -102,21 +152,49 @@ export interface Supplier extends BaseEntity {
   address: string;
   country: string;
   contacts: Contact[];
-  performanceRating: number; // 1-5
+  notes?: string;
+  website?: string;
+  taxId?: string;
+
+  // Performance & Compliance
+  performanceRating: number; // 1.0 to 5.0
   averageLeadTime: number; // days
   certifications: string[];
+  
+  // Relationships
   productsSuppliedIds: string[];
   paymentTerms: string;
   documents: DocumentRef[];
+  timeline: SupplierTimelineEvent[];
+}
+
+export interface ForwarderTimelineEvent {
+  id: string;
+  date: string;
+  type: 'CREATED' | 'UPDATED' | 'RATING_CHANGED' | 'PORT_ADDED' | 'STATUS_CHANGED' | 'COMMUNICATION_LOGGED' | 'DOCUMENT_ADDED' | 'ARCHIVED' | 'RESTORED';
+  title: string;
+  description: string;
+  userId: string;
 }
 
 export interface Forwarder extends BaseEntity {
   name: string;
-  contactPerson: string;
   email: string;
   phone: string;
-  rating: number;
-  preferredPorts: string[];
+  address: string;
+  country: string;
+  contacts: Contact[];
+  notes?: string;
+  website?: string;
+  taxId?: string;
+
+  // Shipping details
+  rating: number; // 1.0 to 5.0
+  preferredPorts: string[]; // Port IDs from ports index
+  
+  // Relationships
+  documents: DocumentRef[];
+  timeline: ForwarderTimelineEvent[];
 }
 
 export interface ShippingLine extends BaseEntity {
@@ -151,6 +229,15 @@ export interface PurchaseCost extends BaseEntity {
 // Sprint 7: Quotations & Orders
 export type QuotationStatus = 'DRAFT' | 'SENT' | 'REVISED' | 'APPROVED' | 'REJECTED' | 'EXPIRED';
 
+export interface QuotationTimelineEvent {
+  id: string;
+  date: string;
+  type: 'CREATED' | 'UPDATED' | 'SENT' | 'REVISED' | 'APPROVED' | 'REJECTED' | 'EXPIRED' | 'STATUS_CHANGED' | 'COMMUNICATION_LOGGED' | 'DOCUMENT_ADDED' | 'ARCHIVED' | 'RESTORED';
+  title: string;
+  description: string;
+  userId: string;
+}
+
 export interface Quotation extends BaseEntity {
   quotationNo: string;
   customerId: string;
@@ -169,6 +256,8 @@ export interface Quotation extends BaseEntity {
   status: QuotationStatus;
   version: number;
   remarks?: string;
+  timeline: QuotationTimelineEvent[];
+  documents: DocumentRef[];
 }
 
 export interface QuotationItem {
@@ -180,6 +269,15 @@ export interface QuotationItem {
 
 export type SalesOrderStatus = 'PENDING' | 'CONFIRMED' | 'PRODUCTION' | 'READY' | 'SHIPPED' | 'CANCELLED';
 
+export interface SalesOrderTimelineEvent {
+  id: string;
+  date: string;
+  type: 'CREATED' | 'CONFIRMED' | 'PRODUCTION_STARTED' | 'READY_FOR_SHIPMENT' | 'SHIPPED' | 'CANCELLED' | 'UPDATED' | 'DOCUMENT_ADDED' | 'NOTE_ADDED' | 'ARCHIVED' | 'RESTORED';
+  title: string;
+  description: string;
+  userId: string;
+}
+
 export interface SalesOrder extends BaseEntity {
   orderNo: string;
   quotationId?: string;
@@ -188,56 +286,113 @@ export interface SalesOrder extends BaseEntity {
   expectedShipmentDate: string;
   items: QuotationItem[];
   totalValue: number;
+  marginPercentage?: number;
+  currency?: string;
+  exchangeRate?: number;
+  incoterm?: string;
+  paymentTerms?: string;
+  originPortId?: string;
+  destinationPortId?: string;
+  containerType?: string;
   status: SalesOrderStatus;
+  remarks?: string;
+  timeline: SalesOrderTimelineEvent[];
+  documents: DocumentRef[];
 }
 
-export type PurchaseOrderStatus = 'DRAFT' | 'ISSUED' | 'RECEIVED' | 'CANCELLED';
+export type PurchaseOrderStatus = 'DRAFT' | 'ISSUED' | 'ACKNOWLEDGED' | 'IN_PRODUCTION' | 'DISPATCHED' | 'RECEIVED' | 'CANCELLED';
+
+export interface PurchaseOrderTimelineEvent {
+  id: string;
+  date: string;
+  type: 'CREATED' | 'ISSUED' | 'ACKNOWLEDGED' | 'IN_PRODUCTION' | 'DISPATCHED' | 'RECEIVED' | 'CANCELLED' | 'UPDATED' | 'NOTE_ADDED' | 'DOCUMENT_ADDED' | 'ARCHIVED' | 'RESTORED';
+  title: string;
+  description: string;
+  userId: string;
+}
 
 export interface PurchaseOrder extends BaseEntity {
   poNo: string;
+  salesOrderId?: string;      // link back to the triggering SO if any
   supplierId: string;
   date: string;
   expectedDeliveryDate: string;
+  actualDeliveryDate?: string;
   items: QuotationItem[];
   totalValue: number;
+  currency?: string;
+  exchangeRate?: number;
+  paymentTerms?: string;
+  deliveryTerms?: string;     // e.g. Ex-Factory, FOR, CIF
+  qualitySpec?: string;       // brief quality / grade notes
+  packagingSpec?: string;     // packaging instructions
   status: PurchaseOrderStatus;
+  remarks?: string;
+  timeline: PurchaseOrderTimelineEvent[];
+  documents: DocumentRef[];
 }
 
 // Sprint 7: Shipments & Logistics
-export type ShipmentStatus = 
-  | 'BOOKING' 
-  | 'STUFFING' 
-  | 'CUSTOMS' 
-  | 'ON_VESSEL' 
-  | 'TRANSIT' 
-  | 'ARRIVED' 
-  | 'DELIVERED' 
-  | 'COMPLETED';
+export type ShipmentStatus =
+  | 'BOOKING'
+  | 'STUFFING'
+  | 'CUSTOMS'
+  | 'ON_VESSEL'
+  | 'TRANSIT'
+  | 'ARRIVED'
+  | 'DELIVERED'
+  | 'COMPLETED'
+  | 'CANCELLED';
+
+export interface ShipmentTimelineEvent {
+  id: string;
+  date: string;
+  type: 'BOOKING' | 'STUFFING' | 'CUSTOMS' | 'ON_VESSEL' | 'TRANSIT' | 'ARRIVED' | 'DELIVERED' | 'COMPLETED' | 'CANCELLED' | 'NOTE_ADDED' | 'DOCUMENT_ADDED' | 'UPDATED';
+  title: string;
+  description: string;
+  userId: string;
+}
+
+export interface ShipmentFreightCost {
+  oceanFreight: number;
+  originCharges: number;       // CFS, handling, stuffing
+  destinationCharges: number;  // THC, port fees
+  insurance: number;
+  customsBrokerage?: number;
+  miscCharges?: number;
+}
 
 export interface Shipment extends BaseEntity {
   shipmentNo: string;
-  orderId: string;
+  orderId: string;              // linked Sales Order
   containerNo?: string;
-  bookingNo?: string;
+  bookingNo?: string;           // forwarder booking ref
+  mbl?: string;                 // Master Bill of Lading
+  hbl?: string;                 // House Bill of Lading
   shippingLineId: string;
+  vesselName?: string;
+  voyageNo?: string;
   forwarderId: string;
+  forwarderRefNo?: string;
   originPortId: string;
   destinationPortId: string;
   etd: string;
   eta: string;
+  atd?: string;                 // Actual time of departure
+  ata?: string;                 // Actual time of arrival
   containerType: string;
   grossWeight: number;
   netWeight: number;
   cbm: number;
+  packageCount?: number;
   sealNo?: string;
+  hazmat?: boolean;
+  freightCost?: ShipmentFreightCost;
+  totalFreightCost?: number;
   status: ShipmentStatus;
+  remarks?: string;
   timeline: ShipmentTimelineEvent[];
-}
-
-export interface ShipmentTimelineEvent {
-  status: ShipmentStatus;
-  date: string;
-  comment?: string;
+  documents: DocumentRef[];
 }
 
 // Sprint 7: Tasks
@@ -295,4 +450,84 @@ export interface DashboardStats {
   profitTrend: { month: string; value: number }[];
   shipmentPipeline: { status: string; count: number }[];
   countryDistribution: { country: string; value: number }[];
+}
+
+export interface ERPDocument extends BaseEntity {
+  name: string;
+  type: string;
+  url: string;
+  size: string;
+  status: 'DRAFT' | 'SIGNED' | 'ARCHIVED';
+  relatedId?: string;
+  relatedType?: string;
+  shipper?: string;
+  consignee?: string;
+  consigneeAddress?: string;
+  items?: any[];
+  totalValue?: number;
+  currency?: string;
+  incoterm?: string;
+  paymentTerms?: string;
+  containerType?: string;
+  remarks?: string;
+}
+
+// Costing Engine
+export interface CostingScenarioItem {
+  productId: string;
+  quantity: number;
+  unitPurchasePrice: number;
+  totalProductCost: number;
+}
+
+export interface CostingScenarioFreight {
+  originPort: string;
+  destinationPort: string;
+  containerType: string;    // 20GP, 40GP, 40HQ
+  containerCount: number;
+  oceanFreightPerContainer: number;  // USD per container
+  originHandling: number;
+  destinationHandling: number;
+  totalFreight: number;
+}
+
+export interface CostingScenarioCosts {
+  productCost: number;
+  freightCost: number;
+  insuranceAmount: number;  // % of productCost
+  customsDuty: number;      // % of productCost + freight (CIF value)
+  inspection: number;
+  bankingCharges: number;
+  miscCharges: number;
+  totalLandedCost: number;
+}
+
+export interface CostingScenarioResult {
+  costPerUnit: number;
+  targetSellingPricePerUnit: number;
+  grossProfitPerUnit: number;
+  totalRevenue: number;
+  totalGrossProfit: number;
+  grossMarginPct: number;
+  breakEvenQty: number;
+}
+
+export interface CostingScenario extends BaseEntity {
+  scenarioName: string;
+  description?: string;
+  supplierId?: string;
+  items: CostingScenarioItem[];
+  freight: CostingScenarioFreight;
+  costs: CostingScenarioCosts;
+  rates: {
+    insuranceRate: number;   // %
+    customsRate: number;     // %
+    targetMargin: number;    // %
+    bankingRate: number;     // %
+  };
+  result: CostingScenarioResult;
+  currency: string;
+  exchangeRate: number;
+  tags?: string[];
+  isFavourite?: boolean;
 }
