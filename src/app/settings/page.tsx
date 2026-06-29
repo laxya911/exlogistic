@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Building2, 
   ShieldCheck, 
@@ -17,12 +17,16 @@ import {
   Monitor,
   Mail,
   Smartphone,
-  Check
+  Check,
+  Coins,
+  Scale,
+  Receipt
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { MasterPage } from '@/components/layout/master-page';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { ReferenceManager } from '@/components/settings/ReferenceManager';
 
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState('organization');
@@ -30,11 +34,12 @@ export default function SettingsPage() {
 
   // Form States (Simulated)
   const [orgData, setOrgData] = useState({
-    name: 'ExLogis Global ERP',
-    taxId: 'TAX-8899-002',
-    address: '100 Matrix Tower, Global Hub, Singapore',
-    timezone: 'Asia/Singapore',
-    currency: 'USD'
+    id: '',
+    name: '',
+    taxId: '',
+    address: '',
+    timezone: '',
+    currency: ''
   });
 
   const [rules, setRules] = useState({
@@ -45,16 +50,17 @@ export default function SettingsPage() {
   });
 
   const [prefixes, setPrefixes] = useState({
-    quote: '2025-',
-    so: 'SO-',
-    po: 'PO-',
-    shp: 'SHP-'
+    quote: '',
+    so: '',
+    po: '',
+    shp: ''
   });
 
   const [sysPrefs, setSysPrefs] = useState({
-    theme: 'dark',
+    id: '',
+    theme: '',
     compactMode: false,
-    dateFormat: 'YYYY-MM-DD'
+    dateFormat: ''
   });
 
   const [notifications, setNotifications] = useState({
@@ -64,21 +70,121 @@ export default function SettingsPage() {
     emailDailyReport: false
   });
 
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const [compRes, prefRes] = await Promise.all([
+          fetch('/api/company'),
+          fetch('/api/preferences')
+        ]);
+        
+        if (compRes.ok) {
+          const comp = await compRes.json();
+          if (comp) {
+            setOrgData({
+              id: comp.id,
+              name: comp.name || '',
+              taxId: comp.taxId || '',
+              address: (comp.branches && comp.branches[0]?.address) || '',
+              timezone: comp.timezone || '',
+              currency: comp.currency || ''
+            });
+          }
+        }
+        
+        if (prefRes.ok) {
+          const pref = await prefRes.json();
+          if (pref) {
+            setSysPrefs({
+              id: pref.id,
+              theme: pref.theme || 'dark',
+              compactMode: pref.compactMode || false,
+              dateFormat: pref.dateFormat || 'YYYY-MM-DD'
+            });
+            setPrefixes({
+              quote: pref.quotePrefix || '',
+              so: pref.soPrefix || '',
+              po: pref.poPrefix || '',
+              shp: pref.shpPrefix || ''
+            });
+            setRules({
+              quoteApproval: pref.quoteApproval ?? true,
+              autoPoGen: pref.autoPoGen ?? true,
+              marginAlert: pref.marginAlert ?? false,
+              requireInsurance: pref.requireInsurance ?? true
+            });
+            setNotifications({
+              emailPO: pref.emailPO ?? true,
+              emailSO: pref.emailSO ?? true,
+              pushShipment: pref.pushShipment ?? true,
+              emailDailyReport: pref.emailDailyReport ?? false
+            });
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching settings:', error);
+      }
+    };
+    fetchSettings();
+  }, []);
+
   const tabs = [
     { id: 'organization', label: 'Organization', icon: Building2 },
     { id: 'business-rules', label: 'Business Rules', icon: ShieldCheck },
     { id: 'logistics', label: 'Logistics Matrix', icon: Truck },
     { id: 'system', label: 'System Prefs', icon: AppWindow },
     { id: 'notifications', label: 'Alert Routing', icon: Bell },
+    { id: 'roles', label: 'Roles & Security', icon: ShieldCheck },
   ];
 
-  const handleSave = () => {
+  const handleSave = async () => {
     setIsSaving(true);
-    // Simulate API network delay
-    setTimeout(() => {
-      setIsSaving(false);
+    try {
+      const compPayload = {
+        id: orgData.id,
+        name: orgData.name,
+        taxId: orgData.taxId,
+        timezone: orgData.timezone,
+        currency: orgData.currency,
+      };
+      
+      const prefPayload = {
+        id: sysPrefs.id,
+        theme: sysPrefs.theme,
+        compactMode: sysPrefs.compactMode,
+        dateFormat: sysPrefs.dateFormat,
+        quotePrefix: prefixes.quote,
+        soPrefix: prefixes.so,
+        poPrefix: prefixes.po,
+        shpPrefix: prefixes.shp,
+        quoteApproval: rules.quoteApproval,
+        autoPoGen: rules.autoPoGen,
+        marginAlert: rules.marginAlert,
+        requireInsurance: rules.requireInsurance,
+        emailPO: notifications.emailPO,
+        emailSO: notifications.emailSO,
+        pushShipment: notifications.pushShipment,
+        emailDailyReport: notifications.emailDailyReport,
+      };
+
+      await Promise.all([
+        fetch('/api/company', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(compPayload)
+        }),
+        fetch('/api/preferences', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(prefPayload)
+        })
+      ]);
       toast.success('Configuration synchronized to core matrix');
-    }, 800);
+    } catch (error) {
+      toast.error('Failed to synchronize configuration');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -268,34 +374,62 @@ export default function SettingsPage() {
 
               {/* Logistics Matrix Tab */}
               {activeTab === 'logistics' && (
-                <>
-                  <div className="glass p-8 lg:p-10 rounded-[2.5rem] border border-white/5">
-                    <div className="flex justify-between items-center mb-8">
-                      <h3 className="text-xl font-display font-medium">Standard Port Access</h3>
-                      <button className="text-[9px] font-mono uppercase tracking-widest text-blue-400 border border-blue-400/20 px-3 py-1 rounded-lg hover:bg-blue-400/10 transition-colors bg-transparent cursor-pointer">Manage Ports</button>
-                    </div>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                      {['IN NHV', 'IN MUN', 'US LAX', 'US NYC', 'JP TYO', 'SG SIN', 'DE HAM', 'AE DXB'].map((port, i) => (
-                        <div key={i} className="flex items-center justify-center gap-3 p-4 rounded-xl bg-white/5 border border-white/5">
-                          <Anchor size={14} className="text-blue-500/60" />
-                          <span className="text-[10px] font-mono font-bold tracking-widest">{port}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
+                <div className="space-y-6">
+                  <ReferenceManager 
+                    title="Currencies"
+                    type="currencies"
+                    icon={Coins}
+                    fields={[
+                      { key: 'code', label: 'Code', type: 'text' },
+                      { key: 'symbol', label: 'Symbol', type: 'text' },
+                      { key: 'exchangeRate', label: 'Exchange Rate', type: 'number' },
+                      { key: 'isDefault', label: 'Is Default', type: 'boolean' },
+                    ]}
+                  />
 
-                  <div className="glass p-8 lg:p-10 rounded-[2.5rem] border border-white/5">
-                    <h3 className="text-xl font-display font-medium mb-8">Container Unit Types</h3>
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                      {['20GP Standard', '40GP Standard', '40HQ High Cube', '20RF Reefer', '40RF Reefer', 'LCL Cargo'].map((type, i) => (
-                        <div key={i} className="flex items-center gap-4 p-4 rounded-xl bg-white/5 border border-white/5">
-                          <Box size={14} className="text-emerald-500/60 shrink-0" />
-                          <span className="text-[10px] font-mono tracking-widest">{type}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </>
+                  <ReferenceManager 
+                    title="Container Types"
+                    type="containers"
+                    icon={Box}
+                    fields={[
+                      { key: 'code', label: 'Code', type: 'text' },
+                      { key: 'description', label: 'Description', type: 'text' },
+                      { key: 'teu', label: 'TEU', type: 'number' },
+                      { key: 'maxWeight', label: 'Max Weight', type: 'number' },
+                    ]}
+                  />
+
+                  <ReferenceManager 
+                    title="Incoterms"
+                    type="incoterms"
+                    icon={Truck}
+                    fields={[
+                      { key: 'code', label: 'Code', type: 'text' },
+                      { key: 'description', label: 'Description', type: 'text' },
+                    ]}
+                  />
+                  
+                  <ReferenceManager 
+                    title="Measurement Units"
+                    type="units"
+                    icon={Scale}
+                    fields={[
+                      { key: 'code', label: 'Code', type: 'text' },
+                      { key: 'name', label: 'Name', type: 'text' },
+                      { key: 'type', label: 'Type (WEIGHT/VOLUME)', type: 'text' },
+                    ]}
+                  />
+
+                  <ReferenceManager 
+                    title="Tax Settings"
+                    type="taxes"
+                    icon={Receipt}
+                    fields={[
+                      { key: 'name', label: 'Name', type: 'text' },
+                      { key: 'ratePercentage', label: 'Rate %', type: 'number' },
+                    ]}
+                  />
+                </div>
               )}
 
               {/* System Prefs Tab */}
@@ -413,6 +547,56 @@ export default function SettingsPage() {
                       </div>
                     </div>
 
+                  </div>
+                </div>
+              )}
+
+              {/* Roles & Security Tab */}
+              {activeTab === 'roles' && (
+                <div className="glass p-8 lg:p-10 rounded-[2.5rem] border border-white/5">
+                  <div className="flex justify-between items-center mb-8">
+                    <div>
+                      <h3 className="text-xl font-display font-medium">Roles & Security</h3>
+                      <p className="text-[10px] font-mono text-white/50 uppercase tracking-widest mt-2">Access Control Matrix</p>
+                    </div>
+                    <a href="/settings/users" className="bg-blue-600 hover:bg-blue-500 text-white px-5 py-2.5 rounded-xl text-sm font-medium transition-all shadow-[0_0_20px_rgba(37,99,235,0.2)]">
+                      Manage Users Matrix
+                    </a>
+                  </div>
+                  
+                  <div className="space-y-6">
+                    <div className="p-6 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-between">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <ShieldCheck size={16} className="text-emerald-400" />
+                          <span className="font-bold">Super Admin</span>
+                        </div>
+                        <p className="text-xs text-white/60 mt-1">Unrestricted access to all modules and system settings.</p>
+                      </div>
+                      <span className="px-3 py-1 bg-emerald-500/10 text-emerald-400 text-[10px] font-mono uppercase rounded border border-emerald-500/20">System Role</span>
+                    </div>
+
+                    <div className="p-6 rounded-2xl bg-white/2 border border-white/5 flex items-center justify-between">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <ShieldCheck size={16} className="text-blue-400" />
+                          <span className="font-bold">Manager</span>
+                        </div>
+                        <p className="text-xs text-white/60 mt-1">Department-level manager with elevated privileges.</p>
+                      </div>
+                      <button className="text-xs text-blue-400 hover:text-blue-300 font-medium">Edit Permissions</button>
+                    </div>
+
+                    <div className="p-6 rounded-2xl bg-white/2 border border-white/5 flex items-center justify-between">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <ShieldCheck size={16} className="text-white/60" />
+                          <span className="font-bold text-white/80">Staff</span>
+                        </div>
+                        <p className="text-xs text-white/60 mt-1">General operational staff with standard access.</p>
+                      </div>
+                      <button className="text-xs text-blue-400 hover:text-blue-300 font-medium">Edit Permissions</button>
+                    </div>
                   </div>
                 </div>
               )}

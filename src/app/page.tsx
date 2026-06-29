@@ -1,393 +1,184 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { 
-  BarChart3, 
-  Package, 
-  Ship, 
-  Anchor, 
-  Calculator, 
-  TrendingUp,
-  Box,
-  Truck,
-  Globe,
-  Bell,
-  CheckCircle2,
-  ListTodo,
-  FileText,
-  Clock,
-  ArrowUpRight,
-  ChevronRight,
-  History,
-  RefreshCw
-} from 'lucide-react';
-import { 
-  BarChart, 
-  Bar, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-  AreaChart,
-  Area
-} from 'recharts';
-import { motion, AnimatePresence } from 'motion/react';
+import React from 'react';
 import Link from 'next/link';
-import { MasterPage } from '@/components/layout/master-page';
-import { formatCurrency, cn } from '@/lib/utils';
-import { toast } from 'sonner';
+import { useSession } from 'next-auth/react';
+import { motion } from 'motion/react';
+import { ArrowRight, Globe, Shield, Zap, Terminal } from 'lucide-react';
 
-export default function Dashboard() {
-  const [data, setData] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-  const [isRefreshing, setIsRefreshing] = useState(false);
-
-  useEffect(() => {
-    fetchDashboardData();
-  }, []);
-
-  const fetchDashboardData = async () => {
-    try {
-      const res = await fetch('/api/dashboard/operational');
-      const json = await res.json();
-      setData(json);
-    } catch (e) {
-      toast.error('Failed to sync with matrix');
-    } finally {
-      setLoading(false);
-      setIsRefreshing(false);
-    }
-  };
-
-  const handleRefresh = () => {
-    setIsRefreshing(true);
-    fetchDashboardData();
-  };
-
-  const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#6366f1', '#8b5cf6'];
-
-  if (loading || !data) {
-    return (
-      <div className="min-h-screen bg-[#080808] flex items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-          <p className="text-[10px] font-mono uppercase tracking-[0.3em] text-white/70">Initiating Neural Uplink...</p>
-        </div>
-      </div>
-    );
-  }
-
-  const kpis = [
-    { label: 'Total Revenue', value: formatCurrency(data.stats.revenue), icon: TrendingUp, color: 'text-blue-500', bg: 'bg-blue-500/10' },
-    { label: 'Total Profit', value: formatCurrency(data.stats.profit), icon: BarChart3, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
-    { label: 'Active Shipments', value: data.stats.shipmentsInProgress, icon: Ship, color: 'text-indigo-500', bg: 'bg-indigo-500/10' },
-    { label: 'Total Containers', value: data.stats.containers, icon: Box, color: 'text-violet-500', bg: 'bg-violet-500/10' },
-  ];
+export default function LandingPage() {
+  const { data: session, status } = useSession();
 
   return (
-    <MasterPage 
-      title="ExLogis Executive" 
-      subtitle="Matrix Command Center"
-      loading={loading}
-    >
-      <div className="space-y-8 pb-20">
-        {/* Top Header Actions */}
-        <div className="flex justify-end mb-4">
-          <button 
-            onClick={handleRefresh}
-            disabled={isRefreshing}
-            className="flex items-center gap-2 px-6 py-2.5 bg-white/5 border border-white/10 rounded-xl text-[10px] font-mono font-bold uppercase tracking-widest hover:bg-white/10 transition-colors cursor-pointer disabled:opacity-50"
-          >
-            <RefreshCw size={14} className={cn(isRefreshing && "animate-spin text-blue-500")} /> 
-            {isRefreshing ? 'Syncing...' : 'Sync Matrix'}
-          </button>
-        </div>
+    <div className="min-h-screen bg-black text-white overflow-hidden selection:bg-blue-500/30">
+      
+      {/* Background Ambience */}
+      <div className="fixed inset-0 z-0 pointer-events-none">
+        <div className="absolute top-0 left-1/4 w-[800px] h-[800px] bg-blue-600/10 rounded-full blur-[120px] mix-blend-screen transform -translate-y-1/2" />
+        <div className="absolute bottom-0 right-1/4 w-[600px] h-[600px] bg-violet-600/10 rounded-full blur-[100px] mix-blend-screen transform translate-y-1/2" />
+        <div className="absolute inset-0 bg-[url('/grid.svg')] bg-center [mask-image:linear-gradient(180deg,white,rgba(255,255,255,0))]" />
+      </div>
 
-        {/* KPI Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {kpis.map((kpi, i) => (
-            <motion.div 
-              key={i}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.1 }}
-              className="glass p-8 rounded-4xl border border-white/5 relative overflow-hidden group hover:border-white/10 transition-colors"
-            >
-              <div className="flex justify-between items-start mb-6">
-                <div className={`p-3 rounded-xl ${kpi.bg} ${kpi.color}`}>
-                  <kpi.icon size={22} />
-                </div>
-                <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                  <ArrowUpRight size={14} className="text-white/70" />
-                </div>
-              </div>
-              <p className="text-3xl font-display font-medium tracking-tight mb-2 text-white">{kpi.value}</p>
-              <p className="text-[10px] font-mono uppercase tracking-[0.2em] text-white/70">{kpi.label}</p>
-              
-              <div className="absolute bottom-0 left-0 w-full h-1 bg-linear-to-r from-transparent via-white/5 to-transparent scale-x-0 group-hover:scale-x-100 transition-transform duration-700"></div>
-            </motion.div>
-          ))}
-        </div>
-
-        {/* Charts Row */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-          {/* Revenue Trend */}
-          <div className="lg:col-span-8 glass p-8 lg:p-10 rounded-[2.5rem] border border-white/5">
-            <div className="flex justify-between items-center mb-10">
-              <div>
-                <h3 className="text-xl font-display font-medium mb-1">Revenue & Profit Trend</h3>
-                <p className="text-[10px] font-mono text-white/70 uppercase tracking-widest">Financial Performance Index</p>
-              </div>
-              <Link href="/reports" className="text-[10px] font-mono uppercase text-blue-500 hover:underline">Full Analytics</Link>
+      {/* Header */}
+      <header className="fixed top-0 w-full z-50 border-b border-white/5 bg-black/50 backdrop-blur-xl">
+        <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-linear-to-tr from-blue-600 to-cyan-400 rotate-12 flex items-center justify-center shadow-lg shadow-blue-500/20">
+              <div className="w-3 h-3 bg-white rounded-sm -rotate-12" />
             </div>
-
-            <div className="h-[350px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={data.charts.revenueTrend}>
-                  <defs>
-                    <linearGradient id="colorRev" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3}/>
-                      <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
-                    </linearGradient>
-                    <linearGradient id="colorProf" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
-                      <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#1a1a1a" vertical={false} />
-                  <XAxis dataKey="month" stroke="#555" fontSize={10} axisLine={false} tickLine={false} />
-                  <YAxis stroke="#555" fontSize={10} axisLine={false} tickLine={false} tickFormatter={(value) => `$${value/1000}k`} />
-                  <Tooltip 
-                    contentStyle={{ backgroundColor: '#000', border: '1px solid #222', borderRadius: '12px', fontSize: '12px' }}
-                    itemStyle={{ color: '#fff' }}
-                    formatter={(value: any) => formatCurrency(Number(value))}
-                  />
-                  <Area type="monotone" dataKey="revenue" stroke="#3b82f6" strokeWidth={3} fillOpacity={1} fill="url(#colorRev)" />
-                  <Area type="monotone" dataKey="profit" stroke="#10b981" strokeWidth={3} fillOpacity={1} fill="url(#colorProf)" />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
+            <span className="font-display font-medium tracking-tight text-xl">ExLogis</span>
           </div>
 
-          {/* Shipment Pipeline */}
-          <div className="lg:col-span-4 glass p-8 lg:p-10 rounded-[2.5rem] border border-white/5">
-            <h3 className="text-xl font-display font-medium mb-1">Pipeline Distribution</h3>
-            <p className="text-[10px] font-mono text-white/70 uppercase tracking-widest mb-10">Current Freight Status</p>
-            
-            <div className="h-[250px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={data.charts.shipmentStatus}
-                    innerRadius={70}
-                    outerRadius={90}
-                    paddingAngle={5}
-                    dataKey="value"
-                  >
-                    {data.charts.shipmentStatus.map((entry: any, index: number) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip 
-                    contentStyle={{ backgroundColor: '#000', border: '1px solid #222', borderRadius: '12px', fontSize: '12px' }}
-                    itemStyle={{ color: '#fff' }}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
+          <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-white/60">
+            <a href="#" className="hover:text-white transition-colors">Features</a>
+            <a href="#" className="hover:text-white transition-colors">Platform</a>
+            <a href="#" className="hover:text-white transition-colors">Company</a>
+          </nav>
 
-            <div className="space-y-4 mt-6">
-              {data.charts.shipmentStatus.map((s: any, i: number) => (
-                <div key={i} className="flex justify-between items-center text-[10px] font-mono uppercase tracking-tighter">
-                  <div className="flex items-center gap-3">
-                    <div className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: COLORS[i % COLORS.length] }}></div>
-                    <span className="text-white/90">{s.name}</span>
-                  </div>
-                  <span className="text-white font-bold bg-white/5 px-2 py-0.5 rounded">{s.value}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Secondary Row */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Pending Tasks */}
-          <div className="glass p-8 lg:p-10 rounded-[2.5rem] border border-white/5">
-            <div className="flex justify-between items-center mb-8">
-              <h3 className="text-xl font-display font-medium">Pending Directives</h3>
-              <Link href="/tasks" className="text-[10px] font-mono uppercase text-blue-500 hover:underline">All Tasks</Link>
-            </div>
-            
-            {data.pendingTasks.length === 0 ? (
-              <div className="py-12 text-center text-white/70">
-                <CheckCircle2 size={32} className="mx-auto mb-4" />
-                <p className="text-[10px] font-mono uppercase tracking-widest">All caught up</p>
-              </div>
+          <div className="flex items-center gap-4">
+            {status === 'loading' ? (
+              <div className="w-24 h-10 bg-white/5 rounded-xl animate-pulse" />
+            ) : session ? (
+              <Link href="/dashboard">
+                <button className="px-5 py-2.5 rounded-xl bg-white/5 border border-white/10 text-sm font-medium hover:bg-white/10 transition-all flex items-center gap-2">
+                  Dashboard <ArrowRight size={14} />
+                </button>
+              </Link>
             ) : (
-              <div className="space-y-4">
-                {data.pendingTasks.map((task: any, i: number) => (
-                  <div key={i} className="flex flex-col sm:flex-row sm:items-center justify-between p-5 rounded-2xl bg-white/2 border border-white/5 group hover:border-white/20 hover:bg-white/4 transition-all gap-4">
-                    <div className="flex items-center gap-4">
-                      <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-white/70 group-hover:text-blue-400 group-hover:border-blue-400/30 transition-colors shrink-0">
-                        <ListTodo size={16} />
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium mb-1">{task.title}</p>
-                        <p className="text-[10px] font-mono text-white/80 uppercase tracking-widest">{task.category}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center sm:flex-col sm:items-end justify-between sm:justify-center gap-2">
-                      <span className={cn(
-                        "text-[9px] font-bold px-2 py-0.5 rounded uppercase tracking-widest border",
-                        task.priority === 'HIGH' ? 'text-rose-400 bg-rose-400/10 border-rose-400/20' : 
-                        task.priority === 'MEDIUM' ? 'text-amber-400 bg-amber-400/10 border-amber-400/20' : 
-                        'text-emerald-400 bg-emerald-400/10 border-emerald-400/20'
-                      )}>
-                        {task.priority}
-                      </span>
-                      <p className="text-[9px] font-mono text-white/80 uppercase tracking-widest">
-                        Due: {new Date(task.dueDate).toLocaleDateString()}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
+              <Link href="/login">
+                <button className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium transition-all shadow-[0_0_20px_rgba(37,99,235,0.2)] hover:shadow-[0_0_30px_rgba(37,99,235,0.4)]">
+                  Sign In
+                </button>
+              </Link>
             )}
           </div>
+        </div>
+      </header>
 
-          {/* Country Distribution */}
-          <div className="glass p-8 lg:p-10 rounded-[2.5rem] border border-white/5">
-            <h3 className="text-xl font-display font-medium mb-1">Global Trade Routes</h3>
-            <p className="text-[10px] font-mono text-white/70 uppercase tracking-widest mb-10">Destination Country Density</p>
-            
-            <div className="h-[300px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={data.charts.countryDistribution} layout="vertical" margin={{ left: 0, right: 30 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#1a1a1a" horizontal={false} />
-                  <XAxis type="number" stroke="#555" fontSize={10} axisLine={false} tickLine={false} />
-                  <YAxis dataKey="name" type="category" stroke="#fff" fontSize={10} axisLine={false} tickLine={false} width={80} />
-                  <Tooltip 
-                    cursor={{ fill: 'rgba(255,255,255,0.05)' }}
-                    contentStyle={{ backgroundColor: '#000', border: '1px solid #222', borderRadius: '12px', fontSize: '12px' }}
-                  />
-                  <Bar dataKey="value" fill="#3b82f6" radius={[0, 4, 4, 0]}>
-                    {data.charts.countryDistribution.map((entry: any, index: number) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
+      {/* Hero Section */}
+      <main className="relative z-10 pt-32 pb-20 px-6">
+        <div className="max-w-7xl mx-auto mt-20 text-center">
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8 }}
+            className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10 text-xs font-mono text-blue-400 mb-8"
+          >
+            <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
+            EXLOGIS V2.0 PLATFORM LIVE
+          </motion.div>
+
+          <motion.h1 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.1 }}
+            className="text-5xl md:text-7xl font-display font-medium tracking-tight mb-8 leading-[1.1]"
+          >
+            The Global Export <br/>
+            <span className="text-transparent bg-clip-text bg-linear-to-r from-blue-400 via-cyan-400 to-emerald-400">
+              Matrix Engine
+            </span>
+          </motion.h1>
+
+          <motion.p 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.2 }}
+            className="text-lg md:text-xl text-white/50 max-w-2xl mx-auto mb-12"
+          >
+            A commercial-grade ERP platform architected for scalability, security, and global trade operations. Unify your supply chain with our next-generation architecture.
+          </motion.p>
+
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.3 }}
+            className="flex flex-col sm:flex-row items-center justify-center gap-4"
+          >
+            {session ? (
+              <Link href="/dashboard">
+                <button className="w-full sm:w-auto px-8 py-4 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white font-medium transition-all shadow-[0_0_30px_rgba(37,99,235,0.3)] hover:shadow-[0_0_40px_rgba(37,99,235,0.5)] flex items-center justify-center gap-2">
+                  Launch Matrix <ArrowRight size={18} />
+                </button>
+              </Link>
+            ) : (
+              <Link href="/login">
+                <button className="w-full sm:w-auto px-8 py-4 rounded-2xl bg-white text-black hover:bg-gray-200 font-medium transition-all flex items-center justify-center gap-2">
+                  Access Platform <ArrowRight size={18} />
+                </button>
+              </Link>
+            )}
+            <button className="w-full sm:w-auto px-8 py-4 rounded-2xl bg-white/5 border border-white/10 hover:bg-white/10 text-white font-medium transition-all flex items-center justify-center gap-2">
+              <Terminal size={18} /> View Documentation
+            </button>
+          </motion.div>
         </div>
 
-        {/* Audit Log and Recent Shipments */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-          {/* Recent Shipments */}
-          <div className="lg:col-span-8 glass p-8 lg:p-10 rounded-[2.5rem] border border-white/5 overflow-hidden">
-            <div className="flex justify-between items-center mb-8">
-              <h3 className="text-xl font-display font-medium">Global Shipment Log</h3>
-              <Link href="/shipments" className="text-[10px] font-mono uppercase text-blue-500 hover:underline">All Freight</Link>
-            </div>
+        {/* Feature Grid */}
+        <div className="max-w-7xl mx-auto mt-40">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs font-mono whitespace-nowrap">
-                <thead className="text-white/70 uppercase tracking-widest border-b border-white/10">
-                  <tr>
-                    <th className="pb-4 px-4 font-normal">Tracking ID</th>
-                    <th className="pb-4 px-4 font-normal">Transit Route</th>
-                    <th className="pb-4 px-4 font-normal">Status</th>
-                    <th className="pb-4 px-4 text-right font-normal">Action</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-white/5">
-                  {data.recentShipments.map((shp: any, i: number) => (
-                    <tr key={i} className="group hover:bg-white/2 transition-colors">
-                      <td className="py-4 px-4">
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center text-white/70 group-hover:text-blue-400 group-hover:border-blue-400/30 transition-colors">
-                            <Box size={14} />
-                          </div>
-                          <span className="font-sans font-bold text-sm text-white/90">{shp.shipmentNo}</span>
-                        </div>
-                      </td>
-                      <td className="py-4 px-4">
-                        <div className="flex items-center gap-2 text-white/90">
-                          <span className="px-2 py-0.5 rounded bg-white/5">{shp.originPortId}</span>
-                          <ChevronRight size={10} className="text-white/70" />
-                          <span className="px-2 py-0.5 rounded bg-white/5">{shp.destinationPortId}</span>
-                        </div>
-                      </td>
-                      <td className="py-4 px-4">
-                        <span className={cn(
-                          "px-2 py-1 rounded text-[9px] font-bold uppercase tracking-widest border",
-                          shp.status === 'DELIVERED' ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" :
-                          shp.status === 'TRANSIT' ? "bg-blue-500/10 text-blue-400 border-blue-500/20" :
-                          "bg-white/5 text-white/90 border-white/10"
-                        )}>
-                          {shp.status}
-                        </span>
-                      </td>
-                      <td className="py-4 px-4 text-right">
-                        <Link href={`/shipments/${shp.id}`}>
-                          <button className="p-2.5 rounded-lg bg-white/5 hover:bg-blue-500/10 hover:text-blue-400 text-white/70 transition-colors border-none cursor-pointer">
-                            <ArrowUpRight size={14} />
-                          </button>
-                        </Link>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: 0.4 }}
+              className="glass p-8 rounded-4xl border border-white/5 bg-white/2 hover:bg-white/4 transition-colors group"
+            >
+              <div className="w-12 h-12 rounded-2xl bg-blue-500/10 flex items-center justify-center text-blue-400 mb-6 group-hover:scale-110 transition-transform">
+                <Shield size={24} />
+              </div>
+              <h3 className="text-xl font-medium mb-3">Enterprise Security</h3>
+              <p className="text-white/50 text-sm leading-relaxed">
+                PostgreSQL backed infrastructure with encrypted sessions, RBAC, and immutable audit trails for every transaction.
+              </p>
+            </motion.div>
 
-          {/* Audit Log */}
-          <div className="lg:col-span-4 glass p-8 lg:p-10 rounded-[2.5rem] border border-white/5 relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/10 blur-3xl -z-10 rounded-full"></div>
-            
-            <div className="flex justify-between items-center mb-8">
-              <h3 className="text-xl font-display font-medium text-amber-500/90">Audit Matrix</h3>
-              <Link href="/dashboard/audit-logs" className="text-[10px] font-mono uppercase text-amber-500/50 hover:text-amber-500 hover:underline">Full Logs</Link>
-            </div>
-            
-            <div className="space-y-6">
-              {data.auditLogs?.length > 0 ? data.auditLogs.map((log: any, i: number) => (
-                <div key={i} className="flex gap-4 relative group">
-                  <div className="absolute left-[15px] top-8 bottom-[-24px] w-px bg-white/5 group-last:hidden"></div>
-                  <div className="w-8 h-8 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center shrink-0 text-white/70 z-10">
-                    <History size={14} />
-                  </div>
-                  <div className="pb-2">
-                    <p className="text-[9px] font-mono text-white/80 uppercase tracking-widest mb-1.5 flex items-center gap-2">
-                      <Clock size={10} /> {new Date(log.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })} • {log.userName}
-                    </p>
-                    <p className="text-xs text-white/80 leading-relaxed">
-                      <span className={cn(
-                        "uppercase font-mono text-[9px] mr-2 px-1.5 py-0.5 rounded border",
-                        log.action === 'CREATE' ? "text-emerald-400 bg-emerald-500/10 border-emerald-500/20" :
-                        log.action === 'UPDATE' ? "text-blue-400 bg-blue-500/10 border-blue-500/20" :
-                        log.action === 'DELETE' ? "text-rose-400 bg-rose-500/10 border-rose-500/20" :
-                        "text-white/90 bg-white/5 border-white/10"
-                      )}>[{log.action}]</span>
-                      {log.details}
-                    </p>
-                  </div>
-                </div>
-              )) : (
-                <div className="py-12 text-center text-white/70">
-                  <p className="text-[10px] font-mono uppercase tracking-widest">No recent audit logs</p>
-                </div>
-              )}
-            </div>
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: 0.5 }}
+              className="glass p-8 rounded-4xl border border-white/5 bg-white/2 hover:bg-white/4 transition-colors group"
+            >
+              <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 flex items-center justify-center text-emerald-400 mb-6 group-hover:scale-110 transition-transform">
+                <Zap size={24} />
+              </div>
+              <h3 className="text-xl font-medium mb-3">Real-time Synchronization</h3>
+              <p className="text-white/50 text-sm leading-relaxed">
+                Powered by Turbopack and React Server Components for instant data mutations and optimistic UI updates.
+              </p>
+            </motion.div>
+
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: 0.6 }}
+              className="glass p-8 rounded-4xl border border-white/5 bg-white/2 hover:bg-white/4 transition-colors group"
+            >
+              <div className="w-12 h-12 rounded-2xl bg-violet-500/10 flex items-center justify-center text-violet-400 mb-6 group-hover:scale-110 transition-transform">
+                <Globe size={24} />
+              </div>
+              <h3 className="text-xl font-medium mb-3">Global Infrastructure</h3>
+              <p className="text-white/50 text-sm leading-relaxed">
+                Ready for multi-tenancy, multi-currency, and global edge deployments without architectural rewrites.
+              </p>
+            </motion.div>
+
           </div>
         </div>
-      </div>
-    </MasterPage>
+      </main>
+
+      {/* Footer */}
+      <footer className="border-t border-white/5 py-12 mt-20">
+        <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-4">
+          <p className="text-sm font-mono text-white/40">© 2026 ExLogis ERP. All rights reserved.</p>
+          <div className="flex items-center gap-6 text-sm font-mono text-white/40">
+            <a href="#" className="hover:text-white transition-colors">Privacy</a>
+            <a href="#" className="hover:text-white transition-colors">Terms</a>
+            <a href="#" className="hover:text-white transition-colors">System Status</a>
+          </div>
+        </div>
+      </footer>
+
+    </div>
   );
 }
