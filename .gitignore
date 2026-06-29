@@ -8,6 +8,9 @@
 # Testing
 /coverage
 
+# Migrations
+prisma/migrations
+
 # Next.js
 /.next/
 /out/
@@ -66,3 +69,4 @@ scripts/
 # Ignore custom maintenance scripts
 bump_contrast.js
 fix_tailwind.js
+/src/generated/prisma

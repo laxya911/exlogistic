@@ -12,11 +12,13 @@ import { motion, AnimatePresence } from 'motion/react';
 import Link from 'next/link';
 import { usePurchaseOrders, POSortField } from '@/hooks/usePurchaseOrders';
 import { Supplier } from '@/types';
+import { Pagination } from '@/components/ui/pagination';
 
 export default function PurchaseOrdersPage() {
   const hook = usePurchaseOrders();
   const {
     orders, rawOrders, loading,
+    currentPage, setCurrentPage, totalPages,
     searchQuery, setSearchQuery,
     filters, setFilters, filterOptions,
     sortBy, setSortBy, sortOrder, setSortOrder,
@@ -267,6 +269,12 @@ export default function PurchaseOrdersPage() {
               </tbody>
             </table>
           </div>
+          
+          <Pagination 
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={setCurrentPage}
+          />
         </div>
       </div>
     </MasterPage>

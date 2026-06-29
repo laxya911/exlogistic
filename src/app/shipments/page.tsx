@@ -10,6 +10,7 @@ import {
 import { formatCurrency, formatDate, cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
 import Link from 'next/link';
+import { Pagination } from '@/components/ui/pagination';
 import { useShipments, ShipmentSortField } from '@/hooks/useShipments';
 
 const STATUS_PROGRESS: Record<string, number> = {
@@ -20,7 +21,9 @@ const STATUS_PROGRESS: Record<string, number> = {
 export default function ShipmentsPage() {
   const hook = useShipments();
   const {
-    shipments, loading, kpis,
+    shipments, loading,
+    currentPage, setCurrentPage, totalPages,
+    kpis,
     searchQuery, setSearchQuery,
     filters, setFilters, filterOptions,
     sortBy, setSortBy, sortOrder, setSortOrder,
@@ -263,6 +266,13 @@ export default function ShipmentsPage() {
               No Shipments Match Filters
             </div>
           )}
+          
+          <Pagination 
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={setCurrentPage}
+            className="mt-6"
+          />
         </div>
       </div>
     </MasterPage>

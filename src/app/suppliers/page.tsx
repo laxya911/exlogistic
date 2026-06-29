@@ -47,6 +47,7 @@ import { Supplier, Contact, Product, PurchaseOrder, Shipment } from '@/types';
 import { formatCurrency, cn, formatDate } from '@/lib/utils';
 import { toast } from 'sonner';
 import { useSuppliers, SupplierSortField, SortOrder } from '@/hooks/useSuppliers';
+import { Pagination } from '@/components/ui/pagination';
 
 export default function SupplierMasterPage() {
   const hook = useSuppliers();
@@ -54,6 +55,9 @@ export default function SupplierMasterPage() {
     suppliers,
     rawSuppliers,
     loading,
+    currentPage,
+    setCurrentPage,
+    totalPages,
     searchQuery,
     setSearchQuery,
     searchField,
@@ -669,6 +673,12 @@ export default function SupplierMasterPage() {
                 </tbody>
               </table>
             </div>
+
+            <Pagination 
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={setCurrentPage}
+            />
           </div>
         </div>
 

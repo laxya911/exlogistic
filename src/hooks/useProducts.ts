@@ -36,8 +36,11 @@ export function useProducts() {
   const [sortBy, setSortBy] = useState<ProductSortField>('name');
   const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
 
-  // Multi-Selection
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 10;
   
   // Undo soft-delete stack
   const [undoStack, setUndoStack] = useState<Product[]>([]);
@@ -346,6 +349,18 @@ export function useProducts() {
     return result;
   }, [products, searchQuery, searchField, filters, sortBy, sortOrder]);
 
+  // Reset to page 1 on filter/search change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, searchField, filters, sortBy, sortOrder]);
+
+  const paginatedProducts = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return processedProducts.slice(start, start + pageSize);
+  }, [processedProducts, currentPage]);
+
+  const totalPages = Math.ceil(processedProducts.length / pageSize);
+
   // Options for filtering selects (extracted dynamically from current products)
   const filterOptions = useMemo(() => {
     const categories = Array.from(new Set(products.map(p => p.category)));
@@ -370,9 +385,13 @@ export function useProducts() {
   };
 
   return {
-    products: processedProducts,
+    products: paginatedProducts,
+    allProcessedProducts: processedProducts,
     rawProducts: products,
     loading,
+    currentPage,
+    setCurrentPage,
+    totalPages,
     searchQuery,
     setSearchQuery,
     searchField,

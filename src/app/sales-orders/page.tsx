@@ -12,11 +12,13 @@ import { motion, AnimatePresence } from 'motion/react';
 import Link from 'next/link';
 import { useSalesOrders } from '@/hooks/useSalesOrders';
 import { Customer } from '@/types';
+import { Pagination } from '@/components/ui/pagination';
 
 export default function SalesOrdersPage() {
   const hook = useSalesOrders();
   const {
     orders, rawOrders, loading,
+    currentPage, setCurrentPage, totalPages,
     searchQuery, setSearchQuery,
     filters, setFilters, filterOptions,
     sortBy, setSortBy, sortOrder, setSortOrder,
@@ -274,6 +276,12 @@ export default function SalesOrdersPage() {
               </tbody>
             </table>
           </div>
+          
+          <Pagination 
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={setCurrentPage}
+          />
         </div>
       </div>
     </MasterPage>

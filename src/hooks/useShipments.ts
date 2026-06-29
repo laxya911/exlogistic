@@ -20,6 +20,10 @@ export function useShipments() {
   const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 15;
+
   useEffect(() => { fetchShipments(); }, []);
 
   const fetchShipments = async () => {
@@ -151,6 +155,18 @@ export function useShipments() {
     return result;
   }, [shipments, searchQuery, filters, sortBy, sortOrder]);
 
+  // Reset to page 1 on filter/search change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, filters, sortBy, sortOrder]);
+
+  const paginatedShipments = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return processedShipments.slice(start, start + pageSize);
+  }, [processedShipments, currentPage]);
+
+  const totalPages = Math.ceil(processedShipments.length / pageSize);
+
   const filterOptions = useMemo(() => ({
     statuses: Array.from(new Set(shipments.map(s => s.status))),
     shippingLines: Array.from(new Set(shipments.map(s => s.shippingLineId))),
@@ -175,7 +191,15 @@ export function useShipments() {
     setSelectedIds(prev => prev.length === ids.length ? [] : ids);
 
   return {
-    shipments: processedShipments, rawShipments: shipments, loading, kpis,
+    shipments: paginatedShipments,
+    allProcessedShipments: processedShipments,
+    rawShipments: shipments,
+    loading,
+    currentPage,
+    setCurrentPage,
+    pageSize,
+    totalPages,
+    kpis,
     searchQuery, setSearchQuery,
     filters, setFilters, filterOptions,
     sortBy, setSortBy, sortOrder, setSortOrder,

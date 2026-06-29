@@ -29,6 +29,7 @@ import { cn } from '@/lib/utils';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'motion/react';
+import { useSession, signOut } from 'next-auth/react';
 
 interface MasterPageProps {
   children: React.ReactNode;
@@ -49,6 +50,7 @@ export function MasterPage({
   searchValue,
   onSearchChange
 }: MasterPageProps) {
+  const { data: session } = useSession();
   const pathname = usePathname();
 
   const navItems = [
@@ -334,11 +336,20 @@ export function MasterPage({
             
             <div className="flex items-center gap-4 pl-6 border-l border-white/10">
               <div className="text-right">
-                <p className="text-xs font-medium">Administrator</p>
+                <p className="text-xs font-medium">{session?.user?.name || 'Guest'}</p>
                 <p className="text-[9px] font-mono text-blue-500/60 uppercase tracking-tighter">SPRINT 8 RELEASE RC</p>
               </div>
-              <div className="w-10 h-10 rounded-xl bg-linear-to-br from-blue-500/20 to-violet-500/20 border border-white/10 flex items-center justify-center font-mono text-xs text-white/70">
-                AD
+              <div className="flex items-center gap-2">
+                <div className="w-10 h-10 rounded-xl bg-linear-to-br from-blue-500/20 to-violet-500/20 border border-white/10 flex items-center justify-center font-mono text-xs text-white/70">
+                  {session?.user?.name ? session.user.name.substring(0, 2).toUpperCase() : 'G'}
+                </div>
+                <button 
+                  onClick={() => signOut({ callbackUrl: '/login' })}
+                  className="p-2 ml-2 rounded-xl text-white/50 hover:text-red-400 hover:bg-white/5 transition-all"
+                  title="Sign Out"
+                >
+                  <LogOut size={16} />
+                </button>
               </div>
             </div>
           </div>
