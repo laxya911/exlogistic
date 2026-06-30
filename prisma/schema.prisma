@@ -259,6 +259,12 @@ model Supplier {
   productLinks   ProductSupplier[]
   purchaseOrders PurchaseOrder[]
 
+  performanceRating Float?
+  categories        Json?
+  contacts          Json?
+  incoterms         Json?
+  paymentTerms      Json?
+
   createdAt DateTime     @default(now())
   updatedAt DateTime     @updatedAt
   deletedAt DateTime?
@@ -292,6 +298,12 @@ model Customer {
 
   salesOrders SalesOrder[]
   quotations  Quotation[]
+
+  creditLimit  Float?
+  segment      String?
+  contacts     Json?
+  incoterms    Json?
+  paymentTerms Json?
 
   createdAt DateTime     @default(now())
   updatedAt DateTime     @updatedAt
@@ -358,10 +370,21 @@ model Quotation {
   id           String            @id @default(uuid())
   quotationNo  String            @unique
   customerId   String
-  date         DateTime
-  validityDate DateTime
-  totalValue   Float
-  status       TransactionStatus
+  date             DateTime
+  validityDate     DateTime
+  totalValue       Float
+  status           TransactionStatus
+  incoterm         String?
+  paymentTerms     String?
+  currency         String?
+  marginPercentage Float?
+  container        String?
+  expectedShipment  DateTime?
+  remarks           String?
+  originPortId      String?
+  destinationPortId String?
+  timeline          Json?
+  documents         Json?
 
   customer    Customer        @relation(fields: [customerId], references: [id], onDelete: Restrict)
   items       QuotationItem[]
@@ -387,9 +410,16 @@ model SalesOrder {
   orderNo     String            @unique
   customerId  String
   quotationId String?
-  date        DateTime
-  totalValue  Float
-  status      TransactionStatus
+  date             DateTime
+  totalValue       Float
+  status           TransactionStatus
+  incoterm         String?
+  paymentTerms     String?
+  currency         String?
+  marginPercentage Float?
+  container        String?
+  expectedShipment DateTime?
+  remarks          String?
 
   customer       Customer         @relation(fields: [customerId], references: [id], onDelete: Restrict)
   quotation      Quotation?       @relation(fields: [quotationId], references: [id], onDelete: SetNull)
@@ -417,9 +447,16 @@ model PurchaseOrder {
   poNo         String            @unique
   supplierId   String
   salesOrderId String?
-  date         DateTime
-  totalValue   Float
-  status       TransactionStatus
+  date                 DateTime
+  totalValue           Float
+  status               TransactionStatus
+  incoterm             String?
+  paymentTerms         String?
+  currency             String?
+  marginPercentage     Float?
+  container            String?
+  expectedDeliveryDate DateTime?
+  remarks              String?
 
   supplier   Supplier            @relation(fields: [supplierId], references: [id], onDelete: Restrict)
   salesOrder SalesOrder?         @relation(fields: [salesOrderId], references: [id], onDelete: SetNull)
@@ -726,4 +763,24 @@ model MeasurementUnit {
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+// ---------------------------------------------------------------------------
+// Automation & Workflow Engine
+// ---------------------------------------------------------------------------
+
+model WorkflowRule {
+  id               String   @id @default(uuid())
+  name             String
+  description      String?
+  triggerEntity    String   // e.g. "Quotation", "Shipment"
+  triggerCondition Json     // e.g. { "status": "APPROVED" }
+  action           String   // e.g. "CREATE_SALES_ORDER"
+  actionPayload    Json?    // Template data to pass to action
+  isActive         Boolean  @default(true)
+  
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  
+  @@index([triggerEntity, isActive])
 }

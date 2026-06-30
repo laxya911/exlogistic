@@ -310,7 +310,10 @@ export interface Quotation extends BaseEntity {
 }
 
 export interface QuotationItem {
+  id?: string;
   productId: string;
+  variantId?: string;
+  variant?: any;
   quantity: number;
   unitPrice: number;
   totalPrice: number;
@@ -465,15 +468,18 @@ export interface CalendarEvent extends BaseEntity {
 }
 
 // Sprint 8: Notifications & Audit
+export type NotificationType = 'INFO' | 'SUCCESS' | 'WARNING' | 'ERROR' | 'QUOTATION_EXPIRING' | 'SHIPMENT_DELAYED' | 'APPROVAL_REQUIRED' | 'PO_OVERDUE' | 'TASK_ASSIGNED';
+
 export interface Notification extends BaseEntity {
   title: string;
   message: string;
-  type: 'INFO' | 'SUCCESS' | 'WARNING' | 'ERROR';
-  priority: 'LOW' | 'MEDIUM' | 'HIGH';
+  type: NotificationType;
+  priority?: 'LOW' | 'MEDIUM' | 'HIGH';
   isRead: boolean;
   relatedId?: string;
   relatedType?: string;
   actionUrl?: string;
+  userId?: string;
 }
 
 export interface AuditLog extends BaseEntity {
@@ -580,3 +586,4 @@ export interface CostingScenario extends BaseEntity {
   tags?: string[];
   isFavourite?: boolean;
 }
+

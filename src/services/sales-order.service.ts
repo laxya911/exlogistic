@@ -78,7 +78,7 @@ class SalesOrderService {
       customerId: original.customerId,
       date: now,
       expectedShipmentDate: original.expectedShipmentDate,
-      items: original.items.map(item => ({ ...item })),
+      items: original.items.map((item: any) => ({ ...item })),
       totalValue: original.totalValue,
       marginPercentage: original.marginPercentage,
       currency: original.currency,

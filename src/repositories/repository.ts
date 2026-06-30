@@ -1,6 +1,8 @@
 import { db } from '../lib/db';
+import { PrismaRepository } from './prisma';
+import { PrismaQuotationRepository } from './prisma/quotation.repository';
 
-export class Repository<T extends { id: string; entityStatus: any }> {
+export class MockRepository<T extends { id: string; entityStatus: any }> {
   private collection: T[];
 
   constructor(collection: T[]) {
@@ -51,20 +53,25 @@ export class Repository<T extends { id: string; entityStatus: any }> {
   }
 }
 
-export const productRepository = new Repository(db.products);
-export const customerRepository = new Repository(db.customers);
-export const supplierRepository = new Repository(db.suppliers);
-export const forwarderRepository = new Repository(db.forwarders);
-export const shippingLineRepository = new Repository(db.shippingLines);
-export const portRepository = new Repository(db.ports);
-export const currencyRepository = new Repository(db.currencies);
-export const quotationRepository = new Repository(db.quotations);
-export const salesOrderRepository = new Repository(db.salesOrders);
-export const purchaseOrderRepository = new Repository(db.purchaseOrders);
-export const shipmentRepository = new Repository(db.shipments);
-export const taskRepository = new Repository(db.tasks);
-export const calendarEventRepository = new Repository(db.calendarEvents);
-export const notificationRepository = new Repository(db.notifications);
-export const auditLogRepository = new Repository(db.auditLogs);
-export const documentRepository = new Repository(db.documents);
-export const costingScenarioRepository = new Repository(db.costingScenarios);
+const useMock = false;
+
+// If useMock is true, use MockRepository. Otherwise use PrismaRepository to hit Postgres.
+export const productRepository = useMock ? new MockRepository(db.products) : new PrismaRepository('product');
+export const customerRepository = useMock ? new MockRepository(db.customers) : new PrismaRepository('customer');
+export const supplierRepository = useMock ? new MockRepository(db.suppliers) : new PrismaRepository('supplier');
+export const quotationRepository = useMock ? new MockRepository(db.quotations) : new PrismaQuotationRepository();
+export const salesOrderRepository = useMock ? new MockRepository(db.salesOrders) : new PrismaRepository('salesOrder', { items: { include: { variant: { include: { product: true } } } } });
+export const purchaseOrderRepository = useMock ? new MockRepository(db.purchaseOrders) : new PrismaRepository('purchaseOrder', { items: { include: { variant: { include: { product: true } } } } });
+export const shipmentRepository = useMock ? new MockRepository(db.shipments) : new PrismaRepository('shipment', { items: { include: { variant: { include: { product: true } } } } });
+export const auditLogRepository = useMock ? new MockRepository(db.auditLogs) : new PrismaRepository('auditLog');
+
+// Models not currently in Prisma schema
+export const taskRepository = new MockRepository(db.tasks);
+export const calendarEventRepository = new MockRepository(db.calendarEvents);
+export const documentRepository = new MockRepository(db.documents);
+export const costingScenarioRepository = new MockRepository(db.costingScenarios);
+export const notificationRepository = new MockRepository(db.notifications || []);
+export const forwarderRepository = new MockRepository(db.forwarders);
+export const shippingLineRepository = new MockRepository(db.shippingLines);
+export const portRepository = new MockRepository(db.ports);
+export const currencyRepository = new MockRepository(db.currencies);

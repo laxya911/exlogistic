@@ -73,7 +73,7 @@ class PurchaseOrderService {
       supplierId: original.supplierId,
       date: now,
       expectedDeliveryDate: original.expectedDeliveryDate,
-      items: original.items.map(item => ({ ...item })),
+      items: original.items.map((item: any) => ({ ...item })),
       totalValue: original.totalValue,
       currency: original.currency,
       exchangeRate: original.exchangeRate,

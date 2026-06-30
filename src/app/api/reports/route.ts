@@ -58,7 +58,7 @@ export async function GET() {
 
     const topDestinations = Object.entries(shipmentsByDestination)
       .map(([name, value]) => ({ name, value }))
-      .sort((a, b) => b.value - a.value)
+      .sort((a: any, b: any) => (b.value as number) - (a.value as number))
       .slice(0, 5);
 
     // 3. Yields / Profitability (from Costing Engine)

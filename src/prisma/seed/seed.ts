@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import { PrismaClient, EntityStatus, TransactionStatus } from '@prisma/client';
 import { Pool } from 'pg';
 import { PrismaPg } from '@prisma/adapter-pg';
@@ -29,7 +30,10 @@ async function main() {
         address: sup.address,
         country: sup.country,
         status: sup.entityStatus === 'ACTIVE' ? EntityStatus.ACTIVE : EntityStatus.INACTIVE,
-      },
+        performanceRating: (sup as any).performanceRating || 4.0,
+        contacts: (sup as any).contacts ? (sup as any).contacts : undefined,
+        paymentTerms: (sup as any).paymentTerms ? JSON.stringify((sup as any).paymentTerms) : undefined,
+      }
     });
   }
 
@@ -46,7 +50,11 @@ async function main() {
         address: cust.address,
         country: cust.country,
         status: cust.entityStatus === 'ACTIVE' ? EntityStatus.ACTIVE : EntityStatus.INACTIVE,
-      },
+        creditLimit: (cust as any).creditLimit || 50000,
+        segment: (cust as any).segment || 'STANDARD',
+        contacts: (cust as any).contacts ? (cust as any).contacts : undefined,
+        paymentTerms: (cust as any).paymentTerms ? JSON.stringify((cust as any).paymentTerms) : undefined,
+      }
     });
   }
 
@@ -168,6 +176,17 @@ async function main() {
         validityDate: new Date(quote.validityDate),
         totalValue: quote.totalValue,
         status: qStatusMap[quote.status] || TransactionStatus.DRAFT,
+        incoterm: (quote as any).incoterm || null,
+        paymentTerms: (quote as any).paymentTerms || null,
+        currency: (quote as any).currency || 'USD',
+        marginPercentage: (quote as any).marginPercentage || null,
+        container: (quote as any).container || (quote as any).containerType || null,
+        expectedShipment: (quote as any).expectedShipment ? new Date((quote as any).expectedShipment) : ((quote as any).expectedShipmentDate ? new Date((quote as any).expectedShipmentDate) : null),
+        remarks: (quote as any).remarks || null,
+        originPortId: (quote as any).originPortId || null,
+        destinationPortId: (quote as any).destinationPortId || null,
+        timeline: (quote as any).timeline ? JSON.stringify((quote as any).timeline) : undefined,
+        documents: (quote as any).documents ? JSON.stringify((quote as any).documents) : undefined,
         items: {
           create: quote.items.map(item => ({
             variantId: getVariantId(item.productId),
@@ -200,6 +219,13 @@ async function main() {
         date: new Date(so.date),
         totalValue: so.totalValue,
         status: soStatusMap[so.status] || TransactionStatus.PENDING,
+        incoterm: (so as any).incoterm || null,
+        paymentTerms: (so as any).paymentTerms || null,
+        currency: (so as any).currency || 'USD',
+        marginPercentage: (so as any).marginPercentage || null,
+        container: (so as any).container || (so as any).containerType || null,
+        expectedShipment: (so as any).expectedShipment ? new Date((so as any).expectedShipment) : ((so as any).expectedShipmentDate ? new Date((so as any).expectedShipmentDate) : null),
+        remarks: (so as any).remarks || null,
         items: {
           create: so.items.map(item => ({
             variantId: getVariantId(item.productId),
@@ -233,6 +259,13 @@ async function main() {
         date: new Date(po.date),
         totalValue: po.totalValue,
         status: poStatusMap[po.status] || TransactionStatus.DRAFT,
+        incoterm: (po as any).incoterm || null,
+        paymentTerms: (po as any).paymentTerms || null,
+        currency: (po as any).currency || 'USD',
+        marginPercentage: (po as any).marginPercentage || null,
+        container: (po as any).container || null,
+        expectedDeliveryDate: (po as any).expectedDeliveryDate ? new Date((po as any).expectedDeliveryDate) : null,
+        remarks: (po as any).remarks || null,
         items: {
           create: po.items.map(item => ({
             variantId: getVariantId(item.productId),

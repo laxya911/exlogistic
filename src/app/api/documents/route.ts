@@ -8,6 +8,7 @@ export async function GET(request: Request) {
     const typeFilter = searchParams.get('type');
     const statusFilter = searchParams.get('status');
     const relTypeFilter = searchParams.get('relatedType');
+    const relIdFilter = searchParams.get('relatedId');
 
     let docs = await documentRepository.getAll();
     docs = docs.filter(d => d.entityStatus !== 'DELETED');
@@ -15,6 +16,7 @@ export async function GET(request: Request) {
     if (typeFilter) docs = docs.filter(d => d.type === typeFilter);
     if (statusFilter) docs = docs.filter(d => d.status === statusFilter);
     if (relTypeFilter) docs = docs.filter(d => (d as any).relatedType === relTypeFilter);
+    if (relIdFilter) docs = docs.filter(d => (d as any).relatedId === relIdFilter);
 
     // Sort newest first
     docs = docs.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());

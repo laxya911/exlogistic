@@ -70,3 +70,4 @@ scripts/
 bump_contrast.js
 fix_tailwind.js
 /src/generated/prisma
+scratch_scripts/

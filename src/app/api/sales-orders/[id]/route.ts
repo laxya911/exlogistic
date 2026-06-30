@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { salesOrderRepository } from '@/repositories/repository';
 import { salesOrderService } from '@/services/sales-order.service';
-import { workflowService } from '@/services/workflow.service';
+import { WorkflowEngine } from '@/services/workflow.service';
 
 export async function GET(
   request: Request,
@@ -37,11 +37,15 @@ export async function PUT(
     // Custom workflow actions
     if (action) {
       if (action === 'book_shipment') {
-        const shipment = await workflowService.createShipmentFromOrder(id);
+        const oldStatus = existingOrder.status;
         existingOrder.status = 'SHIPPED';
-        salesOrderService.logEvent(existingOrder, 'SHIPPED', 'Cargo Dispatched — Shipment Booked', `Shipment ${shipment.shipmentNo} registered and cargo dispatched.`);
-        await salesOrderRepository.update(id, existingOrder);
-        return NextResponse.json({ message: 'Shipment booking created', shipment, order: existingOrder });
+        salesOrderService.logEvent(existingOrder, 'SHIPPED', 'Cargo Dispatched — Shipment Booked', `Shipment process initiated.`);
+        const updated = await salesOrderRepository.update(id, existingOrder);
+        
+        // Trigger generic workflow engine
+        await WorkflowEngine.evaluateRules('SalesOrder', id, 'SHIPPED', oldStatus);
+        
+        return NextResponse.json({ message: 'Shipment booking triggered', order: updated });
       }
 
       if (action === 'confirm') {

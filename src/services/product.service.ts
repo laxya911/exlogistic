@@ -12,32 +12,38 @@ export class ProductService {
     // Required fields check
     if (!product.sku?.trim()) errors.push('SKU identifier is required');
     if (!product.name?.trim()) errors.push('Product name is required');
-    if (!product.category?.trim()) errors.push('Category classification is required');
-    if (!product.brand?.trim()) errors.push('Brand identifier is required');
+    const categoryIds = (product as any).categoryIds;
+    if (!categoryIds || categoryIds.length === 0) errors.push('Category classification is required');
+    if (!product.brandId?.trim()) errors.push('Brand identifier is required');
     if (!product.countryOfOrigin?.trim()) errors.push('Country of origin is required');
     if (!product.hsnCode?.trim()) errors.push('HS Code is required');
 
     // Duplicate SKU check
     if (product.sku?.trim()) {
-      const existing = await productRepository.find(p => 
-        p.sku.toLowerCase() === product.sku!.trim().toLowerCase() && 
-        p.entityStatus !== 'DELETED' &&
-        (!isUpdate || p.id !== product.id)
-      );
-      if (existing.length > 0) {
+      const { prisma } = await import('@/repositories/prisma.client');
+      const existing = await prisma.productVariant.findFirst({
+        where: {
+          sku: { equals: product.sku.trim(), mode: 'insensitive' },
+          product: { status: { not: 'DELETED' } },
+          ...(isUpdate && product.id ? { productId: { not: product.id } } : {})
+        }
+      });
+      
+      if (existing) {
         errors.push(`SKU '${product.sku}' is already registered in the matrix`);
       }
     }
 
-    // Pricing checks
-    if (product.purchasePrice !== undefined && product.purchasePrice < 0) {
-      errors.push('Purchase Price cannot be negative');
-    }
-    if (product.sellingPrice !== undefined && product.sellingPrice < 0) {
-      errors.push('Selling Price cannot be negative');
-    }
-    if (product.purchasePrice !== undefined && product.sellingPrice !== undefined && product.sellingPrice < product.purchasePrice) {
-      errors.push('Selling Price must be equal to or greater than Purchase Price');
+    // Pricing checks on variants
+    if (product.variants?.length) {
+      product.variants.forEach((v: any, index: number) => {
+        if (v.purchasePrice !== undefined && v.purchasePrice < 0) {
+          errors.push(`Variant ${index + 1} Purchase Price cannot be negative`);
+        }
+        if (v.sellingPrice !== undefined && v.sellingPrice < 0) {
+          errors.push(`Variant ${index + 1} Selling Price cannot be negative`);
+        }
+      });
     }
 
     // Weight checks
