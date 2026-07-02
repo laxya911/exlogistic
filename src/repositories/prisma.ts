@@ -58,17 +58,35 @@ export class PrismaRepository<T = any> {
       }
     }
 
+    // For Customer/Supplier, status IS the EntityStatus enum (ACTIVE/INACTIVE/etc)
+    const isEntityModel = ['customer', 'supplier'].includes(this.modelName);
+    const entityStatus = isEntityModel
+      ? (item.status || 'ACTIVE')
+      : (['ACTIVE', 'INACTIVE', 'ARCHIVED', 'DELETED'].includes(item.status) ? item.status : 'ACTIVE');
+
     return {
       ...item,
       items: mappedItems,
-      status: uiStatus,
+      status: isEntityModel ? item.status : uiStatus,
       // Bridge Prisma fields to UI Mock expectations
-      entityStatus: (item.status && ['ACTIVE', 'INACTIVE', 'ARCHIVED', 'DELETED'].includes(item.status)) ? item.status : 'ACTIVE',
+      entityStatus,
       expectedShipmentDate: item.expectedShipment || item.expectedShipmentDate,
       containerType: item.container || item.containerType,
-      creditLimit: item.creditLimit ?? 250000,
-      segment: item.segment || 'Enterprise',
+      creditLimit: item.creditLimit ?? (isEntityModel ? 0 : 250000),
+      segment: item.segment || (isEntityModel ? 'STANDARD' : 'Enterprise'),
       rating: item.rating ?? item.performanceRating ?? 4.5,
+      performanceRating: item.performanceRating ?? item.rating ?? 4.5,
+      // averageLeadTime is not a DB column \u2014 default to 0 so UI doesn't crash on arithmetic
+      averageLeadTime: item.averageLeadTime ?? 0,
+      // certifications is not in DB schema \u2014 default to empty array
+      certifications: Array.isArray(item.certifications) ? item.certifications : [],
+      // productsSuppliedIds not in DB \u2014 default to empty array
+      productsSuppliedIds: Array.isArray(item.productsSuppliedIds) ? item.productsSuppliedIds : [],
+      // Bridge CRM fields back to UI type names
+      paymentTerms: typeof item.paymentTerms === 'string' ? item.paymentTerms : (item.paymentTerms ? JSON.stringify(item.paymentTerms) : ''),
+      contacts: Array.isArray(item.contacts) ? item.contacts : (item.contacts ? (typeof item.contacts === 'string' ? JSON.parse(item.contacts) : item.contacts) : []),
+      timeline: Array.isArray(item.timeline) ? item.timeline : (item.timeline ? (typeof item.timeline === 'string' ? JSON.parse(item.timeline) : item.timeline) : []),
+      documents: Array.isArray(item.documents) ? item.documents : (item.documents ? (typeof item.documents === 'string' ? JSON.parse(item.documents) : item.documents) : []),
     };
   };
 
@@ -126,10 +144,39 @@ export class PrismaRepository<T = any> {
     delete mapped.purchaseOrder;
 
     // Clean up UI mock fields not present in prisma schema
+    // For customer/supplier: entityStatus IS the DB status column — map it before deleting
+    if (this.modelName === 'customer' || this.modelName === 'supplier') {
+      if (mapped.entityStatus !== undefined) {
+        mapped.status = mapped.entityStatus;
+      }
+    }
     delete mapped.entityStatus;
-    delete mapped.creditLimit;
-    delete mapped.segment;
-    delete mapped.rating;
+    
+    if (this.modelName === 'customer') {
+      // Remove UI-only fields that are NOT in the Customer Prisma schema
+      delete mapped.rating;
+      delete mapped.performanceRating;
+      // Remove computed/bridged fields that shouldn't go to DB
+      delete mapped.updatedAt;   // managed by Prisma @updatedAt
+      delete mapped.createdAt;   // managed by Prisma @default(now())
+    } else if (this.modelName === 'supplier') {
+      // productsSuppliedIds NOT in Prisma schema
+      delete mapped.productsSuppliedIds;
+      delete mapped.creditLimit;
+      delete mapped.segment;
+      // Map rating -> performanceRating for supplier
+      if (mapped.rating !== undefined) {
+        mapped.performanceRating = mapped.rating;
+        delete mapped.rating;
+      }
+      // Remove auto-managed timestamp fields
+      delete mapped.updatedAt;
+      delete mapped.createdAt;
+    } else {
+      delete mapped.creditLimit;
+      delete mapped.segment;
+      delete mapped.rating;
+    }
     
     return mapped;
   };

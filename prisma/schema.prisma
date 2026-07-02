@@ -264,6 +264,13 @@ model Supplier {
   contacts          Json?
   incoterms         Json?
   paymentTerms      Json?
+  notes             String?
+  website           String?
+  taxId             String?
+  averageLeadTime   Float?
+  certifications    Json?
+  documents         Json?
+  timeline          Json?
 
   createdAt DateTime     @default(now())
   updatedAt DateTime     @updatedAt
@@ -304,6 +311,13 @@ model Customer {
   contacts     Json?
   incoterms    Json?
   paymentTerms Json?
+  notes                    String?
+  website                  String?
+  taxId                    String?
+  accountManagerId         String?
+  preferredDischargePortId String?
+  documents                Json?
+  timeline                 Json?
 
   createdAt DateTime     @default(now())
   updatedAt DateTime     @updatedAt

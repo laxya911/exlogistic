@@ -12,7 +12,11 @@ export class SupplierService {
     if (!supplier.name?.trim()) errors.push('Supplier identity name is required');
     if (!supplier.email?.trim()) errors.push('Contact email is required');
     if (!supplier.country?.trim()) errors.push('Country of origin/dispatch is required');
-    if (!supplier.paymentTerms?.trim()) errors.push('Payment terms are required');
+    // paymentTerms may be a string or JSON object from DB — normalize to string
+    const paymentTermsStr = typeof supplier.paymentTerms === 'string'
+      ? supplier.paymentTerms
+      : (supplier.paymentTerms ? JSON.stringify(supplier.paymentTerms) : '');
+    if (!paymentTermsStr.trim()) errors.push('Payment terms are required');
 
     // Email validation
     if (supplier.email?.trim()) {
@@ -44,7 +48,7 @@ export class SupplierService {
 
     if (supplier.taxId?.trim()) {
       const existing = await supplierRepository.find(s => 
-        s.taxId!.toLowerCase() === supplier.taxId!.trim().toLowerCase() && 
+        (s.taxId || '').toLowerCase() === supplier.taxId!.trim().toLowerCase() && 
         s.entityStatus !== 'DELETED' &&
         (!isUpdate || s.id !== supplier.id)
       );

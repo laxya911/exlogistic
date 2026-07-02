@@ -31,7 +31,7 @@ export async function PUT(
       return NextResponse.json({ error: 'Customer not found' }, { status: 404 });
     }
 
-    // Handle Custom CRM Actions
+    // Handle Custom CRM Actions (ARCHIVE, RESTORE, DUPLICATE, STATUS_UPDATE)
     if (data.action) {
       if (data.action === 'ARCHIVE') {
         existingCustomer.entityStatus = 'ARCHIVED';
@@ -63,11 +63,26 @@ export async function PUT(
       return NextResponse.json({ error: 'Invalid custom action requested' }, { status: 400 });
     }
 
-    // Normal Customer Profile Edit
+    // Detect partial update — e.g. just saving timeline (communication note)
+    // A partial update lacks core profile fields like name/email
+    const isPartialUpdate = !data.name && !data.email;
+
+    if (isPartialUpdate) {
+      // Just merge the provided fields onto existing record and save — no validation needed
+      const merged = {
+        ...existingCustomer,
+        ...data,
+      };
+      const updated = await customerRepository.update(id, merged);
+      return NextResponse.json(updated);
+    }
+
+    // Full profile edit — run validation
     data.id = id;
     await customerService.validate(data, true);
 
     // Timeline Logs for specific edits
+    const existingTimeline = existingCustomer.timeline || [];
     if (data.creditLimit !== undefined && Number(data.creditLimit) !== existingCustomer.creditLimit) {
       customerService.logEvent(
         existingCustomer,
@@ -76,12 +91,12 @@ export async function PUT(
         `Adjusted credit ceiling from USD ${existingCustomer.creditLimit} to USD ${data.creditLimit}.`
       );
     }
-
     customerService.logEvent(existingCustomer, 'UPDATED', 'Profile Details Updated', 'Updated general contact coordinates and terms.');
 
     const updatedCustomer = await customerRepository.update(id, {
       ...data,
-      timeline: existingCustomer.timeline
+      // Preserve accumulated timeline — prepend new events from service calls above
+      timeline: existingCustomer.timeline,
     });
 
     return NextResponse.json(updatedCustomer);

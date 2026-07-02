@@ -199,10 +199,13 @@ export default function CustomerCRMPage() {
     const exposure = active.reduce((acc, curr) => acc + curr.creditLimit, 0);
     const premiumCount = active.filter(c => c.segment === 'PREMIUM').length;
     
-    // Most popular discharge port
+    // Most popular discharge port — guard against null
     const portsCount: Record<string, number> = {};
     active.forEach(c => {
-      portsCount[c.preferredDischargePortId] = (portsCount[c.preferredDischargePortId] || 0) + 1;
+      const portId = c.preferredDischargePortId;
+      if (portId) {
+        portsCount[portId] = (portsCount[portId] || 0) + 1;
+      }
     });
     let topPort = 'N/A';
     let maxCount = 0;
@@ -246,20 +249,20 @@ export default function CustomerCRMPage() {
     setFormErrors([]);
     setFormTab('general');
 
-    setName(c.name);
-    setEmail(c.email);
-    setPhone(c.phone);
-    setAddress(c.address);
-    setCountry(c.country);
-    setCreditLimit(c.creditLimit);
-    setPaymentTerms(c.paymentTerms);
+    setName(c.name || '');
+    setEmail(c.email || '');
+    setPhone(c.phone || '');
+    setAddress(c.address || '');
+    setCountry(c.country || 'USA');
+    setCreditLimit(c.creditLimit || 100000);
+    setPaymentTerms(typeof c.paymentTerms === 'string' ? c.paymentTerms : '30 Days Net');
     setNotes(c.notes || '');
     setWebsite(c.website || '');
     setTaxId(c.taxId || '');
-    setSegment(c.segment);
-    setAccountManagerId(c.accountManagerId);
-    setPreferredDischargePortId(c.preferredDischargePortId);
-    setFormContacts(c.contacts || [
+    setSegment(c.segment || 'STANDARD');
+    setAccountManagerId(c.accountManagerId || 'USR-001');
+    setPreferredDischargePortId(c.preferredDischargePortId || 'LAX');
+    setFormContacts(Array.isArray(c.contacts) && c.contacts.length > 0 ? c.contacts : [
       { name: '', role: 'Procurement Manager', email: '', phone: '', isPrimary: true }
     ]);
 

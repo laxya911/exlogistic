@@ -226,19 +226,19 @@ export default function SupplierMasterPage() {
     setFormErrors([]);
     setFormTab('general');
 
-    setName(s.name);
-    setEmail(s.email);
-    setPhone(s.phone);
-    setAddress(s.address);
-    setCountry(s.country);
+    setName(s.name || '');
+    setEmail(s.email || '');
+    setPhone(s.phone || '');
+    setAddress(s.address || '');
+    setCountry(s.country || 'India');
     setNotes(s.notes || '');
     setWebsite(s.website || '');
     setTaxId(s.taxId || '');
-    setPerformanceRating(s.performanceRating);
-    setAverageLeadTime(s.averageLeadTime);
-    setPaymentTerms(s.paymentTerms);
-    setCertifications(s.certifications || []);
-    setFormContacts(s.contacts || [
+    setPerformanceRating(s.performanceRating ?? 4.5);
+    setAverageLeadTime(s.averageLeadTime ?? 15);
+    setPaymentTerms(typeof s.paymentTerms === 'string' ? s.paymentTerms : '30 Days Net');
+    setCertifications(Array.isArray(s.certifications) ? s.certifications : []);
+    setFormContacts(Array.isArray(s.contacts) && s.contacts.length > 0 ? s.contacts : [
       { name: '', role: 'Sales Lead', email: '', phone: '', isPrimary: true }
     ]);
 
@@ -1138,6 +1138,7 @@ export default function SupplierMasterPage() {
                         <label className="text-[9px] font-mono text-white/80 uppercase block">Average Lead Time (Days)</label>
                         <input 
                           type="number" 
+                          min="1"
                           value={averageLeadTime}
                           onChange={(e) => setAverageLeadTime(Number(e.target.value))}
                           className="w-full bg-[#0b0b0b] border border-white/10 rounded-xl py-3 px-4 text-xs font-mono text-white focus:outline-none"
@@ -1149,6 +1150,8 @@ export default function SupplierMasterPage() {
                         <input 
                           type="number" 
                           step="0.1"
+                          min="1"
+                          max="5"
                           value={performanceRating}
                           onChange={(e) => setPerformanceRating(Number(e.target.value))}
                           className="w-full bg-[#0b0b0b] border border-white/10 rounded-xl py-3 px-4 text-xs font-mono text-white focus:outline-none"

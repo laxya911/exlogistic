@@ -26,8 +26,16 @@ export async function POST(request: Request) {
     await customerService.validate(data, false);
 
     const now = new Date().toISOString();
+    // Generate slug from name
+    const slug = (data.name as string)
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-|-$/g, '') +
+      '-' + Math.random().toString(36).substr(2, 5);
+
     const customerPayload = {
       ...data,
+      slug,
       contacts: data.contacts || [],
       documents: data.documents || [],
       timeline: [
@@ -41,8 +49,6 @@ export async function POST(request: Request) {
         }
       ],
       entityStatus: 'ACTIVE',
-      createdAt: now,
-      updatedAt: now
     };
 
     const newCustomer = await customerRepository.create(customerPayload);
