@@ -13,7 +13,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
   const isNew = id === 'new';
 
   const [loading, setLoading] = useState(!isNew);
-  const [activeTab, setActiveTab] = useState<'general' | 'variants' | 'packaging' | 'compliance'>('general');
+  const [activeTab, setActiveTab] = useState<'general' | 'variants' | 'packaging' | 'compliance' | 'inventory'>('general');
   const [errors, setErrors] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
 
@@ -48,7 +48,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
   const [storageConditions, setStorageConditions] = useState('Dry, Cool Ventilated Store');
   const [certifications, setCertifications] = useState<string[]>(['FSSAI', 'HACCP']);
   const [japanImportNotes, setJapanImportNotes] = useState('');
-  const [imageUrl, setImageUrl] = useState('');
+  const [images, setImages] = useState<string[]>([]);
 
   // Variants State
   const [attributes, setAttributes] = useState<{name: string, values: string}[]>([]);
@@ -101,7 +101,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
           setStorageConditions(data.storageConditions || 'Dry, Cool Ventilated Store');
           setCertifications(data.certifications || []);
           setJapanImportNotes(data.japanImportNotes || '');
-          setImageUrl(data.images?.[0] || '');
+          setImages(data.images || []);
           
           setExistingVariantsCount(data.variants?.length || 0);
           if (data.variants && data.variants.length > 0) {
@@ -135,6 +135,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
         sku: `${sku || 'SKU'}-${combo.map((c: string) => c.substring(0,3).toUpperCase()).join('-')}`,
         purchasePrice: 0,
         sellingPrice: 0,
+        images: [],
         attributeValues: attrVals
       };
     });
@@ -190,7 +191,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
       packageType, unitsPerCarton, grossWeight: Number(grossWeight), netWeight: Number(netWeight), 
       cbm: Number(cbm), containerLoadingCapacity: Number(containerLoadingCapacity),
       shelfLife, storageConditions, certifications, japanImportNotes,
-      images: imageUrl ? [imageUrl] : [],
+      images,
       attributes: attributes.filter(a => a.name.trim()).map(a => ({
         name: a.name.trim(),
         values: a.values.split(',').map(v => v.trim()).filter(Boolean)
@@ -286,6 +287,14 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
             >
               Compliance
             </button>
+            {!isNew && (
+              <button 
+                className={`text-[11px] font-mono font-bold px-4 py-2 rounded-lg transition-colors whitespace-nowrap ${activeTab === 'inventory' ? 'bg-emerald-500/20 text-emerald-400' : 'text-white/50 hover:text-emerald-400/80'}`}
+                onClick={() => setActiveTab('inventory')}
+              >
+                Stock Ledger
+              </button>
+            )}
           </div>
           
           {activeTab === 'general' && (
@@ -302,10 +311,6 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
                 <div>
                   <label className="text-[11px] font-mono text-white/80 uppercase tracking-wider block mb-1">Description</label>
                   <textarea rows={4} className="w-full bg-[#0b0b0b] border border-white/10 rounded-xl py-3 px-4 text-sm font-mono text-white focus:border-blue-500 focus:outline-none transition-colors" value={description} onChange={(e) => setDescription(e.target.value)} />
-                </div>
-                <div>
-                  <label className="text-[11px] font-mono text-white/80 uppercase tracking-wider block mb-1">Primary Image URL</label>
-                  <input className="w-full bg-[#0b0b0b] border border-white/10 rounded-xl py-3 px-4 text-sm font-mono text-white focus:border-blue-500 focus:outline-none transition-colors" value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} placeholder="https://example.com/image.jpg" />
                 </div>
               </div>
               <div className="space-y-4">
@@ -541,8 +546,187 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
                <Save size={16} /> {saving ? 'Saving...' : 'Save Product'}
             </button>
           </div>
+          {activeTab === 'inventory' && !isNew && (
+            <InventoryLedgerTab variants={variants} />
+          )}
+
         </div>
       </div>
     </>
+  );
+}
+
+function InventoryLedgerTab({ variants }: { variants: any[] }) {
+  const [selectedVariantId, setSelectedVariantId] = useState<string>(variants.length > 0 ? variants[0].id : '');
+  const [ledger, setLedger] = useState<any>(null);
+  const [loading, setLoading] = useState(false);
+  const [adjQty, setAdjQty] = useState(0);
+  const [adjRemarks, setAdjRemarks] = useState('');
+  
+  useEffect(() => {
+    if (selectedVariantId) {
+      setLoading(true);
+      fetch(`/api/inventory?variantId=${selectedVariantId}`)
+        .then(res => res.json())
+        .then(data => {
+          setLedger(data);
+          setLoading(false);
+        });
+    }
+  }, [selectedVariantId]);
+
+  const handleAdjustment = async () => {
+    if (adjQty === 0) return;
+    try {
+      const res = await fetch('/api/inventory', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          variantId: selectedVariantId,
+          quantity: adjQty,
+          type: 'ADJUSTMENT',
+          remarks: adjRemarks || 'Manual Override'
+        })
+      });
+      if (!res.ok) throw new Error('Failed to adjust stock');
+      
+      // Refresh
+      const data = await fetch(`/api/inventory?variantId=${selectedVariantId}`).then(r => r.json());
+      setLedger(data);
+      setAdjQty(0);
+      setAdjRemarks('');
+      alert('Stock adjusted successfully');
+    } catch (e: any) {
+      alert(e.message);
+    }
+  };
+
+  if (!variants || variants.length === 0) return <div className="p-4 text-white/50 text-xs font-mono uppercase">No variants found. Save product first.</div>;
+
+  return (
+    <div className="space-y-6 pt-4">
+      <div className="flex gap-4 items-center">
+        <label className="text-[11px] font-mono text-white/50 uppercase">Select Variant to View Ledger:</label>
+        <select 
+          className="bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-sm text-white outline-none"
+          value={selectedVariantId}
+          onChange={e => setSelectedVariantId(e.target.value)}
+        >
+          {variants.map(v => (
+            <option key={v.id} value={v.id}>{v.sku} - {v.title}</option>
+          ))}
+        </select>
+      </div>
+
+      {loading && <div className="text-white/30 text-xs font-mono uppercase">Loading ledger...</div>}
+      
+      {!loading && ledger && (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="space-y-4">
+            <div className="bg-white/5 border border-white/10 rounded-2xl p-6 space-y-4">
+              <h3 className="text-xs font-mono font-bold uppercase tracking-widest text-emerald-400">Current Stock</h3>
+              
+              <div className="flex justify-between items-center pb-2 border-b border-white/5">
+                <span className="text-xs text-white/50 font-mono">On Hand:</span>
+                <span className="text-xl font-mono text-white">{ledger.inventory?.quantityOnHand || 0}</span>
+              </div>
+              <div className="flex justify-between items-center pb-2 border-b border-white/5">
+                <span className="text-xs text-white/50 font-mono">Allocated (SO):</span>
+                <span className="text-sm font-mono text-white/70">{ledger.inventory?.quantityAllocated || 0}</span>
+              </div>
+              <div className="flex justify-between items-center pb-2 border-b border-white/5">
+                <span className="text-xs text-white/50 font-mono">On Order (PO):</span>
+                <span className="text-sm font-mono text-white/70">{ledger.inventory?.quantityOnOrder || 0}</span>
+              </div>
+              <div className="flex justify-between items-center pt-2">
+                <span className="text-xs text-emerald-400/50 font-mono uppercase font-bold">Available to Sell:</span>
+                <span className="text-lg font-mono text-emerald-400 font-bold">
+                  {(ledger.inventory?.quantityOnHand || 0) - (ledger.inventory?.quantityAllocated || 0)}
+                </span>
+              </div>
+            </div>
+
+            <div className="bg-blue-500/10 border border-blue-500/20 rounded-2xl p-6 space-y-4">
+              <h3 className="text-xs font-mono font-bold uppercase tracking-widest text-blue-400">Manual Adjustment</h3>
+              <div className="space-y-2">
+                <label className="text-[10px] font-mono text-white/50 uppercase">Quantity (Use - for deductions)</label>
+                <input 
+                  type="number" 
+                  value={adjQty} 
+                  onChange={e => setAdjQty(parseFloat(e.target.value) || 0)}
+                  className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm font-mono text-white outline-none focus:border-blue-500/50" 
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-mono text-white/50 uppercase">Reason / Remarks</label>
+                <input 
+                  type="text" 
+                  value={adjRemarks} 
+                  onChange={e => setAdjRemarks(e.target.value)}
+                  placeholder="e.g. Stock Count Discrepancy"
+                  className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-blue-500/50" 
+                />
+              </div>
+              <button 
+                onClick={handleAdjustment}
+                className="w-full py-2 bg-blue-500 text-black text-xs font-mono font-bold uppercase rounded-lg hover:bg-blue-400 transition-colors"
+              >
+                Apply Adjustment
+              </button>
+            </div>
+          </div>
+
+          <div className="lg:col-span-2">
+            <div className="bg-white/5 border border-white/10 rounded-2xl p-6 overflow-hidden">
+              <h3 className="text-xs font-mono font-bold uppercase tracking-widest text-white/70 mb-4">Transaction History</h3>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left">
+                  <thead>
+                    <tr className="border-b border-white/5 text-[10px] font-mono uppercase text-white/30">
+                      <th className="pb-3 pr-4">Date</th>
+                      <th className="pb-3 pr-4">Type</th>
+                      <th className="pb-3 pr-4">Qty</th>
+                      <th className="pb-3 pr-4">Ref Type</th>
+                      <th className="pb-3 pr-4">Ref ID</th>
+                      <th className="pb-3">Remarks</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-white/5">
+                    {ledger.transactions?.map((tx: any) => (
+                      <tr key={tx.id} className="text-xs font-mono text-white/70">
+                        <td className="py-3 pr-4 whitespace-nowrap">{new Date(tx.timestamp).toLocaleString()}</td>
+                        <td className="py-3 pr-4">
+                          <span className={`px-2 py-1 rounded-full text-[9px] font-bold ${
+                            tx.type === 'SHIPMENT' ? 'bg-rose-500/20 text-rose-400' :
+                            tx.type === 'RECEIPT' ? 'bg-emerald-500/20 text-emerald-400' :
+                            tx.type === 'ALLOCATE' ? 'bg-amber-500/20 text-amber-400' :
+                            'bg-blue-500/20 text-blue-400'
+                          }`}>
+                            {tx.type}
+                          </span>
+                        </td>
+                        <td className={`py-3 pr-4 font-bold ${tx.quantity > 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                          {tx.quantity > 0 ? '+' : ''}{tx.quantity}
+                        </td>
+                        <td className="py-3 pr-4 text-white/40">{tx.referenceType || '-'}</td>
+                        <td className="py-3 pr-4 text-white/40 truncate max-w-[100px]" title={tx.referenceId}>{tx.referenceId ? tx.referenceId.substring(0,8)+'...' : '-'}</td>
+                        <td className="py-3 text-white/50">{tx.remarks || '-'}</td>
+                      </tr>
+                    ))}
+                    {(!ledger.transactions || ledger.transactions.length === 0) && (
+                      <tr>
+                        <td colSpan={6} className="py-8 text-center text-white/30 text-[10px] uppercase font-mono tracking-widest">
+                          No transactions found
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }

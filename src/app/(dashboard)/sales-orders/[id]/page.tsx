@@ -1,19 +1,19 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { PageHeaderUpdater } from '@/components/layout/page-context';
 import {
-  ArrowLeft, FileText, Ship, Box, CheckCircle2, XCircle, Play,
-  PackageCheck, Copy, Trash2, DollarSign, Calendar, Anchor,
-  User, Building, Activity, MessageSquare, ExternalLink, AlertCircle
+  ArrowLeft, FileText, Ship, Box, CheckCircle2, XCircle, Play, PackageCheck, Trash2, Activity, MessageSquare, ExternalLink, RefreshCcw, Save, X, User, Building, AlertTriangle
 } from 'lucide-react';
 import { formatCurrency, formatDate, cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import Link from 'next/link';
 import { SalesOrder, Customer, Product } from '@/types';
+import { ContractMetadataCard } from '@/components/sales/contract-metadata-card';
+import { LineItemsTable } from '@/components/sales/line-items-table';
 
-const STATUS_FLOW = ['CONFIRMED', 'PRODUCTION', 'READY', 'SHIPPED'] as const;
+const STATUS_FLOW = ['DRAFT', 'CONFIRMED', 'PRODUCTION', 'READY', 'SHIPPED', 'IN_TRANSIT', 'DELIVERED'] as const;
 
 export default function SalesOrderDetailPage() {
   const params = useParams();
@@ -23,9 +23,17 @@ export default function SalesOrderDetailPage() {
   const [order, setOrder] = useState<SalesOrder | null>(null);
   const [customer, setCustomer] = useState<Customer | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
+  const [suppliers, setSuppliers] = useState<any[]>([]);
   const [orderDocuments, setOrderDocuments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [noteText, setNoteText] = useState('');
+
+  // Editing State
+  const [isEditing, setIsEditing] = useState(false);
+  const [formState, setFormState] = useState<any>({});
+  const [saving, setSaving] = useState(false);
+  const [showPOModal, setShowPOModal] = useState(false);
+  const [selectedSupplierId, setSelectedSupplierId] = useState('');
 
   useEffect(() => {
     if (id) fetchData();
@@ -39,19 +47,163 @@ export default function SalesOrderDetailPage() {
       const orderData: SalesOrder = await res.json();
       setOrder(orderData);
 
-      const [cRes, pRes, dRes] = await Promise.all([
+      const [cRes, pRes, dRes, sRes] = await Promise.all([
         fetch(`/api/customers/${orderData.customerId}`).then(r => r.ok ? r.json() : null),
         fetch('/api/products').then(r => r.json()),
-        fetch(`/api/documents?relatedId=${id}`).then(r => r.ok ? r.json() : [])
+        fetch(`/api/documents?relatedId=${id}`).then(r => r.ok ? r.json() : []),
+        fetch('/api/suppliers').then(r => r.ok ? r.json() : [])
       ]);
       setCustomer(cRes);
       setProducts(pRes);
       setOrderDocuments(dRes);
+      setSuppliers(sRes);
     } catch (e: any) {
       toast.error(e.message || 'Failed to load order');
       router.push('/sales-orders');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleEditToggle = () => {
+    if (!isEditing) {
+      // Enter edit mode, initialize form state
+      setFormState({
+        incoterm: order?.incoterm || '',
+        containerType: order?.containerType || '',
+        currency: order?.currency || 'USD',
+        marginPercentage: order?.marginPercentage || 0,
+        expectedShipmentDate: order?.expectedShipmentDate || '',
+        paymentTerms: order?.paymentTerms || '',
+        remarks: order?.remarks || '',
+        items: order?.items?.map(i => {
+          const factor = order.marginPercentage ? 1 - (order.marginPercentage / 100) : 1;
+          const basePrice = factor > 0 ? Number((i.unitPrice * factor).toFixed(2)) : i.unitPrice;
+          return {
+            ...i,
+            name: products.find(p => p.id === i.productId)?.name || '',
+            sku: products.find(p => p.id === i.productId)?.sku || '',
+            uom: products.find(p => p.id === i.productId)?.uom || 'MT',
+            basePrice,
+            total: (i.quantity || 0) * (i.unitPrice || 0)
+          };
+        }) || []
+      });
+    }
+    setIsEditing(!isEditing);
+  };
+
+  const handleMarginChange = (margin: number) => {
+    const factor = margin > 0 ? 1 - (margin / 100) : 1;
+    const newItems = (formState.items || []).map((item: any) => {
+      const base = item.basePrice || item.unitPrice;
+      const newPrice = factor > 0 ? Number((base / factor).toFixed(2)) : base;
+      return { ...item, unitPrice: newPrice, total: newPrice * (item.quantity || 0) };
+    });
+    setFormState({ ...formState, marginPercentage: margin, items: newItems });
+  };
+
+  const updateFormState = (field: string, value: any) => {
+    setFormState((prev: any) => ({ ...prev, [field]: value }));
+  };
+
+  const updateItem = (idx: number, field: string, value: any) => {
+    const newItems = [...formState.items];
+    const item = { ...newItems[idx], [field]: value };
+    
+    if (field === 'variantId') {
+      let sellingPrice = 0;
+      let purchasePrice = 0;
+      for (const p of products) {
+        const v = p.variants?.find((v: any) => v.id === value);
+        if (v) {
+          item.productId = p.id;
+          item.name = p.name;
+          item.sku = v.sku;
+          item.uom = p.uom || 'MT';
+          sellingPrice = v.sellingPrice || p.sellingPrice || 0;
+          purchasePrice = v.purchasePrice || p.purchasePrice || sellingPrice;
+          break;
+        }
+      }
+      
+      const margin = formState.marginPercentage || 0;
+      const factor = margin > 0 ? 1 - (margin / 100) : 1;
+      
+      item.basePrice = purchasePrice || sellingPrice;
+      item.unitPrice = factor > 0 ? Number((item.basePrice / factor).toFixed(2)) : item.basePrice;
+      item.total = (item.quantity || 0) * item.unitPrice;
+    }
+    
+    if (field === 'quantity') {
+      item.total = (item.quantity || 0) * (item.unitPrice || 0);
+    }
+    
+    if (field === 'unitPrice') {
+      const margin = formState.marginPercentage || 0;
+      const factor = margin > 0 ? 1 - (margin / 100) : 1;
+      item.basePrice = factor > 0 ? Number((value * factor).toFixed(2)) : value;
+      item.total = (item.quantity || 0) * value;
+    }
+    
+    newItems[idx] = item;
+    updateFormState('items', newItems);
+  };
+
+  const removeItem = (idx: number) => {
+    const newItems = [...formState.items];
+    newItems.splice(idx, 1);
+    updateFormState('items', newItems);
+  };
+
+  const addItem = () => {
+    updateFormState('items', [...formState.items, { variantId: '', productId: '', quantity: 1, unitPrice: 0, total: 0, uom: 'MT' }]);
+  };
+
+  const calculatedItems = formState.items || [];
+  const costOfGoods = calculatedItems.reduce((acc: number, item: any) => acc + (item.total || 0), 0);
+  const totalValue = useMemo(() => {
+    const margin = formState.marginPercentage || 0;
+    if (margin === 0) return costOfGoods;
+    const factor = 1 - (margin / 100);
+    if (factor <= 0) return costOfGoods;
+    return Math.round(costOfGoods / factor);
+  }, [costOfGoods, formState.marginPercentage]);
+  const grossProfit = totalValue - costOfGoods;
+
+  const handleSaveEdit = async () => {
+    setSaving(true);
+    try {
+      const finalItems = calculatedItems.map((item: any) => ({
+        variantId: item.variantId,
+        productId: item.productId,
+        quantity: item.quantity,
+        unitPrice: item.unitPrice,
+        totalPrice: Number((item.unitPrice * item.quantity).toFixed(2))
+      }));
+
+      const payload = {
+        ...formState,
+        expectedShipment: formState.expectedShipmentDate ? new Date(formState.expectedShipmentDate).toISOString() : null,
+        totalValue,
+        items: finalItems
+      };
+
+      const res = await fetch(`/api/sales-orders/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to update order');
+      
+      toast.success('Sales order updated successfully');
+      setOrder(data);
+      setIsEditing(false);
+    } catch (e: any) {
+      toast.error(e.message);
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -75,18 +227,8 @@ export default function SalesOrderDetailPage() {
     } catch (e: any) { toast.error(e.message); }
   };
 
-  const handleConfirm = async () => {
-    try { await performAction('confirm'); toast.success('Order confirmed'); await fetchData(); }
-    catch (e: any) { toast.error(e.message); }
-  };
-
-  const handleStartProduction = async () => {
-    try { await performAction('start_production'); toast.success('Production started'); await fetchData(); }
-    catch (e: any) { toast.error(e.message); }
-  };
-
-  const handleMarkReady = async () => {
-    try { await performAction('mark_ready'); toast.success('Cargo marked ready'); await fetchData(); }
+  const handleAction = async (actionStr: string, successMsg: string) => {
+    try { await performAction(actionStr); toast.success(successMsg); await fetchData(); }
     catch (e: any) { toast.error(e.message); }
   };
 
@@ -94,6 +236,19 @@ export default function SalesOrderDetailPage() {
     if (!confirm('Cancel this sales order?')) return;
     try { await performAction('cancel'); toast.success('Order cancelled'); await fetchData(); }
     catch (e: any) { toast.error(e.message); }
+  };
+
+  const handleRevertToDraft = async () => {
+    if (!confirm('Revert this order to DRAFT?')) return;
+    try { await performAction('revert_to_draft'); toast.success('Order reverted to Draft'); await fetchData(); }
+    catch (e: any) { toast.error(e.message); }
+  };
+
+  const handleDelete = async () => {
+    if (!confirm('Soft-delete this order?')) return;
+    const res = await fetch(`/api/sales-orders/${id}`, { method: 'DELETE' });
+    if (res.ok) { toast.success('Order soft-deleted'); router.push('/sales-orders'); }
+    else toast.error('Delete failed');
   };
 
   const handleGenerateDocument = async (type: 'Commercial Invoice' | 'Packing List') => {
@@ -137,6 +292,36 @@ export default function SalesOrderDetailPage() {
     } catch { toast.error('Document generation failed'); }
   };
 
+  const handleCreatePO = async () => {
+    if (!selectedSupplierId) return toast.error('Please select a supplier');
+    setSaving(true);
+    try {
+      const res = await fetch('/api/purchase-orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          supplierId: selectedSupplierId,
+          salesOrderId: id,
+          date: new Date().toISOString(),
+          expectedDeliveryDate: new Date(Date.now() + 15 * 86400000).toISOString(),
+          items: order?.items,
+          totalValue: order?.totalValue,
+          currency: order?.currency || 'USD'
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to create PO');
+      
+      toast.success('Purchase Order created successfully');
+      setShowPOModal(false);
+      router.push(`/purchase-orders/${data.id}`);
+    } catch (e: any) {
+      toast.error(e.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const handleSaveNote = async () => {
     if (!noteText.trim()) return;
     try {
@@ -145,13 +330,6 @@ export default function SalesOrderDetailPage() {
       setNoteText('');
       toast.success('Note logged to timeline');
     } catch (e: any) { toast.error(e.message); }
-  };
-
-  const handleDelete = async () => {
-    if (!confirm('Soft-delete this order?')) return;
-    const res = await fetch(`/api/sales-orders/${id}`, { method: 'DELETE' });
-    if (res.ok) { toast.success('Order soft-deleted'); router.push('/sales-orders'); }
-    else toast.error('Delete failed');
   };
 
   const getStatusStyle = (status: string) => {
@@ -186,82 +364,141 @@ export default function SalesOrderDetailPage() {
   if (!order) return null;
 
   const statusIdx = STATUS_FLOW.indexOf(order.status as any);
+  const packingListDoc = orderDocuments.find(d => d.type === 'Packing List' && d.status !== 'OBSOLETE');
+  const invoiceDoc = orderDocuments.find(d => d.type === 'Commercial Invoice' && d.status !== 'OBSOLETE');
+  
+  const isDocOutdated = (doc: any) => {
+    if (!doc || !order || !order.updatedAt) return false;
+    return new Date(doc.createdAt).getTime() < new Date(order.updatedAt).getTime();
+  };
 
-  const packingListDoc = orderDocuments.find(d => d.type === 'Packing List');
-  const invoiceDoc = orderDocuments.find(d => d.type === 'Commercial Invoice');
+  const packingListOutdated = isDocOutdated(packingListDoc);
+  const invoiceOutdated = isDocOutdated(invoiceDoc);
+  
+  const variantOptions = products.flatMap(p => 
+    (p.variants || []).map(v => ({
+      value: v.id,
+      label: `${p.name} - ${v.sku}`,
+      description: `Stock: ${v.inventory || 0} ${p.uom}`
+    }))
+  );
 
   return (
     <>
       <PageHeaderUpdater title={order.orderNo} subtitle="Export Contract — Fulfilment Dashboard"  />
       <div className="space-y-8">
-        {/* Top bar */}
+        
+        {/* Top Action Bar */}
         <div className="flex flex-wrap items-center justify-between gap-4">
           <button onClick={() => router.push('/sales-orders')}
             className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-[10px] font-mono uppercase text-white/90 hover:bg-white/10 cursor-pointer">
-            <ArrowLeft size={12} /> Back to registry
+            <ArrowLeft size={12} /> Back
           </button>
 
-          <div className="flex flex-wrap items-center gap-2.5">
-            <button onClick={handleDelete} className="p-3.5 rounded-2xl bg-white/5 border border-white/10 text-white/70 hover:text-rose-400 hover:bg-rose-500/10 transition-all cursor-pointer" title="Soft delete">
-              <Trash2 size={14} />
-            </button>
-            {packingListDoc ? (
-              <Link href={`/documents?selectedId=${packingListDoc.id}`}
-                className="flex items-center gap-1.5 px-5 py-3 border border-emerald-500/30 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/25 rounded-2xl text-[10px] font-mono uppercase tracking-widest transition-all cursor-pointer">
-                <Box size={12} /> View Packing List
-              </Link>
-            ) : (
-              <button onClick={() => handleGenerateDocument('Packing List')}
-                className="flex items-center gap-1.5 px-5 py-3 border border-white/10 bg-white/5 text-white/90 hover:bg-white/10 rounded-2xl text-[10px] font-mono uppercase tracking-widest transition-all cursor-pointer">
-                <Box size={12} /> Packing List
+          {isEditing ? (
+            <div className="flex items-center gap-3">
+              <button onClick={handleEditToggle} disabled={saving} className="flex items-center gap-1.5 px-5 py-3 rounded-2xl bg-white/5 border border-white/10 text-white/70 hover:bg-white/10 text-[10px] font-mono uppercase tracking-widest transition-all cursor-pointer">
+                <X size={12} /> Discard
               </button>
-            )}
-            {invoiceDoc ? (
-              <Link href={`/documents?selectedId=${invoiceDoc.id}`}
-                className="flex items-center gap-1.5 px-5 py-3 border border-emerald-500/30 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/25 rounded-2xl text-[10px] font-mono uppercase tracking-widest transition-all cursor-pointer">
-                <FileText size={12} /> View Invoice
-              </Link>
-            ) : (
-              <button onClick={() => handleGenerateDocument('Commercial Invoice')}
-                className="flex items-center gap-1.5 px-5 py-3 border border-white/10 bg-white/5 text-white/90 hover:bg-white/10 rounded-2xl text-[10px] font-mono uppercase tracking-widest transition-all cursor-pointer">
-                <FileText size={12} /> Invoice
+              <button onClick={handleSaveEdit} disabled={saving} className="flex items-center gap-1.5 px-6 py-3 bg-blue-500 text-black hover:bg-blue-400 rounded-2xl text-[10px] font-mono font-bold uppercase tracking-widest transition-all border-none cursor-pointer">
+                <Save size={12} /> {saving ? 'Saving...' : 'Save Changes'}
               </button>
-            )}
-
-            {order.status === 'CONFIRMED' && (
-              <button onClick={handleStartProduction}
-                className="flex items-center gap-1.5 px-5 py-3 border border-amber-500/30 bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 rounded-2xl text-[10px] font-mono uppercase tracking-widest transition-all cursor-pointer">
-                <Play size={12} /> Start Production
+            </div>
+          ) : (
+            <div className="flex flex-wrap items-center gap-2.5">
+              <button onClick={handleDelete} className="p-3.5 rounded-2xl bg-white/5 border border-white/10 text-white/70 hover:text-rose-400 hover:bg-rose-500/10 transition-all cursor-pointer" title="Soft delete">
+                <Trash2 size={14} />
               </button>
-            )}
-            {order.status === 'PRODUCTION' && (
-              <button onClick={handleMarkReady}
-                className="flex items-center gap-1.5 px-5 py-3 border border-purple-500/30 bg-purple-500/10 text-purple-400 hover:bg-purple-500/20 rounded-2xl text-[10px] font-mono uppercase tracking-widest transition-all cursor-pointer">
-                <PackageCheck size={12} /> Mark Ready
-              </button>
-            )}
-            {order.status !== 'SHIPPED' && order.status !== 'CANCELLED' && (
-              <button onClick={handleCancel}
-                className="flex items-center gap-1.5 px-5 py-3 border border-rose-500/30 bg-rose-500/10 text-rose-400 hover:bg-rose-500/25 rounded-2xl text-[10px] font-mono uppercase tracking-widest transition-all cursor-pointer">
-                <XCircle size={12} /> Cancel
-              </button>
-            )}
-            {(order.status === 'READY') && (
-              <button onClick={handleBookShipment}
-                className="flex items-center gap-1.5 px-6 py-3 bg-emerald-500 text-black hover:bg-emerald-400 rounded-2xl text-[10px] font-mono font-bold uppercase tracking-widest transition-all border-none cursor-pointer">
-                <Ship size={12} /> Book Shipment →
-              </button>
-            )}
-            {order.status === 'SHIPPED' && (
-              <span className="px-5 py-3 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-2xl text-[10px] font-mono font-bold uppercase tracking-widest">
-                ✓ SHIPPED
-              </span>
-            )}
-          </div>
+              {(order.status === 'DRAFT' || order.status === 'PENDING') && (
+                <button onClick={handleEditToggle} className="flex items-center gap-1.5 px-5 py-3 rounded-2xl bg-white/5 border border-white/10 text-white/90 hover:bg-white/10 text-[10px] font-mono uppercase tracking-widest transition-all cursor-pointer">
+                  <FileText size={12} /> Edit Contract
+                </button>
+              )}
+              {packingListDoc ? (
+                <div className="flex items-center gap-2">
+                  <Link href={`/documents?selectedId=${packingListDoc.id}`} className={cn("flex items-center gap-1.5 px-5 py-3 border rounded-2xl text-[10px] font-mono uppercase tracking-widest transition-all cursor-pointer", packingListOutdated ? "border-amber-500/30 bg-amber-500/10 text-amber-400 hover:bg-amber-500/25" : "border-emerald-500/30 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/25")}>
+                    {packingListOutdated ? <AlertTriangle size={12} /> : <Box size={12} />} 
+                    View Packing List {packingListOutdated && "(Outdated)"}
+                  </Link>
+                  {packingListOutdated && (
+                    <button onClick={() => handleGenerateDocument('Packing List')} className="px-3 py-3 rounded-2xl bg-white/5 hover:bg-white/10 text-white/70 border border-white/10 transition-all cursor-pointer" title="Regenerate Packing List">
+                      <RefreshCcw size={14} />
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <button onClick={() => handleGenerateDocument('Packing List')} className="flex items-center gap-1.5 px-5 py-3 border border-white/10 bg-white/5 text-white/90 hover:bg-white/10 rounded-2xl text-[10px] font-mono uppercase tracking-widest transition-all cursor-pointer">
+                  <Box size={12} /> Packing List
+                </button>
+              )}
+              {invoiceDoc ? (
+                <div className="flex items-center gap-2">
+                  <Link href={`/documents?selectedId=${invoiceDoc.id}`} className={cn("flex items-center gap-1.5 px-5 py-3 border rounded-2xl text-[10px] font-mono uppercase tracking-widest transition-all cursor-pointer", invoiceOutdated ? "border-amber-500/30 bg-amber-500/10 text-amber-400 hover:bg-amber-500/25" : "border-emerald-500/30 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/25")}>
+                    {invoiceOutdated ? <AlertTriangle size={12} /> : <FileText size={12} />} 
+                    View Invoice {invoiceOutdated && "(Outdated)"}
+                  </Link>
+                  {invoiceOutdated && (
+                    <button onClick={() => handleGenerateDocument('Commercial Invoice')} className="px-3 py-3 rounded-2xl bg-white/5 hover:bg-white/10 text-white/70 border border-white/10 transition-all cursor-pointer" title="Regenerate Invoice">
+                      <RefreshCcw size={14} />
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <button onClick={() => handleGenerateDocument('Commercial Invoice')} className="flex items-center gap-1.5 px-5 py-3 border border-white/10 bg-white/5 text-white/90 hover:bg-white/10 rounded-2xl text-[10px] font-mono uppercase tracking-widest transition-all cursor-pointer">
+                  <FileText size={12} /> Invoice
+                </button>
+              )}
+              {(order.status === 'DRAFT' || order.status === 'PENDING') && (
+                <button onClick={() => handleAction('confirm', 'Order confirmed')} className="flex items-center gap-1.5 px-5 py-3 border border-blue-500/30 bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 rounded-2xl text-[10px] font-mono uppercase tracking-widest transition-all cursor-pointer">
+                  <CheckCircle2 size={12} /> Confirm Order
+                </button>
+              )}
+              {order.status === 'CONFIRMED' && (
+                <button onClick={() => handleAction('start_production', 'Production started')} className="flex items-center gap-1.5 px-5 py-3 border border-amber-500/30 bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 rounded-2xl text-[10px] font-mono uppercase tracking-widest transition-all cursor-pointer">
+                  <Play size={12} /> Start Production
+                </button>
+              )}
+              {order.status === 'PRODUCTION' && (
+                <button onClick={() => handleAction('mark_ready', 'Cargo marked ready')} className="flex items-center gap-1.5 px-5 py-3 border border-purple-500/30 bg-purple-500/10 text-purple-400 hover:bg-purple-500/20 rounded-2xl text-[10px] font-mono uppercase tracking-widest transition-all cursor-pointer">
+                  <PackageCheck size={12} /> Mark Ready
+                </button>
+              )}
+              {order.status !== 'SHIPPED' && order.status !== 'CANCELLED' && (
+                <button onClick={handleCancel} className="flex items-center gap-1.5 px-5 py-3 border border-rose-500/30 bg-rose-500/10 text-rose-400 hover:bg-rose-500/25 rounded-2xl text-[10px] font-mono uppercase tracking-widest transition-all cursor-pointer">
+                  <XCircle size={12} /> Cancel
+                </button>
+              )}
+              {order.status !== 'DRAFT' && order.status !== 'SHIPPED' && order.status !== 'CANCELLED' && (
+                <button onClick={handleRevertToDraft} className="flex items-center gap-1.5 px-5 py-3 border border-white/10 bg-white/5 text-white/70 hover:bg-white/10 rounded-2xl text-[10px] font-mono uppercase tracking-widest transition-all cursor-pointer">
+                  <RefreshCcw size={12} /> Revert to Draft
+                </button>
+              )}
+              {order.status === 'READY' && (
+                <button onClick={handleBookShipment} className="flex items-center gap-1.5 px-6 py-3 bg-emerald-500 text-black hover:bg-emerald-400 rounded-2xl text-[10px] font-mono font-bold uppercase tracking-widest transition-all border-none cursor-pointer">
+                  <Ship size={12} /> Book Shipment →
+                </button>
+              )}
+              {(order.status === 'CONFIRMED' || order.status === 'PRODUCTION' || order.status === 'READY') && (
+                <button onClick={() => setShowPOModal(true)} className="flex items-center gap-1.5 px-5 py-3 border border-fuchsia-500/30 bg-fuchsia-500/10 text-fuchsia-400 hover:bg-fuchsia-500/25 rounded-2xl text-[10px] font-mono uppercase tracking-widest transition-all cursor-pointer">
+                  <Box size={12} /> Create PO
+                </button>
+              )}
+              {order.status === 'SHIPPED' && (
+                <button onClick={() => handleAction('in_transit', 'Order marked as In Transit')} className="flex items-center gap-1.5 px-6 py-3 bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/20 rounded-2xl text-[10px] font-mono font-bold uppercase tracking-widest transition-all cursor-pointer">
+                  <Ship size={12} /> Mark In Transit
+                </button>
+              )}
+              {order.status === 'IN_TRANSIT' && (
+                <button onClick={() => handleAction('delivered', 'Order marked as Delivered')} className="flex items-center gap-1.5 px-6 py-3 bg-blue-500/10 text-blue-400 border border-blue-500/30 hover:bg-blue-500/20 rounded-2xl text-[10px] font-mono font-bold uppercase tracking-widest transition-all cursor-pointer">
+                  <CheckCircle2 size={12} /> Mark Delivered
+                </button>
+              )}
+            </div>
+          )}
         </div>
 
-        {/* Progress pipeline stepper */}
-        {order.status !== 'CANCELLED' && (
+        {/* Progress Pipeline */}
+        {!isEditing && order.status !== 'CANCELLED' && (
           <div className="glass p-6 rounded-3xl border border-white/5">
             <div className="flex items-center gap-2 overflow-x-auto">
               {STATUS_FLOW.map((step, i) => (
@@ -284,59 +521,29 @@ export default function SalesOrderDetailPage() {
           </div>
         )}
 
-        {/* Main Detail Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-
-          {/* Left sidebar */}
           <div className="lg:col-span-4 space-y-6">
-
-            {/* Contract Parameters */}
-            <div className="glass p-8 rounded-4xl border border-white/5 space-y-5">
-              <div className="flex justify-between items-center pb-4 border-b border-white/5">
-                <span className="text-[10px] font-mono text-white/70 uppercase tracking-widest">Contract Status</span>
-                <span className={cn('px-3 py-1 rounded text-[9px] font-mono font-bold uppercase border', getStatusStyle(order.status))}>
-                  {order.status}
-                </span>
+            <ContractMetadataCard 
+              isEditing={isEditing}
+              order={order}
+              formState={formState}
+              onChange={updateFormState}
+              getStatusStyle={getStatusStyle}
+            />
+            
+            {/* Remarks in Edit Mode */}
+            {isEditing && (
+              <div className="glass p-8 rounded-4xl border border-white/5 space-y-3">
+                <label className="text-[10px] font-mono text-white/70 uppercase tracking-widest">Remarks</label>
+                <textarea 
+                  value={formState.remarks || ''} onChange={e => updateFormState('remarks', e.target.value)}
+                  placeholder="Special clauses..."
+                  className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm text-white/90 outline-none focus:border-blue-500/50 transition-all h-32 resize-none"
+                />
               </div>
-              <div className="grid grid-cols-2 gap-4 text-xs font-mono">
-                {[
-                  ['Incoterm', order.incoterm || '—'],
-                  ['Container', order.containerType || '—'],
-                  ['Currency', order.currency || 'USD'],
-                  ['Margin', `${order.marginPercentage || 0}%`],
-                ].map(([label, val]) => (
-                  <div key={label}>
-                    <p className="text-[9px] text-white/70 uppercase mb-1">{label}</p>
-                    <p className="font-bold text-white/80">{val}</p>
-                  </div>
-                ))}
-              </div>
-              <div className="grid grid-cols-2 gap-4 text-xs font-mono">
-                <div>
-                  <p className="text-[9px] text-white/70 uppercase mb-1">Order Date</p>
-                  <p className="font-bold text-white/80">{formatDate(order.date)}</p>
-                </div>
-                <div>
-                  <p className="text-[9px] text-white/70 uppercase mb-1">Expected Shipment</p>
-                  <p className="font-bold text-white/80">{formatDate(order.expectedShipmentDate)}</p>
-                </div>
-              </div>
-              <div className="text-xs font-mono">
-                <p className="text-[9px] text-white/70 uppercase mb-1">Payment Terms</p>
-                <p className="font-bold text-white/80">{order.paymentTerms || '—'}</p>
-              </div>
-              {order.quotationId && (
-                <div className="pt-3 border-t border-white/5 text-xs font-mono">
-                  <p className="text-[9px] text-white/70 uppercase mb-1">Source Quotation</p>
-                  <Link href={`/quotations/${order.quotationId}`} className="text-blue-400 hover:underline flex items-center gap-1">
-                    View Quotation <ExternalLink size={10} />
-                  </Link>
-                </div>
-              )}
-            </div>
-
-            {/* Customer Card */}
-            {customer && (
+            )}
+            
+            {!isEditing && customer && (
               <div className="glass p-8 rounded-4xl border border-white/5 space-y-4">
                 <h4 className="text-[10px] font-mono text-white/70 uppercase tracking-widest pb-3 border-b border-white/5 flex items-center gap-2">
                   <User size={12} className="text-blue-400" /> Buyer CRM Node
@@ -355,125 +562,139 @@ export default function SalesOrderDetailPage() {
               </div>
             )}
 
-            {/* Documents Vault */}
-            <div className="glass p-8 rounded-4xl border border-white/5 space-y-4">
-              <h4 className="text-[10px] font-mono text-white/70 uppercase tracking-widest pb-2 border-b border-white/5">
-                Contract Documents
-              </h4>
-              {orderDocuments.length > 0 ? (
-                orderDocuments.map(doc => (
-                  <div key={doc.id} className="flex justify-between items-center p-3 bg-white/2 border border-white/5 rounded-xl text-[11px] font-mono">
-                    <div className="flex items-center gap-2">
-                      <FileText size={13} className="text-blue-400 shrink-0" />
-                      <span className="text-white/80 truncate max-w-[140px]">{doc.name}</span>
+            {!isEditing && (
+              <div className="glass p-8 rounded-4xl border border-white/5 space-y-4">
+                <h4 className="text-[10px] font-mono text-white/70 uppercase tracking-widest pb-2 border-b border-white/5">
+                  Contract Documents
+                </h4>
+                {orderDocuments.length > 0 ? (
+                  orderDocuments.map(doc => (
+                    <div key={doc.id} className="flex justify-between items-center p-3 bg-white/2 border border-white/5 rounded-xl text-[11px] font-mono">
+                      <div className="flex items-center gap-2">
+                        <FileText size={13} className="text-blue-400 shrink-0" />
+                        <span className="text-white/80 truncate max-w-[140px]">{doc.name}</span>
+                      </div>
+                      <Link href={`/documents?selectedId=${doc.id}`} className="text-white/80 hover:text-white transition-colors shrink-0" title="Open">
+                        <ExternalLink size={12} />
+                      </Link>
                     </div>
-                    <Link href={`/documents?selectedId=${doc.id}`} className="text-white/80 hover:text-white transition-colors shrink-0" title="Open">
-                      <ExternalLink size={12} />
-                    </Link>
-                  </div>
-                ))
-              ) : (
-                <p className="text-center py-4 text-white/10 text-[9px] font-mono uppercase">No documents generated yet</p>
-              )}
-            </div>
+                  ))
+                ) : (
+                  <p className="text-center py-4 text-white/10 text-[9px] font-mono uppercase">No documents generated yet</p>
+                )}
+              </div>
+            )}
           </div>
 
-          {/* Right main panel */}
           <div className="lg:col-span-8 space-y-8">
+            <LineItemsTable 
+              isEditing={isEditing}
+              items={isEditing ? calculatedItems : order.items}
+              updateItem={updateItem}
+              removeItem={removeItem}
+              addItem={addItem}
+              variantOptions={variantOptions}
+              formatCurrency={formatCurrency}
+              getProductName={getProductName}
+              marginPercentage={isEditing ? (formState.marginPercentage || 0) : (order.marginPercentage || 0)}
+              setMarginPercentage={handleMarginChange}
+              costOfGoods={isEditing ? costOfGoods : 0}
+              grossProfit={isEditing ? grossProfit : 0}
+              totalValue={isEditing ? totalValue : order.totalValue}
+            />
 
-            {/* Line Items table */}
-            <div className="glass p-8 rounded-4xl border border-white/5 space-y-6">
-              <h3 className="text-sm font-mono text-white/70 uppercase tracking-widest flex items-center gap-2 pb-4 border-b border-white/5">
-                <Box size={14} className="text-blue-400" /> Itemised Cargo Manifest
-              </h3>
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs font-mono">
-                  <thead className="text-white/70 uppercase tracking-wider border-b border-white/5">
-                    <tr>
-                      <th className="pb-4">Product SKU</th>
-                      <th className="pb-4 text-right">Qty</th>
-                      <th className="pb-4 text-right">Unit Price</th>
-                      <th className="pb-4 text-right">Total</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-white/5">
-                    {order.items.map((item, idx) => (
-                      <tr key={idx}>
-                        <td className="py-4">
-                          <p className="font-sans font-bold text-white/90">{getProductName(item.productId)}</p>
-                        </td>
-                        <td className="py-4 text-right text-white/90 font-bold">{item.quantity} MT</td>
-                        <td className="py-4 text-right text-white/90 font-bold">{formatCurrency(item.unitPrice)}</td>
-                        <td className="py-4 text-right text-white font-bold">{formatCurrency(item.totalPrice)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              <div className="border-t border-white/5 pt-6 flex justify-end">
-                <div className="w-full max-w-xs space-y-2 font-mono text-xs">
-                  {order.marginPercentage && (
-                    <div className="flex justify-between text-white/70">
-                      <span>Margin</span><span>{order.marginPercentage}%</span>
-                    </div>
-                  )}
-                  <div className="flex justify-between font-bold text-base border-t border-white/5 pt-2">
-                    <span className="text-white/80">Contract Value</span>
-                    <span className="text-blue-400 font-sans text-lg">{formatCurrency(order.totalValue)}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Remarks */}
-            {order.remarks && (
+            {!isEditing && order.remarks && (
               <div className="glass p-8 rounded-4xl border border-white/5 space-y-3">
                 <h4 className="text-[10px] font-mono text-white/70 uppercase tracking-widest pb-2 border-b border-white/5">Special Clauses & Remarks</h4>
                 <p className="text-[11px] font-mono text-white/70 whitespace-pre-wrap leading-relaxed">{order.remarks}</p>
               </div>
             )}
 
-            {/* Timeline & Notes */}
-            <div className="glass p-8 rounded-4xl border border-white/5 space-y-6">
-              <h3 className="text-sm font-mono text-white/70 uppercase tracking-widest flex items-center gap-2 pb-4 border-b border-white/5">
-                <Activity size={14} className="text-blue-400" /> Fulfilment Timeline
-              </h3>
-
-              {/* Note logger */}
-              <div className="p-4 rounded-2xl bg-white/2 border border-white/5 space-y-3">
-                <p className="text-[8px] font-mono text-white/70 uppercase tracking-wider">Log Operational Note</p>
-                <textarea
-                  value={noteText}
-                  onChange={e => setNoteText(e.target.value)}
-                  placeholder="Record buyer communications, production updates, or shipment alerts..."
-                  className="w-full bg-[#070707] border border-white/10 rounded-xl p-3 text-[11px] font-mono text-white focus:outline-none focus:border-blue-500/50 min-h-[56px]"
-                />
-                <div className="flex justify-end">
-                  <button onClick={handleSaveNote} disabled={!noteText.trim()}
-                    className="px-4 py-2 bg-blue-500 text-black text-[9px] font-mono font-bold uppercase rounded-lg hover:bg-blue-400 disabled:opacity-40 border-none cursor-pointer">
-                    Save Note
-                  </button>
+            {!isEditing && (
+              <div className="glass p-8 rounded-4xl border border-white/5 space-y-6">
+                <h3 className="text-sm font-mono text-white/70 uppercase tracking-widest flex items-center gap-2 pb-4 border-b border-white/5">
+                  <Activity size={14} className="text-blue-400" /> Fulfilment Timeline
+                </h3>
+                <div className="p-4 rounded-2xl bg-white/2 border border-white/5 space-y-3">
+                  <p className="text-[8px] font-mono text-white/70 uppercase tracking-wider">Log Operational Note</p>
+                  <textarea
+                    value={noteText} onChange={e => setNoteText(e.target.value)}
+                    placeholder="Record updates..."
+                    className="w-full bg-[#070707] border border-white/10 rounded-xl p-3 text-[11px] font-mono text-white focus:outline-none focus:border-blue-500/50 min-h-[56px]"
+                  />
+                  <div className="flex justify-end">
+                    <button onClick={handleSaveNote} className="px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-[9px] font-mono font-bold uppercase transition-all">
+                      Save Note
+                    </button>
+                  </div>
+                </div>
+                <div className="space-y-4 pt-2">
+                  {(order.timeline as any[])?.slice().reverse().map((event, idx) => (
+                    <div key={idx} className="flex gap-4">
+                      <div className="flex flex-col items-center">
+                        <div className="w-6 h-6 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-white/50 shrink-0">
+                          {getTimelineIcon(event.type)}
+                        </div>
+                        {idx !== (order.timeline as any[]).length - 1 && <div className="w-px h-full bg-white/5 my-1" />}
+                      </div>
+                      <div className="pb-4">
+                        <p className="text-xs font-mono font-bold text-white/90">{event.title}</p>
+                        <p className="text-[11px] font-mono text-white/60 mt-1">{event.description}</p>
+                        <p className="text-[9px] font-mono text-white/40 uppercase mt-2">{formatDate(event.date)}</p>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
-
-              {/* Events list */}
-              <div className="max-h-[300px] overflow-y-auto custom-scrollbar pr-2 space-y-6 relative before:absolute before:left-[11px] before:top-2 before:bottom-2 before:w-px before:bg-white/5">
-                {(order.timeline || []).map((ev, idx) => (
-                  <div key={ev.id || idx} className="relative pl-8">
-                    <div className="absolute left-0 top-1 w-6 h-6 rounded-full bg-[#0a0a0a] border border-white/15 flex items-center justify-center z-10 text-blue-400">
-                      {getTimelineIcon(ev.type)}
-                    </div>
-                    <p className="text-[8px] font-mono text-white/70 uppercase mb-0.5">{formatDate(ev.date)}</p>
-                    <p className="text-xs font-bold text-white/90 mb-0.5">{ev.title}</p>
-                    <p className="text-[10px] text-white/70 leading-relaxed font-sans">{ev.description}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-
+            )}
           </div>
         </div>
       </div>
+      {/* Purchase Order Modal */}
+      {showPOModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+          <div className="bg-[#0a0a0a] border border-white/10 rounded-3xl p-6 w-full max-w-md space-y-6">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-mono text-white/90 uppercase tracking-widest">Create Purchase Order</h3>
+              <button onClick={() => setShowPOModal(false)} className="text-white/50 hover:text-white bg-transparent border-none cursor-pointer"><X size={18} /></button>
+            </div>
+            
+            <p className="text-xs text-white/70">Select a supplier to assign this procurement order to. The items and quantities from the sales order will be cloned into the new PO automatically.</p>
+            
+            <div className="space-y-4">
+              <div className="space-y-1">
+                <label className="text-[10px] font-mono text-white/50 uppercase tracking-widest">Supplier</label>
+                <select
+                  value={selectedSupplierId}
+                  onChange={(e) => setSelectedSupplierId(e.target.value)}
+                  className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm text-white/90 outline-none focus:border-blue-500/50 appearance-none"
+                >
+                  <option value="">-- Select Supplier --</option>
+                  {suppliers.map(s => (
+                    <option key={s.id} value={s.id}>{s.name} ({s.country})</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 pt-4 border-t border-white/10">
+              <button 
+                onClick={() => setShowPOModal(false)}
+                className="px-5 py-2.5 rounded-xl text-xs font-mono uppercase tracking-widest text-white/70 hover:bg-white/5 transition-colors border-none bg-transparent cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={handleCreatePO}
+                disabled={saving || !selectedSupplierId}
+                className="px-5 py-2.5 rounded-xl text-xs font-mono font-bold uppercase tracking-widest text-black bg-blue-500 hover:bg-blue-400 disabled:opacity-50 transition-colors border-none cursor-pointer"
+              >
+                {saving ? 'Creating...' : 'Create PO'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

@@ -12,6 +12,8 @@ import { formatCurrency, formatDate, cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import Link from 'next/link';
 import { PurchaseOrder, Supplier, Product } from '@/types';
+import { PurchaseOrderMetadataCard } from '@/components/purchase/purchase-order-metadata-card';
+import { LineItemsTable } from '@/components/sales/line-items-table';
 
 const STATUS_FLOW = ['DRAFT', 'ISSUED', 'ACKNOWLEDGED', 'IN_PRODUCTION', 'DISPATCHED', 'RECEIVED'] as const;
 
@@ -25,6 +27,11 @@ export default function PurchaseOrderDetailPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [noteText, setNoteText] = useState('');
+
+  // Editing State
+  const [isEditing, setIsEditing] = useState(false);
+  const [formState, setFormState] = useState<any>({});
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => { if (id) fetchData(); }, [id]);
 
@@ -86,6 +93,112 @@ export default function PurchaseOrderDetailPage() {
     else toast.error('Delete failed');
   };
 
+  const handleEditToggle = () => {
+    if (!isEditing) {
+      setFormState({
+        currency: po?.currency || 'USD',
+        incoterm: po?.incoterm || '',
+        expectedDeliveryDate: po?.expectedDeliveryDate || '',
+        paymentTerms: po?.paymentTerms || '',
+        items: po?.items?.map(i => ({
+          ...i,
+          name: products.find(p => p.id === i.productId)?.name || '',
+          sku: products.find(p => p.id === i.productId)?.sku || '',
+          uom: products.find(p => p.id === i.productId)?.uom || 'MT',
+          total: (i.quantity || 0) * (i.unitPrice || 0)
+        })) || []
+      });
+    }
+    setIsEditing(!isEditing);
+  };
+
+  const handleSaveEdit = async () => {
+    try {
+      setSaving(true);
+      
+      const itemsToSave = formState.items.map((i: any) => {
+        const product = products.find(p => p.id === i.productId);
+        const variant = product?.variants?.find((v: any) => v.id === i.variantId);
+        return {
+          productId: i.productId,
+          variantId: i.variantId,
+          quantity: i.quantity,
+          unitPrice: i.unitPrice,
+          totalPrice: i.total
+        };
+      });
+      const totalValue = itemsToSave.reduce((sum: number, i: any) => sum + (i.totalPrice || 0), 0);
+
+      const payload = {
+        ...po,
+        ...formState,
+        items: itemsToSave,
+        totalValue
+      };
+
+      const res = await fetch(`/api/purchase-orders/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to save');
+
+      setPo(data);
+      setIsEditing(false);
+      toast.success('Purchase Order updated successfully');
+      await fetchData();
+    } catch (e: any) {
+      toast.error(e.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const updateFormState = (field: string, value: any) => {
+    setFormState((prev: any) => ({ ...prev, [field]: value }));
+  };
+
+  const updateItem = (idx: number, field: string, value: any) => {
+    const newItems = [...formState.items];
+    const item = { ...newItems[idx], [field]: value };
+    
+    if (field === 'variantId') {
+      for (const p of products) {
+        const v = p.variants?.find((v: any) => v.id === value);
+        if (v) {
+          item.productId = p.id;
+          item.name = p.name;
+          item.sku = v.sku;
+          item.uom = p.uom || 'MT';
+          item.unitPrice = v.purchasePrice || p.purchasePrice || v.sellingPrice || p.sellingPrice || 0;
+          break;
+        }
+      }
+      item.total = (item.quantity || 0) * item.unitPrice;
+    }
+    
+    if (field === 'quantity' || field === 'unitPrice') {
+      item.total = (item.quantity || 0) * (item.unitPrice || 0);
+    }
+    
+    newItems[idx] = item;
+    updateFormState('items', newItems);
+  };
+
+  const removeItem = (idx: number) => {
+    const newItems = [...formState.items];
+    newItems.splice(idx, 1);
+    updateFormState('items', newItems);
+  };
+
+  const addItem = () => {
+    updateFormState('items', [
+      ...formState.items,
+      { productId: '', variantId: '', quantity: 1, unitPrice: 0, total: 0 }
+    ]);
+  };
+
   const getStatusStyle = (status: string) => {
     switch (status) {
       case 'DRAFT': return 'text-white/70 bg-white/5 border-white/10';
@@ -136,10 +249,30 @@ export default function PurchaseOrderDetailPage() {
           </button>
 
           <div className="flex flex-wrap items-center gap-2.5">
-            <button onClick={handleDelete}
-              className="p-3.5 rounded-2xl bg-white/5 border border-white/10 text-white/70 hover:text-rose-400 hover:bg-rose-500/10 transition-all cursor-pointer" title="Soft delete">
-              <Trash2 size={14} />
-            </button>
+            {isEditing ? (
+              <>
+                <button onClick={() => setIsEditing(false)}
+                  className="px-5 py-2.5 rounded-xl text-xs font-mono uppercase tracking-widest text-white/70 hover:bg-white/5 border border-white/10 transition-colors bg-transparent cursor-pointer">
+                  Cancel
+                </button>
+                <button onClick={handleSaveEdit} disabled={saving}
+                  className="flex items-center gap-2 px-6 py-2.5 bg-blue-500 text-black hover:bg-blue-400 disabled:opacity-50 rounded-xl text-xs font-mono font-bold uppercase tracking-widest transition-all border-none cursor-pointer">
+                  {saving ? 'Saving...' : 'Save Changes'}
+                </button>
+              </>
+            ) : (
+              <>
+                <button onClick={handleDelete}
+                  className="p-3.5 rounded-2xl bg-white/5 border border-white/10 text-white/70 hover:text-rose-400 hover:bg-rose-500/10 transition-all cursor-pointer" title="Soft delete">
+                  <Trash2 size={14} />
+                </button>
+
+                {(po.status === 'DRAFT' || po.status === 'ISSUED') && (
+                  <button onClick={handleEditToggle}
+                    className="flex items-center gap-1.5 px-5 py-3 border border-blue-500/30 bg-blue-500/10 text-blue-400 hover:bg-blue-500/25 rounded-2xl text-[10px] font-mono uppercase tracking-widest transition-all cursor-pointer">
+                    <FileText size={12} /> Edit PO
+                  </button>
+                )}
 
             {!isCancelled && po.status !== 'RECEIVED' && (
               <button onClick={() => handleAction('cancel', 'PO cancelled')}
@@ -182,6 +315,8 @@ export default function PurchaseOrderDetailPage() {
                 ✓ GOODS RECEIVED
               </span>
             )}
+              </>
+            )}
           </div>
         </div>
 
@@ -216,53 +351,13 @@ export default function PurchaseOrderDetailPage() {
           <div className="lg:col-span-4 space-y-6">
 
             {/* PO Parameters */}
-            <div className="glass p-8 rounded-4xl border border-white/5 space-y-5">
-              <div className="flex justify-between items-center pb-4 border-b border-white/5">
-                <span className="text-[10px] font-mono text-white/70 uppercase tracking-widest">PO Status</span>
-                <span className={cn('px-3 py-1 rounded text-[9px] font-mono font-bold uppercase border', getStatusStyle(po.status))}>
-                  {po.status.replace('_', ' ')}
-                </span>
-              </div>
-              <div className="grid grid-cols-2 gap-4 text-xs font-mono">
-                {[
-                  ['Currency', po.currency || 'INR'],
-                  ['Delivery Terms', po.deliveryTerms || '—'],
-                ].map(([label, val]) => (
-                  <div key={label}>
-                    <p className="text-[9px] text-white/70 uppercase mb-1">{label}</p>
-                    <p className="font-bold text-white/80">{val}</p>
-                  </div>
-                ))}
-              </div>
-              <div className="grid grid-cols-2 gap-4 text-xs font-mono">
-                <div>
-                  <p className="text-[9px] text-white/70 uppercase mb-1">Issue Date</p>
-                  <p className="font-bold text-white/80">{formatDate(po.date)}</p>
-                </div>
-                <div>
-                  <p className="text-[9px] text-white/70 uppercase mb-1">Expected Delivery</p>
-                  <p className="font-bold text-white/80">{formatDate(po.expectedDeliveryDate)}</p>
-                </div>
-              </div>
-              {po.actualDeliveryDate && (
-                <div className="text-xs font-mono">
-                  <p className="text-[9px] text-white/70 uppercase mb-1">Actual Delivery</p>
-                  <p className="font-bold text-emerald-400">{formatDate(po.actualDeliveryDate)}</p>
-                </div>
-              )}
-              <div className="text-xs font-mono">
-                <p className="text-[9px] text-white/70 uppercase mb-1">Payment Terms</p>
-                <p className="font-bold text-white/80">{po.paymentTerms || '—'}</p>
-              </div>
-              {po.salesOrderId && (
-                <div className="pt-3 border-t border-white/5 text-xs font-mono">
-                  <p className="text-[9px] text-white/70 uppercase mb-1">Linked Sales Order</p>
-                  <Link href={`/sales-orders/${po.salesOrderId}`} className="text-blue-400 hover:underline flex items-center gap-1">
-                    View Sales Order <ExternalLink size={10} />
-                  </Link>
-                </div>
-              )}
-            </div>
+            <PurchaseOrderMetadataCard 
+              isEditing={isEditing} 
+              po={po} 
+              formState={formState} 
+              onChange={updateFormState} 
+              getStatusStyle={getStatusStyle} 
+            />
 
             {/* Supplier Card */}
             {supplier && (
@@ -332,46 +427,26 @@ export default function PurchaseOrderDetailPage() {
           <div className="lg:col-span-8 space-y-8">
 
             {/* Line Items */}
-            <div className="glass p-8 rounded-4xl border border-white/5 space-y-6">
-              <h3 className="text-sm font-mono text-white/70 uppercase tracking-widest flex items-center gap-2 pb-4 border-b border-white/5">
-                <Package size={14} className="text-amber-400" /> Procured Items Manifest
-              </h3>
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs font-mono">
-                  <thead className="text-white/70 uppercase tracking-wider border-b border-white/5">
-                    <tr>
-                      <th className="pb-4">Product</th>
-                      <th className="pb-4 text-right">Qty</th>
-                      <th className="pb-4 text-right">Unit Cost</th>
-                      <th className="pb-4 text-right">Total</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-white/5">
-                    {po.items.map((item, idx) => (
-                      <tr key={idx}>
-                        <td className="py-4">
-                          <p className="font-sans font-bold text-white/90">{getProductName(item.productId)}</p>
-                        </td>
-                        <td className="py-4 text-right text-white/90 font-bold">{item.quantity} MT</td>
-                        <td className="py-4 text-right text-white/90 font-bold">{formatCurrency(item.unitPrice)}</td>
-                        <td className="py-4 text-right text-white font-bold">{formatCurrency(item.totalPrice)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              <div className="border-t border-white/5 pt-6 flex justify-end">
-                <div className="w-full max-w-xs space-y-2 font-mono text-xs">
-                  <div className="flex justify-between text-white/70">
-                    <span>Currency</span><span>{po.currency || 'INR'} @ {po.exchangeRate || 1} per USD</span>
-                  </div>
-                  <div className="flex justify-between font-bold text-base border-t border-white/5 pt-2">
-                    <span className="text-white/80">Procurement Value</span>
-                    <span className="text-amber-400 font-sans text-lg">{formatCurrency(po.totalValue)}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
+            <LineItemsTable 
+              isEditing={isEditing}
+              items={isEditing ? formState.items : po.items}
+              updateItem={updateItem}
+              removeItem={removeItem}
+              addItem={addItem}
+              variantOptions={products.flatMap(p => p.variants?.map((v: any) => ({
+                value: v.id,
+                label: `${p.name} (${v.sku})`,
+                description: `Stock: ${v.inventory || 0} ${p.uom || 'MT'} | Cost: ${formatCurrency(v.purchasePrice || p.purchasePrice || 0)}`
+              })) || [])}
+              formatCurrency={formatCurrency}
+              getProductName={getProductName}
+              marginPercentage={0}
+              setMarginPercentage={() => {}}
+              costOfGoods={isEditing ? formState.items.reduce((s: number, i: any) => s + (i.total || 0), 0) : po.totalValue}
+              grossProfit={0}
+              totalValue={isEditing ? formState.items.reduce((s: number, i: any) => s + (i.total || 0), 0) : po.totalValue}
+              isPurchaseOrder={true}
+            />
 
             {/* Remarks */}
             {po.remarks && (

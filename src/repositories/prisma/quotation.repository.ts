@@ -41,7 +41,8 @@ export class PrismaQuotationRepository {
       creditLimit: 250000,
       segment: 'Enterprise',
       rating: 4.5,
-      version: 1,
+      version: q.version || 1,
+      exchangeRate: q.exchangeRate || 1,
     };
   }
 
@@ -72,13 +73,13 @@ export class PrismaQuotationRepository {
     });
     return data ? this.mapToFrontend(data) : null;
   }
-
   async create(data: any) {
-    const { id, items, timeline, documents, entityStatus, creditLimit, segment, rating, version, createdAt, updatedAt, action, customerId, originPortId, destinationPortId, ...rest } = data;
+    const { id, items, timeline, documents, entityStatus, creditLimit, segment, rating, createdAt, updatedAt, action, customerId, originPortId, destinationPortId, containerType, ...rest } = data;
     
     const created = await prisma.quotation.create({
       data: {
         ...rest,
+        container: containerType || data.container,
         id: id || undefined,
         status: this.mapStatus(data.status),
         date: new Date(data.date),
@@ -103,13 +104,14 @@ export class PrismaQuotationRepository {
   }
 
   async update(id: string, data: any) {
-    const { id: _id, items, timeline, documents, entityStatus, creditLimit, segment, rating, version, createdAt, updatedAt, action, customerId, originPortId, destinationPortId, ...rest } = data;
+    const { id: _id, items, timeline, documents, entityStatus, creditLimit, segment, rating, createdAt, updatedAt, action, customerId, originPortId, destinationPortId, containerType, ...rest } = data;
     
     const updated = await prisma.quotation.update({
       where: { id },
       data: {
         ...rest,
-        status: this.mapStatus(data.status),
+        container: containerType !== undefined ? containerType : (data.container !== undefined ? data.container : undefined),
+        status: data.status ? this.mapStatus(data.status) : undefined,
         date: data.date ? new Date(data.date) : undefined,
         validityDate: data.validityDate ? new Date(data.validityDate) : undefined,
         expectedShipment: data.expectedShipment ? new Date(data.expectedShipment) : null,

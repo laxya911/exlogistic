@@ -38,6 +38,10 @@ export class PrismaRepository<T = any> {
         }
       } else if (item.status === 'SHIPPED') {
         uiStatus = 'SHIPPED';
+      } else if (item.status === 'IN_TRANSIT') {
+        uiStatus = 'IN_TRANSIT';
+      } else if (item.status === 'DELIVERED') {
+        uiStatus = 'DELIVERED';
       } else if (item.status === 'CANCELLED') {
         uiStatus = 'CANCELLED';
       }
@@ -93,6 +97,11 @@ export class PrismaRepository<T = any> {
   private cleanAndMapPayload = (data: any): any => {
     if (!data) return data;
     const mapped = { ...data };
+
+    // Convert common date fields to native Date objects if they are strings
+    if (typeof mapped.date === 'string') {
+      mapped.date = new Date(mapped.date);
+    }
     
     // Map expectedShipmentDate -> expectedShipment
     if (mapped.expectedShipmentDate !== undefined) {
@@ -100,10 +109,12 @@ export class PrismaRepository<T = any> {
       delete mapped.expectedShipmentDate;
     }
     
-    // Map containerType -> container
+    // Map containerType -> container only for models that use 'container'
     if (mapped.containerType !== undefined) {
-      mapped.container = mapped.containerType;
-      delete mapped.containerType;
+      if (['quotation', 'salesOrder', 'purchaseOrder'].includes(this.modelName)) {
+        mapped.container = mapped.containerType;
+        delete mapped.containerType;
+      }
     }
 
     if (this.modelName === 'salesOrder') {
@@ -113,6 +124,8 @@ export class PrismaRepository<T = any> {
           'PRODUCTION': 'CONFIRMED',
           'READY': 'CONFIRMED',
           'SHIPPED': 'SHIPPED',
+          'IN_TRANSIT': 'IN_TRANSIT',
+          'DELIVERED': 'DELIVERED',
           'CANCELLED': 'CANCELLED'
         };
         mapped.status = soStatusMap[mapped.status] || mapped.status;
@@ -142,6 +155,10 @@ export class PrismaRepository<T = any> {
     delete mapped.forwarder;
     delete mapped.salesOrder;
     delete mapped.purchaseOrder;
+    delete mapped.quotation;
+    delete mapped.shipments;
+    delete mapped.purchaseOrders;
+    delete mapped.salesOrders;
 
     // Clean up UI mock fields not present in prisma schema
     // For customer/supplier: entityStatus IS the DB status column — map it before deleting
@@ -176,6 +193,26 @@ export class PrismaRepository<T = any> {
       delete mapped.creditLimit;
       delete mapped.segment;
       delete mapped.rating;
+      delete mapped.performanceRating;
+      delete mapped.averageLeadTime;
+      delete mapped.certifications;
+      delete mapped.productsSuppliedIds;
+      delete mapped.contacts;
+      
+      // Clean up fields not present in all models
+      if (this.modelName !== 'salesOrder' && this.modelName !== 'purchaseOrder') {
+        delete mapped.paymentTerms;
+        delete mapped.container;
+      }
+      if (this.modelName !== 'salesOrder') {
+        delete mapped.expectedShipment;
+      }
+      
+      // Always delete UI-only mapped fields
+      delete mapped.expectedShipmentDate;
+      if (this.modelName !== 'shipment') {
+        delete mapped.containerType;
+      }
     }
     
     return mapped;
@@ -195,7 +232,8 @@ export class PrismaRepository<T = any> {
     const cleanData = this.cleanAndMapPayload(data);
     
     // Handle items relation for create
-    if (Array.isArray((data as any).items)) {
+    const modelsWithItemsRelation = ['salesOrder', 'purchaseOrder', 'shipment'];
+    if (modelsWithItemsRelation.includes(this.modelName) && Array.isArray((data as any).items)) {
       cleanData.items = {
         create: (data as any).items.map((i: any) => {
           const itemPayload: any = {
@@ -219,29 +257,39 @@ export class PrismaRepository<T = any> {
       const cleanData = this.cleanAndMapPayload(data);
       
       // Handle items relation for update
-      if (Array.isArray((data as any).items)) {
-        cleanData.items = {
-          deleteMany: {},
-          create: (data as any).items.map((i: any) => {
-            const itemPayload: any = {
-              variantId: i.variantId || i.productId,
-              quantity: Number(i.quantity),
-            };
-            if (this.modelName !== 'shipment') {
-              itemPayload.unitPrice = Number(i.unitPrice);
-            }
-            return itemPayload;
-          })
-        };
-      } else {
-        delete cleanData.items;
+      const modelsWithItemsRelation = ['salesOrder', 'purchaseOrder', 'shipment'];
+      if (modelsWithItemsRelation.includes(this.modelName)) {
+        if (Array.isArray((data as any).items)) {
+          cleanData.items = {
+            deleteMany: {},
+            create: (data as any).items.map((i: any) => {
+              const itemPayload: any = {
+                variantId: i.variantId || i.productId,
+                quantity: Number(i.quantity),
+              };
+              if (this.modelName !== 'shipment') {
+                itemPayload.unitPrice = Number(i.unitPrice);
+              }
+              return itemPayload;
+            })
+          };
+        } else {
+          delete cleanData.items;
+        }
       }
+      
+      // Remove relation scalar IDs that Prisma's checked update payload rejects
+      delete cleanData.salesOrderId;
+      delete cleanData.purchaseOrderId;
+      delete cleanData.customerId;
+      delete cleanData.supplierId;
+      delete cleanData.quotationId;
       
       const updated = await this.delegate.update({ where: { id }, data: cleanData, include: this.defaultIncludes });
       return this.mapToMock(updated);
     } catch (e) {
       console.error("Prisma update error in PrismaRepository:", e);
-      return null;
+      throw e;
     }
   }
 
@@ -259,6 +307,7 @@ export class PrismaRepository<T = any> {
       const all = await this.getAll();
       return all.filter(query);
     }
-    return this.delegate.findMany({ where: query, include: this.defaultIncludes });
+    const data = await this.delegate.findMany({ where: query, include: this.defaultIncludes });
+    return data.map(this.mapToMock);
   }
 }

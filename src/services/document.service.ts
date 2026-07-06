@@ -32,7 +32,9 @@ export class DocumentService {
       },
       items: quote.items?.map((item: any, idx: number) => ({
         id: `item-${idx}`,
-        description: `Product: ${item.productId}`, // In reality, we'd join with Products
+        description: item.variant?.product?.name 
+          ? `${item.variant.product.name} (${item.variant.sku})` 
+          : (item.variant?.title || `Product: ${item.productId || item.variantId}`),
         quantity: item.quantity,
         unitPrice: item.unitPrice,
         totalPrice: item.quantity * item.unitPrice
@@ -64,7 +66,9 @@ export class DocumentService {
       },
       items: order.items?.map((item: any, idx: number) => ({
         id: `item-${idx}`,
-        description: `Product: ${item.productId}`,
+        description: item.variant?.product?.name 
+          ? `${item.variant.product.name} (${item.variant.sku})` 
+          : (item.variant?.title || `Product: ${item.productId || item.variantId}`),
         quantity: item.quantity,
         unitPrice: item.unitPrice,
         totalPrice: item.quantity * item.unitPrice

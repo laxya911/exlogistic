@@ -4,51 +4,35 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { PageHeaderUpdater } from '@/components/layout/page-context';
 import { 
-  ArrowLeft, 
-  FileText, 
-  CheckCircle, 
-  XCircle, 
-  RefreshCcw, 
-  Send, 
-  Trash2, 
-  DollarSign, 
-  Calendar, 
-  Anchor, 
-  Clock, 
-  Layers, 
-  Globe, 
-  User, 
-  TrendingUp, 
-  Activity, 
-  MapPin, 
-  FileDown, 
-  ExternalLink,
-  MessageSquare,
-  Building
+  ArrowLeft, FileText, CheckCircle, XCircle, RefreshCcw, Send, Trash2, 
+  DollarSign, Calendar, Anchor, Clock, Layers, Globe, User, TrendingUp, 
+  Activity, MapPin, FileDown, ExternalLink, MessageSquare, Building, Save, X
 } from 'lucide-react';
 import { formatCurrency, formatDate, cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { Quotation, Customer, Product, Port } from '@/types';
+import { QuotationMetadataCard } from '@/components/sales/quotation-metadata-card';
+import { LineItemsTable } from '@/components/sales/line-items-table';
 
 export default function QuotationDetailPage() {
   const router = useRouter();
   const params = useParams();
   const id = params.id as string;
 
-  // States
   const [quotation, setQuotation] = useState<Quotation | null>(null);
   const [customer, setCustomer] = useState<Customer | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
   const [ports, setPorts] = useState<Port[]>([]);
   const [loading, setLoading] = useState(true);
-
-  // Note logging form
   const [communicationNote, setCommunicationNote] = useState('');
 
+  // Editing State
+  const [isEditing, setIsEditing] = useState(false);
+  const [formState, setFormState] = useState<any>({});
+  const [saving, setSaving] = useState(false);
+
   useEffect(() => {
-    if (id) {
-      fetchDetails();
-    }
+    if (id) fetchDetails();
   }, [id]);
 
   const fetchDetails = async () => {
@@ -59,14 +43,12 @@ export default function QuotationDetailPage() {
       const qData = await qRes.json();
       setQuotation(qData);
 
-      // Fetch customer
       const cRes = await fetch(`/api/customers/${qData.customerId}`);
       if (cRes.ok) {
         const cData = await cRes.json();
         setCustomer(cData);
       }
 
-      // Fetch products and ports
       const [pRes] = await Promise.all([
         fetch('/api/products').then(r => r.json())
       ]);
@@ -86,6 +68,155 @@ export default function QuotationDetailPage() {
     }
   };
 
+  const updateFormState = (field: string, value: any) => {
+    setFormState((prev: any) => ({ ...prev, [field]: value }));
+  };
+
+  const updateItem = (idx: number, field: string, value: any) => {
+    const newItems = [...formState.items];
+    const item = { ...newItems[idx], [field]: value };
+    
+    if (field === 'variantId') {
+      let sellingPrice = 0;
+      for (const p of products) {
+        const v = p.variants?.find((v: any) => v.id === value);
+        if (v) {
+          item.productId = p.id;
+          item.name = p.name;
+          item.sku = v.sku;
+          item.uom = p.uom || 'MT';
+          sellingPrice = v.sellingPrice || p.sellingPrice || 0;
+          break;
+        }
+      }
+      
+      const margin = formState.marginPercentage || 0;
+      const factor = margin > 0 ? 1 - (margin / 100) : 1;
+      
+      item.basePrice = sellingPrice; 
+      item.unitPrice = factor > 0 ? Number((item.basePrice / factor).toFixed(2)) : item.basePrice;
+      item.total = (item.quantity || 0) * item.unitPrice;
+    }
+    
+    if (field === 'quantity') {
+      item.total = (item.quantity || 0) * (item.unitPrice || 0);
+    }
+    
+    if (field === 'unitPrice') {
+      const margin = formState.marginPercentage || 0;
+      const factor = margin > 0 ? 1 - (margin / 100) : 1;
+      item.basePrice = factor > 0 ? Number((value * factor).toFixed(2)) : value;
+      item.total = (item.quantity || 0) * value;
+    }
+    
+    newItems[idx] = item;
+    setFormState({ ...formState, items: newItems });
+  };
+
+  const removeItem = (idx: number) => {
+    const newItems = [...formState.items];
+    newItems.splice(idx, 1);
+    updateFormState('items', newItems);
+  };
+
+  const addItem = () => {
+    updateFormState('items', [...formState.items, { variantId: '', productId: '', quantity: 1, unitPrice: 0, total: 0, uom: 'MT' }]);
+  };
+
+  const calculatedItems = formState.items || [];
+  const costOfGoods = calculatedItems.reduce((acc: number, item: any) => acc + (item.total || 0), 0);
+  const totalValue = useMemo(() => {
+    const margin = formState.marginPercentage || 0;
+    if (margin === 0) return costOfGoods;
+    const factor = 1 - (margin / 100);
+    if (factor <= 0) return costOfGoods;
+    return Math.round(costOfGoods / factor);
+  }, [costOfGoods, formState.marginPercentage]);
+  const grossProfit = totalValue - costOfGoods;
+
+  const handleEditToggle = () => {
+    if (!isEditing) {
+      setFormState({
+        originPortId: quotation?.originPortId || 'TYO',
+        destinationPortId: quotation?.destinationPortId || 'LAX',
+        incoterm: quotation?.incoterm || 'FOB',
+        containerType: quotation?.containerType || '20GP',
+        paymentTerms: quotation?.paymentTerms || '30 Days Net',
+        currency: quotation?.currency || 'USD',
+        remarks: quotation?.remarks || '',
+        marginPercentage: quotation?.marginPercentage || 25,
+        validityDays: quotation?.validityDate && quotation?.date 
+            ? Math.max(1, Math.round((new Date(quotation.validityDate).getTime() - new Date(quotation.date).getTime()) / 86400000))
+            : 30,
+        items: quotation?.items?.map((i: any) => {
+          const margin = quotation?.marginPercentage || 0;
+          const factor = margin > 0 ? 1 - (margin / 100) : 1;
+          const basePrice = factor > 0 ? Number((i.unitPrice * factor).toFixed(2)) : i.unitPrice;
+          return {
+            ...i,
+            name: products.find(p => p.id === i.productId)?.name || '',
+            sku: products.find(p => p.id === i.productId)?.sku || '',
+            uom: products.find(p => p.id === i.productId)?.uom || 'MT',
+            basePrice,
+            total: (i.quantity || 0) * (i.unitPrice || 0)
+          };
+        }) || []
+      });
+    }
+    setIsEditing(!isEditing);
+  };
+
+  const handleMarginChange = (margin: number) => {
+    const factor = margin > 0 ? 1 - (margin / 100) : 1;
+    const newItems = (formState.items || []).map((item: any) => {
+      const base = item.basePrice || item.unitPrice;
+      const newPrice = factor > 0 ? Number((base / factor).toFixed(2)) : base;
+      return { ...item, unitPrice: newPrice, total: newPrice * (item.quantity || 0) };
+    });
+    setFormState({ ...formState, marginPercentage: margin, items: newItems });
+  };
+
+  const handleSaveEdit = async () => {
+    if (!quotation) return;
+    setSaving(true);
+    try {
+      const finalItems = formState.items.map((item: any) => ({
+        variantId: item.variantId,
+        productId: item.productId,
+        quantity: item.quantity,
+        unitPrice: item.unitPrice,
+        totalPrice: item.total
+      }));
+      
+      const totalValueFinal = finalItems.reduce((acc: number, cur: any) => acc + cur.totalPrice, 0);
+
+      const payload = {
+        ...quotation,
+        ...formState,
+        validityDate: new Date(Date.now() + (formState.validityDays || 30) * 86400000).toISOString(),
+        totalValue: totalValueFinal,
+        items: finalItems
+      };
+      delete payload.validityDays;
+
+      const res = await fetch(`/api/quotations/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to update quotation');
+      
+      toast.success('Quotation updated successfully');
+      setQuotation(data);
+      setIsEditing(false);
+    } catch (e: any) {
+      toast.error(e.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const getProductName = (prodId: string) => {
     const prod = products.find(p => p.id === prodId);
     return prod ? `${prod.name} (${prod.sku})` : prodId;
@@ -96,7 +227,6 @@ export default function QuotationDetailPage() {
     return port ? `${port.name} (${port.code})` : portId;
   };
 
-  // Actions
   const handleApprove = async () => {
     try {
       const res = await fetch(`/api/quotations/${id}`, {
@@ -109,9 +239,7 @@ export default function QuotationDetailPage() {
 
       toast.success(data.message || 'Proposal approved! Workflows triggered.');
       await fetchDetails();
-    } catch (e: any) {
-      toast.error(e.message);
-    }
+    } catch (e: any) { toast.error(e.message); }
   };
 
   const handleReject = async () => {
@@ -124,9 +252,7 @@ export default function QuotationDetailPage() {
       if (!res.ok) throw new Error('Rejection failed');
       toast.success('Proposal status updated to REJECTED');
       await fetchDetails();
-    } catch (e) {
-      toast.error('Failed to reject proposal');
-    }
+    } catch (e) { toast.error('Failed to reject proposal'); }
   };
 
   const handleSend = async () => {
@@ -139,9 +265,7 @@ export default function QuotationDetailPage() {
       if (!res.ok) throw new Error('Sending failed');
       toast.success('Proposal sent to customer contact');
       await fetchDetails();
-    } catch (e) {
-      toast.error('Failed to dispatch proposal');
-    }
+    } catch (e) { toast.error('Failed to dispatch proposal'); }
   };
 
   const handleRevise = async () => {
@@ -156,9 +280,7 @@ export default function QuotationDetailPage() {
       
       toast.success(`Generated revised version draft: ${data.quotationNo} (v${data.version}.0)`);
       router.push(`/quotations/${data.id}`);
-    } catch (e: any) {
-      toast.error(e.message || 'Revision failed');
-    }
+    } catch (e: any) { toast.error(e.message || 'Revision failed'); }
   };
 
   const handleSaveNote = async () => {
@@ -179,7 +301,7 @@ export default function QuotationDetailPage() {
       const res = await fetch(`/api/quotations/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ timeline: updatedTimeline })
+        body: JSON.stringify({ action: 'log_note', timeline: updatedTimeline })
       });
       if (!res.ok) throw new Error('Note logger failed');
       const updated = await res.json();
@@ -187,9 +309,7 @@ export default function QuotationDetailPage() {
       toast.success('Negotiation log note recorded');
       setCommunicationNote('');
       setQuotation(updated);
-    } catch (e) {
-      toast.error('Failed to log note');
-    }
+    } catch (e) { toast.error('Failed to log note'); }
   };
 
   const handleDelete = async () => {
@@ -199,9 +319,7 @@ export default function QuotationDetailPage() {
         if (!res.ok) throw new Error('Delete failed');
         toast.success('Proposal soft-deleted');
         router.push('/quotations');
-      } catch (e) {
-        toast.error('Failed to delete quotation');
-      }
+      } catch (e) { toast.error('Failed to delete quotation'); }
     }
   };
 
@@ -217,139 +335,107 @@ export default function QuotationDetailPage() {
     }
   };
 
+  const variantOptions = products.flatMap(p => 
+    (p.variants || []).map(v => ({
+      value: v.id,
+      label: `${p.name} - ${v.sku}`,
+      description: `Stock: ${v.inventory || 0} ${p.uom}`
+    }))
+  );
+
   if (!quotation) return null;
 
   return (
     <>
       <PageHeaderUpdater title={quotation.quotationNo} subtitle={`Commercial proposal version v${quotation.version || 1}.0`} />
       <div className="space-y-8">
+        
         {/* Top bar control actions */}
         <div className="flex flex-wrap items-center justify-between gap-4">
-          <button 
-            onClick={() => router.push('/quotations')}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-[10px] font-mono uppercase text-white/90 hover:bg-white/10 hover:text-white cursor-pointer"
-          >
+          <button onClick={() => router.push('/quotations')}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-[10px] font-mono uppercase text-white/90 hover:bg-white/10 hover:text-white cursor-pointer">
             <ArrowLeft size={12} /> Back to vault
           </button>
 
-          {/* Workflow operations buttons */}
-          <div className="flex flex-wrap items-center gap-2.5">
-            {/* Soft Delete */}
-            <button 
-              onClick={handleDelete}
-              className="p-3.5 rounded-2xl bg-white/5 border border-white/10 text-white/70 hover:text-rose-400 hover:bg-rose-500/10 transition-all cursor-pointer"
-              title="Soft delete proposal"
-            >
-              <Trash2 size={14} />
-            </button>
-
-            {/* Revise version */}
-            {quotation.status !== 'APPROVED' && quotation.status !== 'REVISED' && (
-              <button 
-                onClick={handleRevise}
-                className="flex items-center gap-1.5 px-5 py-3 border border-[#9b5de5]/30 bg-[#9b5de5]/10 text-[#9b5de5] hover:bg-[#9b5de5]/25 rounded-2xl text-[10px] font-mono uppercase tracking-widest transition-all cursor-pointer"
-              >
-                <RefreshCcw size={12} /> Revise Version
+          {isEditing ? (
+            <div className="flex items-center gap-3">
+              <button onClick={handleEditToggle} disabled={saving} className="flex items-center gap-1.5 px-5 py-3 rounded-2xl bg-white/5 border border-white/10 text-white/70 hover:bg-white/10 text-[10px] font-mono uppercase tracking-widest transition-all cursor-pointer">
+                <X size={12} /> Discard
               </button>
-            )}
-
-            {/* Send to client */}
-            {quotation.status === 'DRAFT' && (
-              <button 
-                onClick={handleSend}
-                className="flex items-center gap-1.5 px-5 py-3 border border-blue-500/30 bg-blue-500/10 text-blue-400 hover:bg-blue-500/25 rounded-2xl text-[10px] font-mono uppercase tracking-widest transition-all cursor-pointer"
-              >
-                <Send size={12} /> Send Proposal
+              <button onClick={handleSaveEdit} disabled={saving} className="flex items-center gap-1.5 px-6 py-3 bg-blue-500 text-black hover:bg-blue-400 rounded-2xl text-[10px] font-mono font-bold uppercase tracking-widest transition-all border-none cursor-pointer">
+                <Save size={12} /> {saving ? 'Saving...' : 'Save Changes'}
               </button>
-            )}
-
-            {/* Reject */}
-            {(quotation.status === 'SENT' || quotation.status === 'DRAFT') && (
-              <button 
-                onClick={handleReject}
-                className="flex items-center gap-1.5 px-5 py-3 border border-rose-500/30 bg-rose-500/10 text-rose-400 hover:bg-rose-500/25 rounded-2xl text-[10px] font-mono uppercase tracking-widest transition-all cursor-pointer"
-              >
-                <XCircle size={12} /> Reject Proposal
+            </div>
+          ) : (
+            <div className="flex flex-wrap items-center gap-2.5">
+              <button onClick={handleDelete} className="p-3.5 rounded-2xl bg-white/5 border border-white/10 text-white/70 hover:text-rose-400 hover:bg-rose-500/10 transition-all cursor-pointer" title="Soft delete proposal">
+                <Trash2 size={14} />
               </button>
-            )}
 
-            {/* Approve (Convert to SO) */}
-            {(quotation.status === 'SENT' || quotation.status === 'DRAFT') && (
-              <button 
-                onClick={handleApprove}
-                className="flex items-center gap-1.5 px-6 py-3 bg-emerald-500 text-black hover:bg-emerald-400 rounded-2xl text-[10px] font-mono font-bold uppercase tracking-widest transition-all border-none cursor-pointer"
-              >
-                <CheckCircle size={12} /> Approve & Convert SO
-              </button>
-            )}
+              {quotation.status === 'DRAFT' && (
+                <button onClick={handleEditToggle} className="flex items-center gap-1.5 px-5 py-3 border border-emerald-500/30 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/25 rounded-2xl text-[10px] font-mono uppercase tracking-widest transition-all cursor-pointer">
+                  <FileText size={12} /> Edit Proposal
+                </button>
+              )}
 
-            {/* Print / PDF Document */}
-            <a 
-              href={`/documents/quotation/${id}`}
-              target="_blank"
-              className="flex items-center gap-1.5 px-5 py-3 border border-blue-500/30 bg-blue-500/10 text-blue-400 hover:bg-blue-500/25 rounded-2xl text-[10px] font-mono uppercase tracking-widest transition-all cursor-pointer no-underline"
-            >
-              Print / PDF
-            </a>
-          </div>
+              {quotation.status !== 'APPROVED' && quotation.status !== 'REVISED' && (
+                <button onClick={handleRevise} className="flex items-center gap-1.5 px-5 py-3 border border-[#9b5de5]/30 bg-[#9b5de5]/10 text-[#9b5de5] hover:bg-[#9b5de5]/25 rounded-2xl text-[10px] font-mono uppercase tracking-widest transition-all cursor-pointer">
+                  <RefreshCcw size={12} /> Revise Version
+                </button>
+              )}
+
+              {quotation.status === 'DRAFT' && (
+                <button onClick={handleSend} className="flex items-center gap-1.5 px-5 py-3 border border-blue-500/30 bg-blue-500/10 text-blue-400 hover:bg-blue-500/25 rounded-2xl text-[10px] font-mono uppercase tracking-widest transition-all cursor-pointer">
+                  <Send size={12} /> Send Proposal
+                </button>
+              )}
+
+              {(quotation.status === 'SENT' || quotation.status === 'DRAFT') && (
+                <button onClick={handleReject} className="flex items-center gap-1.5 px-5 py-3 border border-rose-500/30 bg-rose-500/10 text-rose-400 hover:bg-rose-500/25 rounded-2xl text-[10px] font-mono uppercase tracking-widest transition-all cursor-pointer">
+                  <XCircle size={12} /> Reject Proposal
+                </button>
+              )}
+
+              {(quotation.status === 'SENT' || quotation.status === 'DRAFT') && (
+                <button onClick={handleApprove} className="flex items-center gap-1.5 px-6 py-3 bg-emerald-500 text-black hover:bg-emerald-400 rounded-2xl text-[10px] font-mono font-bold uppercase tracking-widest transition-all border-none cursor-pointer">
+                  <CheckCircle size={12} /> Approve & Convert SO
+                </button>
+              )}
+
+              <a href={`/documents/quotation/${id}`} target="_blank" className="flex items-center gap-1.5 px-5 py-3 border border-blue-500/30 bg-blue-500/10 text-blue-400 hover:bg-blue-500/25 rounded-2xl text-[10px] font-mono uppercase tracking-widest transition-all cursor-pointer no-underline">
+                Print / PDF
+              </a>
+            </div>
+          )}
         </div>
 
         {/* Details Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
           
-          {/* Left panel: Customer profile & shipping parameters */}
           <div className="lg:col-span-4 space-y-6">
-            
-            {/* Incoterms & Status Card */}
-            <div className="glass p-8 rounded-4xl border border-white/5 space-y-6">
-              <div className="flex justify-between items-center pb-4 border-b border-white/5">
-                <span className="text-[10px] font-mono text-white/70 uppercase tracking-widest">Proposal Status</span>
-                <span className={cn("px-3 py-1 rounded text-[9px] font-mono font-bold uppercase border", getStatusBadgeColor(quotation.status))}>
-                  {quotation.status}
-                </span>
-              </div>
+            <QuotationMetadataCard 
+              isEditing={isEditing}
+              quotation={quotation}
+              formState={formState}
+              onChange={updateFormState}
+              getStatusStyle={getStatusBadgeColor}
+              ports={ports}
+            />
 
-              <div className="grid grid-cols-2 gap-4 text-xs font-mono">
-                <div>
-                  <p className="text-[9px] text-white/70 uppercase mb-1">Incoterm Rule</p>
-                  <span className="px-2 py-0.5 rounded bg-white/5 border border-white/10 font-bold text-white/80">{quotation.incoterm}</span>
-                </div>
-                <div>
-                  <p className="text-[9px] text-white/70 uppercase mb-1">Exchange Rate</p>
-                  <p className="font-bold text-white/80">1 {quotation.currency} = {quotation.exchangeRate}</p>
-                </div>
+            {/* Remarks in Edit Mode */}
+            {isEditing && (
+              <div className="glass p-8 rounded-4xl border border-white/5 space-y-3">
+                <label className="text-[10px] font-mono text-white/70 uppercase tracking-widest">Remarks</label>
+                <textarea 
+                  value={formState.remarks || ''} onChange={e => updateFormState('remarks', e.target.value)}
+                  placeholder="Special clauses..."
+                  className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm text-white/90 outline-none focus:border-blue-500/50 transition-all h-32 resize-none"
+                />
               </div>
-
-              <div className="grid grid-cols-2 gap-4 text-xs font-mono">
-                <div>
-                  <p className="text-[9px] text-white/70 uppercase mb-1">Origin Port</p>
-                  <p className="font-bold text-white/80 truncate">{getPortName(quotation.originPortId)}</p>
-                </div>
-                <div>
-                  <p className="text-[9px] text-white/70 uppercase mb-1">Discharge Port</p>
-                  <p className="font-bold text-white/80 truncate">{getPortName(quotation.destinationPortId)}</p>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4 text-xs font-mono">
-                <div>
-                  <p className="text-[9px] text-white/70 uppercase mb-1">Container Spec</p>
-                  <p className="font-bold text-white/80">{quotation.containerType}</p>
-                </div>
-                <div>
-                  <p className="text-[9px] text-white/70 uppercase mb-1">Payment terms</p>
-                  <p className="font-bold text-white/80">{quotation.paymentTerms}</p>
-                </div>
-              </div>
-
-              <div className="text-xs font-mono space-y-1">
-                <p className="text-[9px] text-white/70 uppercase">Validity expiry date</p>
-                <p className="font-bold text-white/80 flex items-center gap-1.5"><Calendar size={12} className="text-blue-400" /> {formatDate(quotation.validityDate)}</p>
-              </div>
-            </div>
+            )}
 
             {/* Customer CRM Profile Card */}
-            {customer && (
+            {customer && !isEditing && (
               <div className="glass p-8 rounded-4xl border border-white/5 space-y-6">
                 <h4 className="text-[10px] font-mono text-white/70 uppercase tracking-widest pb-4 border-b border-white/5 flex items-center gap-2">
                   <User size={14} className="text-blue-400" /> Customer CRM Node
@@ -369,141 +455,153 @@ export default function QuotationDetailPage() {
             )}
 
             {/* Document Vault PDF Reference */}
-            <div className="glass p-8 rounded-4xl border border-white/5 space-y-4">
-              <h4 className="text-[10px] font-mono text-white/70 uppercase tracking-widest pb-2 border-b border-white/5">
-                Proposal Vault Documents
-              </h4>
-              {(Array.isArray(quotation.documents) ? quotation.documents : []).length > 0 ? (
-                (Array.isArray(quotation.documents) ? quotation.documents : []).map(doc => (
-                  <div key={doc.id} className="flex justify-between items-center p-3.5 bg-white/2 border border-white/5 rounded-xl text-[11px] font-mono">
-                    <div className="flex items-center gap-2">
-                      <FileText size={14} className="text-blue-400" />
-                      <span className="text-white/80 font-bold truncate max-w-[150px]">{doc.name}</span>
+            {!isEditing && (
+              <div className="glass p-8 rounded-4xl border border-white/5 space-y-4">
+                <h4 className="text-[10px] font-mono text-white/70 uppercase tracking-widest pb-2 border-b border-white/5">
+                  Proposal Vault Documents
+                </h4>
+                {(Array.isArray(quotation.documents) ? quotation.documents : []).length > 0 ? (
+                  (Array.isArray(quotation.documents) ? quotation.documents : []).map(doc => (
+                    <div key={doc.id} className="flex justify-between items-center p-3.5 bg-white/2 border border-white/5 rounded-xl text-[11px] font-mono">
+                      <div className="flex items-center gap-2">
+                        <FileText size={14} className="text-blue-400" />
+                        <span className="text-white/80 font-bold truncate max-w-[150px]">{doc.name}</span>
+                      </div>
+                      <a href={doc.url} className="text-white/80 hover:text-white transition-colors" title="Download Vault PDF">
+                        <ExternalLink size={12} />
+                      </a>
                     </div>
-                    <a href={doc.url} className="text-white/80 hover:text-white transition-colors" title="Download Vault PDF">
-                      <ExternalLink size={12} />
-                    </a>
-                  </div>
-                ))
-              ) : (
-                <p className="text-center py-4 text-white/10 text-[9px] uppercase font-mono">No Vault documents generated</p>
-              )}
-            </div>
-
+                  ))
+                ) : (
+                  <p className="text-center py-4 text-white/10 text-[9px] uppercase font-mono">No Vault documents generated</p>
+                )}
+              </div>
+            )}
           </div>
 
-          {/* Right panel: Line items table & cost sheet ledger & timelines */}
           <div className="lg:col-span-8 space-y-8">
-            
-            {/* Commodity Grid */}
-            <div className="glass p-8 rounded-4xl border border-white/5 space-y-6">
-              <h3 className="text-sm font-mono text-white/70 uppercase tracking-widest flex items-center gap-2 pb-4 border-b border-white/5">
-                <Layers size={14} className="text-blue-400" /> Itemized Commodities List
-              </h3>
-              
-              <div className="overflow-x-auto font-mono">
-                <table className="w-full text-left text-xs">
-                  <thead className="text-white/70 uppercase tracking-wider border-b border-white/5">
-                    <tr>
-                      <th className="pb-4">Commodity SKU</th>
-                      <th className="pb-4 text-right">Quantity</th>
-                      <th className="pb-4 text-right">Selling Price</th>
-                      <th className="pb-4 text-right">Total Price</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-white/5">
-                    {quotation.items.map((item, idx) => (
-                      <tr key={idx} className="text-white/80">
-                        <td className="py-4">
-                          <p className="font-sans font-bold text-white/95">
-                            {item.variant ? `${item.variant.product?.name || item.variant.title} (${item.variant.sku})` : getProductName(item.productId || item.variantId || '')}
-                          </p>
-                        </td>
-                        <td className="py-4 text-right font-bold">{item.quantity} MT</td>
-                        <td className="py-4 text-right font-bold">{formatCurrency(item.unitPrice)}</td>
-                        <td className="py-4 text-right font-bold text-white">{formatCurrency(item.totalPrice)}</td>
+            {isEditing ? (
+              <LineItemsTable 
+                isEditing={isEditing}
+                items={calculatedItems}
+                updateItem={updateItem}
+                removeItem={removeItem}
+                addItem={addItem}
+                variantOptions={variantOptions}
+                formatCurrency={formatCurrency}
+                getProductName={getProductName}
+                marginPercentage={formState.marginPercentage || 0}
+                setMarginPercentage={handleMarginChange}
+                costOfGoods={costOfGoods}
+                grossProfit={grossProfit}
+                totalValue={totalValue}
+              />
+            ) : (
+              <div className="glass p-8 rounded-4xl border border-white/5 space-y-6">
+                <h3 className="text-sm font-mono text-white/70 uppercase tracking-widest flex items-center gap-2 pb-4 border-b border-white/5">
+                  <Layers size={14} className="text-blue-400" /> Itemized Commodities List
+                </h3>
+                
+                <div className="overflow-x-auto font-mono">
+                  <table className="w-full text-left text-xs">
+                    <thead className="text-white/70 uppercase tracking-wider border-b border-white/5">
+                      <tr>
+                        <th className="pb-4">Commodity SKU</th>
+                        <th className="pb-4 text-right">Quantity</th>
+                        <th className="pb-4 text-right">Selling Price</th>
+                        <th className="pb-4 text-right">Total Price</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody className="divide-y divide-white/5">
+                      {quotation.items.map((item, idx) => (
+                        <tr key={idx} className="text-white/80">
+                          <td className="py-4">
+                            <p className="font-sans font-bold text-white/95">
+                              {item.variant ? `${item.variant.product?.name || item.variant.title} (${item.variant.sku})` : getProductName(item.productId || item.variantId || '')}
+                            </p>
+                          </td>
+                          <td className="py-4 text-right font-bold">{item.quantity} MT</td>
+                          <td className="py-4 text-right font-bold">{formatCurrency(item.unitPrice)}</td>
+                          <td className="py-4 text-right font-bold text-white">{formatCurrency(item.totalPrice)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
 
-              {/* Total Summary Cost Sheet */}
-              <div className="border-t border-white/5 pt-6 flex justify-end font-mono text-xs">
-                <div className="w-full max-w-sm space-y-2.5">
-                  <div className="flex justify-between text-white/70">
-                    <span>Proposed Margin Percentage</span>
-                    <span>{quotation.marginPercentage}%</span>
-                  </div>
-                  <div className="h-px bg-white/5 my-1" />
-                  <div className="flex justify-between text-base font-bold text-white">
-                    <span>Total Proposal Value</span>
-                    <span className="text-blue-400 font-sans text-lg">{formatCurrency(quotation.totalValue)}</span>
+                <div className="border-t border-white/5 pt-6 flex justify-end font-mono text-xs">
+                  <div className="w-full max-w-sm space-y-2.5">
+                    <div className="flex justify-between text-white/70">
+                      <span>Proposed Margin Percentage</span>
+                      <span>{quotation.marginPercentage}%</span>
+                    </div>
+                    <div className="h-px bg-white/5 my-1" />
+                    <div className="flex justify-between text-base font-bold text-white">
+                      <span>Total Proposal Value</span>
+                      <span className="text-blue-400">{formatCurrency(quotation.totalValue)}</span>
+                    </div>
                   </div>
                 </div>
-              </div>
-            </div>
 
-            {/* Remarks */}
-            {quotation.remarks && (
-              <div className="glass p-8 rounded-4xl border border-white/5 space-y-3">
-                <h4 className="text-[10px] font-mono text-white/70 uppercase tracking-widest pb-2 border-b border-white/5">
-                  Negotiation Remarks / Special Clauses
-                </h4>
-                <p className="text-[11px] font-mono text-white/70 whitespace-pre-wrap leading-relaxed">{quotation.remarks}</p>
+                {quotation.remarks && (
+                  <div className="mt-8 p-5 bg-white/5 rounded-2xl border border-white/10 text-xs text-white/70 font-mono">
+                    <span className="font-bold text-white/90 uppercase mb-2 block">Special Clauses & Remarks</span>
+                    {quotation.remarks}
+                  </div>
+                )}
               </div>
             )}
 
-            {/* Timelines and Negotiation logs */}
-            <div className="glass p-8 rounded-4xl border border-white/5 space-y-6">
-              <h3 className="text-sm font-mono text-white/70 uppercase tracking-widest flex items-center gap-2 pb-4 border-b border-white/5">
-                <Activity size={14} className="text-blue-400" /> Timeline & Negotiation Notes
-              </h3>
-
-              {/* Live communication logger */}
-              <div className="p-4 rounded-2xl bg-white/2 border border-white/5 space-y-3">
-                <p className="text-[8px] font-mono text-white/70 uppercase tracking-wider">Log Negotiation Milestone Note</p>
-                <textarea
-                  value={communicationNote}
-                  onChange={(e) => setCommunicationNote(e.target.value)}
-                  placeholder="Record pricing concessions, volume discount approvals, or custom inspection agreements..."
-                  className="w-full bg-[#070707] border border-white/10 rounded-xl p-3 text-[11px] font-mono text-white focus:outline-none focus:border-blue-500/50 min-h-[60px]"
-                />
-                <div className="flex justify-end">
-                  <button
+            {/* Negotiation / Communication Logger */}
+            {!isEditing && (
+              <div className="glass p-8 rounded-4xl border border-white/5 space-y-6">
+                <h3 className="text-sm font-mono text-white/70 uppercase tracking-widest flex items-center gap-2 pb-4 border-b border-white/5">
+                  <MessageSquare size={14} className="text-blue-400" /> Negotiation Timeline
+                </h3>
+                
+                <div className="flex gap-4">
+                  <input
+                    type="text"
+                    value={communicationNote}
+                    onChange={(e) => setCommunicationNote(e.target.value)}
+                    placeholder="Log a call, email, or counter-offer detail..."
+                    className="flex-1 bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm text-white/90 outline-none focus:border-blue-500/50 transition-all font-mono"
+                    onKeyDown={(e) => e.key === 'Enter' && handleSaveNote()}
+                  />
+                  <button 
                     onClick={handleSaveNote}
-                    disabled={!communicationNote.trim()}
-                    className="px-4 py-2 bg-blue-500 text-black text-[9px] font-mono font-bold uppercase rounded-lg hover:bg-blue-400 disabled:opacity-40 disabled:hover:bg-blue-500 border-none cursor-pointer"
+                    className="px-6 py-3 bg-white/5 hover:bg-white/10 border border-white/10 text-white font-mono uppercase text-[10px] tracking-widest rounded-xl transition-all cursor-pointer"
                   >
-                    Save Log Note
+                    Log Note
                   </button>
                 </div>
-              </div>
 
-              {/* Timeline List */}
-              <div className="max-h-[250px] overflow-y-auto custom-scrollbar pr-2 space-y-6 relative before:absolute before:left-[11px] before:top-2 before:bottom-2 before:w-px before:bg-white/5">
-                {(Array.isArray(quotation.timeline) ? quotation.timeline : []).map((item, idx) => (
-                  <div key={item.id || idx} className="relative pl-8">
-                    <div className="absolute left-0 top-1 w-6 h-6 rounded-full bg-[#0a0a0a] border border-white/15 flex items-center justify-center z-10 text-blue-400">
-                      {item.type === 'CREATED' && <FileText size={10} />}
-                      {item.type === 'UPDATED' && <FileText size={10} />}
-                      {item.type === 'SENT' && <Send size={10} />}
-                      {item.type === 'REVISED' && <RefreshCcw size={10} />}
-                      {item.type === 'APPROVED' && <CheckCircle size={10} className="text-emerald-400" />}
-                      {item.type === 'REJECTED' && <XCircle size={10} className="text-rose-400" />}
-                      {item.type === 'STATUS_CHANGED' && <Activity size={10} />}
-                      {item.type === 'COMMUNICATION_LOGGED' && <MessageSquare size={10} />}
+                <div className="space-y-4 pt-4">
+                  {(Array.isArray(quotation.timeline) ? quotation.timeline : []).map((event: any, i: number) => (
+                    <div key={event.id || i} className="flex gap-4 p-4 rounded-2xl bg-white/2 border border-white/5">
+                      <div className="w-8 h-8 rounded-full bg-blue-500/10 border border-blue-500/20 flex items-center justify-center shrink-0">
+                        <User size={12} className="text-blue-400" />
+                      </div>
+                      <div className="flex-1 min-w-0 font-mono">
+                        <div className="flex justify-between items-start mb-1">
+                          <h5 className="font-bold text-xs text-white/90">{event.title}</h5>
+                          <span className="text-[9px] text-white/50 whitespace-nowrap ml-4">
+                            {new Date(event.date).toLocaleDateString()} {new Date(event.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </span>
+                        </div>
+                        <p className="text-[10px] text-white/70">{event.description}</p>
+                      </div>
                     </div>
-                    <p className="text-[8px] font-mono text-white/70 uppercase mb-0.5">{formatDate(item.date)}</p>
-                    <p className="text-xs font-bold text-white/90 mb-0.5">{item.title}</p>
-                    <p className="text-[10px] text-white/70 leading-relaxed font-sans">{item.description}</p>
-                  </div>
-                ))}
+                  ))}
+                  {(Array.isArray(quotation.timeline) ? quotation.timeline : []).length === 0 && (
+                    <p className="text-center py-6 text-[10px] uppercase font-mono text-white/20 border border-dashed border-white/10 rounded-2xl">
+                      No negotiation history logged
+                    </p>
+                  )}
+                </div>
               </div>
-            </div>
-
+            )}
           </div>
-
         </div>
       </div>
     </>

@@ -78,6 +78,7 @@ export default function VariantsPage({ params }: { params: Promise<{ id: string 
             <thead className="bg-white/2 text-white/70 uppercase tracking-[0.2em] border-b border-white/5">
               <tr>
                 <th className="py-5 px-6">Variant Name</th>
+                <th className="py-5 px-6 w-48">Images (URLs)</th>
                 <th className="py-5 px-6">SKU</th>
                 <th className="py-5 px-6 w-32">Cost</th>
                 <th className="py-5 px-6 w-32">Price</th>
@@ -87,6 +88,16 @@ export default function VariantsPage({ params }: { params: Promise<{ id: string 
               {variants.map((v: any, i: number) => (
                 <tr key={i} className="hover:bg-white/2">
                   <td className="py-4 px-6">{v.title}</td>
+                  <td className="py-2 px-4">
+                    <input className="w-full bg-white/5 border border-white/10 rounded-lg py-2 px-3 text-white focus:outline-none text-[10px]" 
+                      placeholder="url1, url2..."
+                      value={Array.isArray(v.images) ? (v.images.length > 0 && typeof v.images[0] === 'string' ? v.images.join(', ') : v.images.map((img: any) => img.url).join(', ')) : (v.imageUrl || '')} 
+                      onChange={(e) => {
+                        const newV = [...variants]; 
+                        newV[i].images = e.target.value.split(',').map(u => u.trim()).filter(Boolean); 
+                        setVariants(newV);
+                    }} />
+                  </td>
                   <td className="py-2 px-4">
                     <input className="w-full bg-white/5 border border-white/10 rounded-lg py-2 px-3 text-white focus:outline-none" value={v.sku} onChange={(e) => {
                       const newV = [...variants]; newV[i].sku = e.target.value; setVariants(newV);

@@ -87,6 +87,12 @@ export async function PUT(
         return NextResponse.json(updated);
       }
 
+      if (action === 'log_note') {
+        existingQuotation.timeline = data.timeline;
+        const updated = await quotationRepository.update(id, existingQuotation);
+        return NextResponse.json(updated);
+      }
+
       return NextResponse.json({ error: 'Invalid custom action specified' }, { status: 400 });
     }
 

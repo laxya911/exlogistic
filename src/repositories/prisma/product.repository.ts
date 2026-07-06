@@ -46,10 +46,11 @@ export class PrismaProductRepository {
       supplierId: supplier?.supplierId || '',
       moq: supplier?.moq || 0,
       leadTime: supplier?.leadTime || 0,
-      unitsPerCarton: 1, // Add mapped defaults
-      containerLoadingCapacity: 800,
-      shelfLife: '12 Months',
-      storageConditions: 'Standard',
+      unitsPerCarton: p.unitsPerCarton ?? 1,
+      containerLoadingCapacity: p.containerLoadingCapacity ?? 800,
+      shelfLife: p.shelfLife || '12 Months',
+      storageConditions: p.storageConditions || 'Standard',
+      japanImportNotes: p.japanImportNotes || '',
       
       images: p.defaultImage ? [p.defaultImage] : (defaultVariant?.images?.map((i:any) => i.url) || []),
       documents: p.documents || [],
@@ -148,7 +149,12 @@ export class PrismaProductRepository {
         sellingPrice: Number(v.sellingPrice) || 0,
         currency: v.currency || 'USD',
         grossWeight: Number(v.weight) || data.grossWeight || 0,
-        images: v.imageUrl ? { create: [{ url: v.imageUrl, isPrimary: true }] } : undefined,
+        netWeight: Number(v.netWeight) || data.netWeight || 0,
+        volumeCBM: Number(v.cbm) || data.cbm || 0,
+        packagingType: v.packageType || data.packageType || 'PP Woven Bag',
+        images: v.images && v.images.length ? {
+          create: v.images.map((imgStr: string, i: number) => ({ url: typeof imgStr === 'string' ? imgStr : (imgStr as any).url, isPrimary: i === 0 }))
+        } : (v.imageUrl ? { create: [{ url: v.imageUrl, isPrimary: true }] } : undefined),
         attributes: { create: varAttrs }
       };
     }) : [{
@@ -159,6 +165,9 @@ export class PrismaProductRepository {
       sellingPrice: Number(data.sellingPrice) || 0,
       currency: data.currency || 'USD',
       grossWeight: data.grossWeight || 0,
+      netWeight: data.netWeight || 0,
+      volumeCBM: data.cbm || 0,
+      packagingType: data.packageType || 'PP Woven Bag',
       images: data.images?.length ? {
         create: data.images.map((url: string, i: number) => ({ url, isPrimary: i === 0 }))
       } : undefined
@@ -172,6 +181,11 @@ export class PrismaProductRepository {
         shortDescription: data.description,
         hsnCode: data.hsnCode,
         countryOfOrigin: data.countryOfOrigin,
+        unitsPerCarton: data.unitsPerCarton ? Number(data.unitsPerCarton) : undefined,
+        containerLoadingCapacity: data.containerLoadingCapacity ? Number(data.containerLoadingCapacity) : undefined,
+        shelfLife: data.shelfLife,
+        storageConditions: data.storageConditions,
+        japanImportNotes: data.japanImportNotes,
         
         brand: data.brandId ? { connect: { id: data.brandId } } : undefined,
         
@@ -231,10 +245,22 @@ export class PrismaProductRepository {
       shortDescription: data.description,
       hsnCode: data.hsnCode,
       countryOfOrigin: data.countryOfOrigin,
+      unitsPerCarton: data.unitsPerCarton ? Number(data.unitsPerCarton) : undefined,
+      containerLoadingCapacity: data.containerLoadingCapacity ? Number(data.containerLoadingCapacity) : undefined,
+      shelfLife: data.shelfLife,
+      storageConditions: data.storageConditions,
+      japanImportNotes: data.japanImportNotes,
       entityStatus: data.entityStatus,
     };
 
     if (data.brandId) updatePayload.brand = { connect: { id: data.brandId } };
+    
+    if (data.supplierId) {
+      updatePayload.suppliers = {
+        deleteMany: {},
+        create: [{ supplier: { connect: { id: data.supplierId } } }]
+      };
+    }
     
     if (data.categoryIds !== undefined) {
       updatePayload.categories = {
@@ -293,6 +319,9 @@ export class PrismaProductRepository {
             sellingPrice: Number(v.sellingPrice) || 0,
             currency: v.currency || 'USD',
             grossWeight: Number(v.weight) || data.grossWeight || 0,
+            netWeight: Number(v.netWeight) || data.netWeight || 0,
+            volumeCBM: Number(v.cbm) || data.cbm || 0,
+            packagingType: v.packageType || data.packageType || 'PP Woven Bag',
             status: 'ACTIVE' as const
           };
 
@@ -302,10 +331,10 @@ export class PrismaProductRepository {
               where: { id: existingVar.id },
               data: {
                 ...variantData,
-                images: v.imageUrl ? { 
+                images: v.images && v.images.length ? {
                   deleteMany: {},
-                  create: [{ url: v.imageUrl, isPrimary: true }] 
-                } : undefined,
+                  create: v.images.map((imgStr: string, i: number) => ({ url: typeof imgStr === 'string' ? imgStr : (imgStr as any).url, isPrimary: i === 0 }))
+                } : (v.imageUrl ? { deleteMany: {}, create: [{ url: v.imageUrl, isPrimary: true }] } : undefined),
                 attributes: {
                   deleteMany: {},
                   create: varAttrs
@@ -318,9 +347,9 @@ export class PrismaProductRepository {
                 productId: id,
                 sku,
                 ...variantData,
-                images: v.imageUrl ? { 
-                  create: [{ url: v.imageUrl, isPrimary: true }] 
-                } : undefined,
+                images: v.images && v.images.length ? {
+                  create: v.images.map((imgStr: string, i: number) => ({ url: typeof imgStr === 'string' ? imgStr : (imgStr as any).url, isPrimary: i === 0 }))
+                } : (v.imageUrl ? { create: [{ url: v.imageUrl, isPrimary: true }] } : undefined),
                 attributes: {
                   create: varAttrs
                 }

@@ -1,5 +1,5 @@
 import { Product, ProductTimelineEvent } from '@/types';
-import { productRepository } from '@/repositories/repository';
+import { prismaProductRepository } from '@/repositories/prisma/product.repository';
 
 export class ProductService {
   /**
@@ -106,7 +106,7 @@ export class ProductService {
    * Clones a product, generating a new SKU and ID.
    */
   async duplicate(id: string): Promise<Product> {
-    const original = await productRepository.getById(id);
+    const original = await prismaProductRepository.getById(id);
     if (!original) throw new Error('Product matrix node not found');
 
     const copySku = `${original.sku}_COPY`;
@@ -114,7 +114,9 @@ export class ProductService {
     // Check if the duplicated SKU already exists, if so append unique tag
     let uniqueSku = copySku;
     let counter = 1;
-    while ((await productRepository.find(p => p.sku === uniqueSku && p.entityStatus !== 'DELETED')).length > 0) {
+    
+    const { prisma } = await import('@/repositories/prisma.client');
+    while ((await prisma.productVariant.findFirst({ where: { sku: uniqueSku, product: { status: { not: 'DELETED' } } } }))) {
       uniqueSku = `${copySku}_${counter}`;
       counter++;
     }
@@ -142,7 +144,7 @@ export class ProductService {
       entityStatus: 'ACTIVE'
     };
 
-    return productRepository.create(duplicatedProduct);
+    return prismaProductRepository.create(duplicatedProduct);
   }
 }
 

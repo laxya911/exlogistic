@@ -68,7 +68,7 @@ export const auditLogRepository = useMock ? new MockRepository(db.auditLogs) : n
 // Models not currently in Prisma schema
 export const taskRepository = new MockRepository(db.tasks);
 export const calendarEventRepository = new MockRepository(db.calendarEvents);
-export const documentRepository = new MockRepository(db.documents);
+export const documentRepository = useMock ? new MockRepository(db.documents) : new PrismaRepository('document');
 export const costingScenarioRepository = new MockRepository(db.costingScenarios);
 export const notificationRepository = new MockRepository(db.notifications || []);
 export const forwarderRepository = new MockRepository(db.forwarders);

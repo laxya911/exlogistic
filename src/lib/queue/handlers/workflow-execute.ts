@@ -11,48 +11,41 @@ export class WorkflowExecuteHandler implements JobHandler<'WORKFLOW_EXECUTE'> {
     
     try {
       if (action === 'CREATE_SALES_ORDER' && triggerEntity === 'Quotation') {
-        const orderNo = `SO-${Math.random().toString(36).substring(7).toUpperCase()}`;
-
-        // Wait, because the UI uses the mock DB, we must add it to the mock DB first
-        // so it appears in the frontend when navigating to /sales-orders/SO-XYZ
-        const newSo = await salesOrderRepository.create({
-          orderNo: orderNo,
-          quotationId: entityId,
-          customerId: 'CUST-0006', // Mock customer
-          date: new Date().toISOString(),
-          status: 'PENDING',
-          totalValue: 0,
-          items: []
+        const quote = await prisma.quotation.findUnique({ 
+          where: { id: entityId }, 
+          include: { items: true } 
         });
 
-        // Also attempt Prisma insert for future-proofing
-        try {
-          const quote = await prisma.quotation.findUnique({ where: { id: entityId }, include: { items: true } });
-          if (quote) {
-            await prisma.salesOrder.create({
-              data: {
-                id: newSo.id,
-                orderNo: orderNo,
-                customerId: quote.customerId,
-                quotationId: quote.id,
-                date: new Date(),
-                totalValue: quote.totalValue,
-                status: 'DRAFT',
-                items: {
-                  create: quote.items.map(i => ({
-                    variantId: i.variantId,
-                    quantity: i.quantity,
-                    unitPrice: i.unitPrice
-                  }))
-                }
-              }
-            });
-          }
-        } catch (e) {
-          logger.warn(`[WORKFLOW] Could not insert to Prisma (expected if mock ID used): ${e}`);
+        if (!quote) {
+          logger.warn(`[WORKFLOW] Quotation ${entityId} not found. Cannot create Sales Order.`);
+          return { skipped: true, reason: 'Quotation not found' };
         }
+
+        const orderNo = `SO-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+
+        // Create via the main repository so data is mapped and inserted correctly
+        const newSo = await salesOrderRepository.create({
+          orderNo: orderNo,
+          quotationId: quote.id,
+          customerId: quote.customerId,
+          date: new Date().toISOString(), // Fix: expected string
+          status: 'DRAFT' as any, // Fix: DRAFT is in Prisma but missing in UI types
+          totalValue: quote.totalValue,
+          incoterm: quote.incoterm || undefined,
+          paymentTerms: quote.paymentTerms || undefined,
+          currency: quote.currency || undefined,
+          marginPercentage: quote.marginPercentage || undefined,
+          containerType: quote.container || undefined,
+          items: quote.items.map(i => ({
+            productId: i.variantId || '',
+            variantId: i.variantId,
+            quantity: i.quantity,
+            unitPrice: i.unitPrice,
+            totalPrice: i.quantity * i.unitPrice
+          }))
+        });
         
-        logger.info(`[WORKFLOW] Successfully auto-created Sales Order: ${orderNo} (Mock ID: ${newSo.id})`);
+        logger.info(`[WORKFLOW] Successfully auto-created Sales Order: ${orderNo} (ID: ${newSo.id})`);
         return { salesOrderId: newSo.id, orderNo };
       }
       

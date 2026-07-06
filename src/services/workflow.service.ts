@@ -16,6 +16,22 @@ export class WorkflowEngine {
     logger.info(`Evaluating workflows for ${triggerEntity} (ID: ${entityId}, Status: ${currentStatus})`);
 
     try {
+      // Auto-seed rule if missing
+      const ruleCount = await prisma.workflowRule.count({ where: { action: 'CREATE_SALES_ORDER' } });
+      if (ruleCount === 0) {
+        await prisma.workflowRule.create({
+          data: {
+            name: 'Auto-create Sales Order on Quote Approval',
+            description: 'Automatically generate a drafted sales order when a quotation is fully approved.',
+            triggerEntity: 'Quotation',
+            triggerCondition: { status: 'APPROVED' },
+            action: 'CREATE_SALES_ORDER',
+            actionPayload: {},
+            isActive: true
+          }
+        });
+      }
+
       const activeRules = await prisma.workflowRule.findMany({
         where: {
           triggerEntity,

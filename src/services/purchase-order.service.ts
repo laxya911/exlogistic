@@ -78,7 +78,7 @@ class PurchaseOrderService {
       currency: original.currency,
       exchangeRate: original.exchangeRate,
       paymentTerms: original.paymentTerms,
-      deliveryTerms: original.deliveryTerms,
+      incoterm: original.incoterm,
       qualitySpec: original.qualitySpec,
       packagingSpec: original.packagingSpec,
       status: 'DRAFT',

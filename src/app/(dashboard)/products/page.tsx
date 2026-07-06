@@ -453,7 +453,9 @@ export default function ProductMasterPage() {
                         Price {sortBy === 'price' && (sortOrder === 'asc' ? <ChevronUp size={10} /> : <ChevronDown size={10} />)}
                       </button>
                     </th>
-                    <th className="py-5 px-6 text-right">UOM</th>
+                    <th className="py-5 px-6 text-center">Origin</th>
+                    <th className="py-5 px-6 text-center">UOM</th>
+                    <th className="py-5 px-6 text-right">Status</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/5">
@@ -504,17 +506,22 @@ export default function ProductMasterPage() {
                       <td className="py-4 px-6 text-right font-sans font-bold text-white/80">
                         {formatCurrency(p.sellingPrice)}
                       </td>
+                      <td className="py-4 px-6 text-center font-mono text-[11px] text-white/70 uppercase">
+                        {p.countryOfOrigin || 'N/A'}
+                      </td>
+                      <td className="py-4 px-6 text-center font-mono text-[11px] text-white/70 uppercase">
+                        {p.uom}
+                      </td>
                       <td className="py-4 px-6 text-right">
-                        <div className="flex flex-col items-end">
-                          <span className="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 text-[8px] font-mono font-bold uppercase">{p.entityStatus}</span>
-                          <span className="text-[11px] text-white/70 mt-1 uppercase">{p.uom}</span>
-                        </div>
+                        <span className={cn("px-2 py-1 rounded text-[9px] font-mono font-bold uppercase tracking-wider", p.entityStatus === 'ACTIVE' ? "bg-emerald-500/10 text-emerald-400" : "bg-white/10 text-white/50")}>
+                          {p.entityStatus}
+                        </span>
                       </td>
                     </tr>
                   ))}
                   {products.length === 0 && (
                     <tr>
-                      <td colSpan={6} className="py-16 text-center text-white/70 font-mono text-sm uppercase tracking-widest">
+                      <td colSpan={8} className="py-16 text-center text-white/70 font-mono text-sm uppercase tracking-widest">
                         No Commodities Found In Active Index
                       </td>
                     </tr>

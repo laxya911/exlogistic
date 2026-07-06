@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useParams } from 'next/navigation';
 import { PageHeaderUpdater } from '@/components/layout/page-context';
 import { 
   ArrowLeft, 
@@ -9,24 +9,18 @@ import {
   Trash2, 
   Calculator, 
   TrendingUp, 
-  Percent, 
-  DollarSign, 
-  Layers, 
-  Clock, 
-  Anchor, 
   AlertCircle,
-  HelpCircle,
-  FileText
+  Layers
 } from 'lucide-react';
 import { formatCurrency, cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { Customer, Product, Port } from '@/types';
-import { useQuotations } from '@/hooks/useQuotations';
 import { SearchableSelect } from '@/components/ui/searchable-select';
 
-export default function NewQuotationPage() {
+export default function EditQuotationPage() {
   const router = useRouter();
-  const { createQuotation } = useQuotations();
+  const params = useParams();
+  const id = params.id as string;
 
   // Master Data State
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -55,14 +49,20 @@ export default function NewQuotationPage() {
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
 
   useEffect(() => {
-    fetchMetadata();
-  }, []);
+    if (id) {
+      fetchMetadata();
+    }
+  }, [id]);
 
   const fetchMetadata = async () => {
     try {
-      const [cRes, pRes] = await Promise.all([
+      const [cRes, pRes, qRes] = await Promise.all([
         fetch('/api/customers').then(r => r.json()),
-        fetch('/api/products').then(r => r.json())
+        fetch('/api/products').then(r => r.json()),
+        fetch(`/api/quotations/${id}`).then(r => {
+          if (!r.ok) throw new Error('Quotation not found');
+          return r.json();
+        })
       ]);
       setCustomers(cRes);
       setProducts(pRes);
@@ -74,16 +74,39 @@ export default function NewQuotationPage() {
         { id: 'SIN', name: 'Singapore', code: 'SG SIN', country: 'Singapore', type: 'SEA', entityStatus: 'ACTIVE', createdAt: '', updatedAt: '' }
       ]);
 
-      if (cRes.length > 0) setCustomerId(cRes[0].id);
-      if (pRes.length > 0) {
-        // Set first product's first variant as default
-        const defaultProduct = pRes[0].id || '';
-        const defaultVariant = pRes[0].variants?.[0]?.id || '';
-        const defaultPrice = pRes[0].variants?.[0]?.sellingPrice || pRes[0].sellingPrice || 120;
-        setItems([{ variantId: defaultVariant, productId: defaultProduct, quantity: 100, unitPrice: defaultPrice }]);
+      if (qRes) {
+        setCustomerId(qRes.customerId || '');
+        setOriginPortId(qRes.originPortId || 'TYO');
+        setDestinationPortId(qRes.destinationPortId || 'LAX');
+        setIncoterm(qRes.incoterm || 'FOB');
+        setContainerType(qRes.containerType || '20GP');
+        setPaymentTerms(qRes.paymentTerms || '30 Days Net');
+        setCurrency(qRes.currency || 'USD');
+        setRemarks(qRes.remarks || '');
+        const margin = qRes.marginPercentage || 25;
+        setMarginPercentage(margin);
+        
+        // Reverse calculate validity days from date and validityDate
+        if (qRes.date && qRes.validityDate) {
+          const diff = new Date(qRes.validityDate).getTime() - new Date(qRes.date).getTime();
+          setValidityDays(Math.max(1, Math.round(diff / 86400000)));
+        }
+
+        const loadedItems = (qRes.items || []).map((i: any) => ({
+          variantId: i.variantId || '',
+          productId: i.productId || '',
+          quantity: i.quantity,
+          // Calculate cost price (unitPrice in DB is the selling price)
+          unitPrice: margin === 100 ? 0 : Number((i.unitPrice * (1 - (margin / 100))).toFixed(2))
+        }));
+        
+        if (loadedItems.length > 0) {
+          setItems(loadedItems);
+        }
       }
     } catch (e) {
-      toast.error('Failed to sync master matrix metadata');
+      toast.error('Failed to load quotation data');
+      router.push('/quotations');
     } finally {
       setLoading(false);
     }
@@ -192,11 +215,8 @@ export default function NewQuotationPage() {
       return;
     }
 
-    const quotationNo = `QT-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
     const payload = {
-      quotationNo,
       customerId,
-      date: new Date().toISOString(),
       validityDate: new Date(Date.now() + validityDays * 86400000).toISOString(),
       currency,
       exchangeRate: currency === 'USD' ? 1 : currency === 'JPY' ? 158.5 : 83.5,
@@ -208,32 +228,39 @@ export default function NewQuotationPage() {
       items: finalItems,
       totalValue,
       marginPercentage,
-      status: 'DRAFT' as const,
-      version: 1,
       remarks,
-      documents: [],
-      timeline: []
     };
 
-    const result = await createQuotation(payload);
-    if (result.success) {
-      router.push('/quotations');
-    } else if (result.error) {
-      setValidationErrors(result.error.split(' | '));
+    try {
+      const res = await fetch(`/api/quotations/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.error || 'Failed to update quotation');
+      toast.success('Proposal updated successfully');
+      router.push(`/quotations/${id}`);
+    } catch (err: any) {
+      setValidationErrors([err.message]);
     }
   };
 
+  if (loading) {
+    return <div className="p-8 text-white/50 text-xs font-mono uppercase tracking-widest">Loading proposal data...</div>;
+  }
+
   return (
     <>
-      <PageHeaderUpdater title="Create Proposal" subtitle="Quotation Configurator & Profit Margin Simulator" />
+      <PageHeaderUpdater title="Edit Proposal" subtitle="Quotation Configurator & Profit Margin Simulator" />
       <div className="space-y-6">
         {/* Back navigation */}
         <div className="flex justify-between items-center">
           <button 
-            onClick={() => router.push('/quotations')}
+            onClick={() => router.push(`/quotations/${id}`)}
             className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-[10px] font-mono uppercase text-white/90 hover:bg-white/10 hover:text-white cursor-pointer"
           >
-            <ArrowLeft size={12} /> Back to Vault
+            <ArrowLeft size={12} /> Cancel Editing
           </button>
         </div>
 
@@ -514,16 +541,16 @@ export default function NewQuotationPage() {
               <div className="flex justify-end gap-4 pt-6 border-t border-white/5">
                 <button
                   type="button"
-                  onClick={() => router.push('/quotations')}
+                  onClick={() => router.push(`/quotations/${id}`)}
                   className="px-6 py-3 bg-white/5 border border-white/10 rounded-xl text-[10px] font-mono uppercase tracking-widest hover:bg-white/10 cursor-pointer border-none text-white"
                 >
-                  Cancel
+                  Discard Changes
                 </button>
                 <button
                   type="submit"
-                  className="px-8 py-3 bg-blue-500 text-black font-bold rounded-xl text-[10px] font-mono uppercase tracking-widest hover:bg-blue-400 cursor-pointer border-none"
+                  className="px-8 py-3 bg-[#9b5de5] text-white font-bold rounded-xl text-[10px] font-mono uppercase tracking-widest hover:bg-[#8b4de5] cursor-pointer border-none"
                 >
-                  Generate Draft Proposal
+                  Save Proposal Edits
                 </button>
               </div>
             </div>

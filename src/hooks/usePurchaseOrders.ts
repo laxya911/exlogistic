@@ -127,10 +127,10 @@ export function usePurchaseOrders() {
   const bulkExportCSV = (ids: string[]) => {
     const targets = orders.filter(o => ids.includes(o.id));
     if (!targets.length) return;
-    const headers = ['PO No', 'Supplier ID', 'Date', 'Expected Delivery', 'Payment Terms', 'Delivery Terms', 'Value', 'Currency', 'Status'];
+    const headers = ['PO No', 'Supplier ID', 'Date', 'Expected Delivery', 'Payment Terms', 'Incoterm', 'Value', 'Currency', 'Status'];
     const rows = targets.map(o => [
       o.poNo, o.supplierId, o.date, o.expectedDeliveryDate,
-      o.paymentTerms || '', o.deliveryTerms || '',
+      o.paymentTerms || '', o.incoterm || '',
       o.totalValue, o.currency || 'INR', o.status
     ]);
     const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');

@@ -7,8 +7,17 @@ class ShipmentService {
   /**
    * Returns the next logical status in the shipment pipeline.
    */
-  nextStatus(current: ShipmentStatus): ShipmentStatus | null {
-    const idx = STATUS_ORDER.indexOf(current);
+  nextStatus(current: ShipmentStatus | string): ShipmentStatus | null {
+    let normalized = (current || '').toString().trim().toUpperCase();
+    
+    // Map any generic TransactionStatus to our logistics pipeline
+    if (normalized === 'DRAFT') normalized = 'BOOKING';
+    if (normalized === 'PENDING') normalized = 'STUFFING';
+    if (normalized === 'CONFIRMED') normalized = 'CUSTOMS';
+    if (normalized === 'SHIPPED') normalized = 'ON_VESSEL';
+    if (normalized === 'IN_TRANSIT') normalized = 'TRANSIT';
+    
+    const idx = STATUS_ORDER.indexOf(normalized as ShipmentStatus);
     if (idx === -1 || idx === STATUS_ORDER.length - 1) return null;
     return STATUS_ORDER[idx + 1];
   }
@@ -66,7 +75,7 @@ class ShipmentService {
     if (shipment.status === 'CANCELLED') throw new Error('Cannot advance a cancelled shipment');
 
     const next = this.nextStatus(shipment.status);
-    if (!next) throw new Error('No further status progression available');
+    if (!next) throw new Error(`No further status progression available for current status: '${shipment.status}'`);
 
     const stageTitles: Record<ShipmentStatus, string> = {
       BOOKING: 'Booking Confirmed',

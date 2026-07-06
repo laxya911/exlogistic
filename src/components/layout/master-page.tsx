@@ -44,8 +44,10 @@ export function MasterPage({
 }: MasterPageProps) {
   const { data: session } = useSession();
   const pathname = usePathname();
-  const [sidebarOpen, setSidebarOpen] = useState(true);
-  const { title, subtitle } = usePageHeader();
+  const [sidebarPinned, setSidebarPinned] = useState(false);
+  const [sidebarHovered, setSidebarHovered] = useState(false);
+  const sidebarOpen = sidebarPinned || sidebarHovered;
+  const { title: pageTitle, subtitle } = usePageHeader();
 
   const navItems = [
     { label: 'Dashboard', href: '/', icon: LayoutDashboard },
@@ -70,11 +72,15 @@ export function MasterPage({
       
       {/* Sidebar Navigation */}
       <motion.aside 
-        initial={{ width: 280 }}
+        initial={{ width: 80 }}
         animate={{ width: sidebarOpen ? 280 : 80 }}
-        className="glass border-r border-white/5 hidden md:flex flex-col relative z-20 h-screen sticky top-0"
+        onMouseLeave={() => setSidebarHovered(false)}
+        className="glass border-r border-white/5 hidden md:flex flex-col relative z-20 h-screen top-0"
       >
-        <div className="p-5 flex items-center gap-3">
+        <div 
+          className="p-5 flex items-center gap-3 cursor-pointer"
+          onMouseEnter={() => setSidebarHovered(true)}
+        >
           <div className="w-8 h-8 rounded-xl bg-linear-to-tr from-blue-600 to-indigo-600 shadow-[0_0_15px_rgba(37,99,235,0.5)] flex items-center justify-center shrink-0">
             <Hexagon size={16} className="text-white fill-white/20" />
           </div>
@@ -93,7 +99,7 @@ export function MasterPage({
           {navItems.map((item) => {
             const isActive = pathname.startsWith(item.href) && item.href !== '/' || pathname === item.href;
             return (
-              <Link key={item.label} href={item.href}>
+              <Link key={item.label} href={item.href} title={!sidebarOpen ? item.label : undefined}>
                 <div className={cn(
                   "flex items-center gap-3 px-3 py-3 rounded-xl transition-all group relative overflow-hidden",
                   isActive ? "bg-white/10 text-white shadow-lg" : "text-white/60 hover:text-white hover:bg-white/5"
@@ -113,10 +119,11 @@ export function MasterPage({
 
         <div className="p-4 mt-auto">
           <button 
-            onClick={() => setSidebarOpen(!sidebarOpen)}
+            onClick={() => setSidebarPinned(!sidebarPinned)}
             className="w-full flex items-center justify-center p-3 rounded-xl bg-white/5 border border-white/5 text-white/50 hover:text-white/90 hover:bg-white/10 transition-colors"
+            title={sidebarPinned ? "Unpin Sidebar" : "Pin Sidebar"}
           >
-            {sidebarOpen ? <ChevronLeft size={16} /> : <ChevronRight size={16} />}
+            {sidebarPinned ? <ChevronLeft size={16} /> : <ChevronRight size={16} />}
           </button>
         </div>
       </motion.aside>
@@ -171,7 +178,7 @@ export function MasterPage({
                 <div className="mb-12 flex justify-between items-end">
                   <div>
                     <p className="text-[10px] font-mono text-blue-500 uppercase tracking-[0.3em] mb-3">ExLogis / {pathname.split('/')[1] || 'Dashboard'}</p>
-                    <h2 className="text-4xl font-display font-medium tracking-tight mb-2">{title}</h2>
+                    <h2 className="text-4xl font-display font-medium tracking-tight mb-2">{pageTitle}</h2>
                     {subtitle && <p className="text-sm text-white/80">{subtitle}</p>}
                   </div>
                 </div>

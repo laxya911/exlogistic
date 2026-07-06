@@ -21,8 +21,16 @@ enum TransactionStatus {
   PENDING
   CONFIRMED
   SHIPPED
+  IN_TRANSIT
+  DELIVERED
   CANCELLED
   COMPLETED
+  BOOKING
+  STUFFING
+  CUSTOMS
+  ON_VESSEL
+  ARRIVED
+  TRANSIT
 }
 
 enum ImageType {
@@ -93,6 +101,13 @@ model Product {
   isPublished      Boolean      @default(false)
   isFeatured       Boolean      @default(false)
   status           EntityStatus @default(ACTIVE)
+
+  // Logistics & Compliance
+  unitsPerCarton           Int?
+  containerLoadingCapacity Int?
+  shelfLife                String?
+  storageConditions        String?
+  japanImportNotes         String?
 
   brandId String?
   brand   Brand?  @relation(fields: [brandId], references: [id], onDelete: Restrict)
@@ -340,20 +355,26 @@ model Warehouse {
 }
 
 model Inventory {
-  id          String    @id @default(uuid())
-  variantId   String
-  warehouseId String
-  quantity    Float     @default(0)
-  reservedQty Float     @default(0)
-  lotNumber   String?
-  batchNumber String?
-  expiryDate  DateTime?
+  id                String    @id @default(uuid())
+  variantId         String
+  warehouseId       String
+  quantity          Float     @default(0)
+  reservedQty       Float     @default(0)
+  quantityOnHand    Float     @default(0)
+  quantityAllocated Float     @default(0)
+  quantityOnOrder   Float     @default(0)
+  minimumStock      Float     @default(0)
+  lotNumber         String?
+  batchNumber       String?
+  expiryDate        DateTime?
 
   variant      ProductVariant         @relation(fields: [variantId], references: [id], onDelete: Restrict)
   warehouse    Warehouse              @relation(fields: [warehouseId], references: [id], onDelete: Restrict)
   transactions InventoryTransaction[]
 
+  // Allow nulls for unique constraints so simple queries work
   @@unique([variantId, warehouseId, lotNumber, batchNumber])
+  @@unique([variantId, warehouseId], name: "variantId_warehouseId")
   @@index([variantId])
 }
 
@@ -362,9 +383,12 @@ model InventoryTransaction {
   inventoryId    String
   variantId      String
   warehouseId    String
-  quantityChange Float
-  referenceType  String // e.g., "PURCHASE_ORDER", "SALES_ORDER", "ADJUSTMENT"
+  quantityChange Float    @default(0)
+  quantity       Float    @default(0)
+  type           String   @default("UNKNOWN") // "RECEIPT", "SHIPMENT", "ADJUSTMENT", "RETURN"
+  referenceType  String? // e.g., "PURCHASE_ORDER", "SALES_ORDER", "ADJUSTMENT"
   referenceId    String?
+  remarks        String?
   timestamp      DateTime @default(now())
   userId         String?
 
@@ -391,6 +415,7 @@ model Quotation {
   incoterm         String?
   paymentTerms     String?
   currency         String?
+  exchangeRate     Float?
   marginPercentage Float?
   container        String?
   expectedShipment  DateTime?
@@ -406,6 +431,7 @@ model Quotation {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  version   Int      @default(1)
 }
 
 model QuotationItem {
@@ -434,6 +460,8 @@ model SalesOrder {
   container        String?
   expectedShipment DateTime?
   remarks          String?
+  timeline         Json?
+  documents        Json?
 
   customer       Customer         @relation(fields: [customerId], references: [id], onDelete: Restrict)
   quotation      Quotation?       @relation(fields: [quotationId], references: [id], onDelete: SetNull)
@@ -471,6 +499,8 @@ model PurchaseOrder {
   container            String?
   expectedDeliveryDate DateTime?
   remarks              String?
+  timeline             Json?
+  documents            Json?
 
   supplier   Supplier            @relation(fields: [supplierId], references: [id], onDelete: Restrict)
   salesOrder SalesOrder?         @relation(fields: [salesOrderId], references: [id], onDelete: SetNull)
@@ -499,7 +529,32 @@ model Shipment {
   destinationPortId String
   etd               DateTime
   eta               DateTime
+  atd               DateTime?
+  ata               DateTime?
   status            TransactionStatus
+  timeline          Json?
+  documents         Json?
+  
+  // Logistics Fields
+  containerNo       String?
+  bookingNo         String?
+  mbl               String?
+  hbl               String?
+  shippingLineId    String?
+  vesselName        String?
+  voyageNo          String?
+  forwarderId       String?
+  forwarderRefNo    String?
+  containerType     String?
+  grossWeight       Float?
+  netWeight         Float?
+  cbm               Float?
+  packageCount      Int?
+  sealNo            String?
+  hazmat            Boolean   @default(false)
+  freightCost       Json?
+  totalFreightCost  Float?
+  remarks           String?
 
   salesOrder SalesOrder     @relation(fields: [salesOrderId], references: [id], onDelete: Restrict)
   items      ShipmentItem[]
@@ -517,6 +572,34 @@ model ShipmentItem {
   shipment Shipment       @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
   variant  ProductVariant @relation(fields: [variantId], references: [id], onDelete: Restrict)
 }
+
+// ---------------------------------------------------------------------------
+// Document Management
+// ---------------------------------------------------------------------------
+
+model Document {
+  id           String   @id @default(uuid())
+  name         String
+  type         String   // "Commercial Invoice", "Packing List", etc.
+  url          String
+  size         String?
+  status       String   // "DRAFT", "SIGNED", "ACTIVE", "OBSOLETE"
+  relatedId    String
+  relatedType  String   // "SALES_ORDER", "PURCHASE_ORDER", etc.
+  shipper      String?
+  consignee    String?
+  consigneeAddress String?
+  items        Json?
+  totalValue   Float?
+  currency     String?
+  incoterm     String?
+  paymentTerms String?
+  containerType String?
+  entityStatus String   @default("ACTIVE")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
 
 // ---------------------------------------------------------------------------
 // Audit & System

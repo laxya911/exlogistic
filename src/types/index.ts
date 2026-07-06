@@ -37,6 +37,7 @@ export interface ProductVariant extends BaseEntity {
   title: string; // e.g., "Black / 256GB"
   slug?: string;
   isDefault: boolean;
+  inventory?: number;
   
   // Dimensions & Weight
   weight?: number;
@@ -319,12 +320,12 @@ export interface QuotationItem {
   totalPrice: number;
 }
 
-export type SalesOrderStatus = 'PENDING' | 'CONFIRMED' | 'PRODUCTION' | 'READY' | 'SHIPPED' | 'CANCELLED';
+export type SalesOrderStatus = 'DRAFT' | 'PENDING' | 'CONFIRMED' | 'PRODUCTION' | 'READY' | 'SHIPPED' | 'IN_TRANSIT' | 'DELIVERED' | 'CANCELLED';
 
 export interface SalesOrderTimelineEvent {
   id: string;
   date: string;
-  type: 'CREATED' | 'CONFIRMED' | 'PRODUCTION_STARTED' | 'READY_FOR_SHIPMENT' | 'SHIPPED' | 'CANCELLED' | 'UPDATED' | 'DOCUMENT_ADDED' | 'NOTE_ADDED' | 'ARCHIVED' | 'RESTORED';
+  type: 'CREATED' | 'CONFIRMED' | 'PRODUCTION_STARTED' | 'READY_FOR_SHIPMENT' | 'SHIPPED' | 'IN_TRANSIT' | 'DELIVERED' | 'CANCELLED' | 'UPDATED' | 'DOCUMENT_ADDED' | 'NOTE_ADDED' | 'ARCHIVED' | 'RESTORED';
   title: string;
   description: string;
   userId: string;
@@ -375,7 +376,7 @@ export interface PurchaseOrder extends BaseEntity {
   currency?: string;
   exchangeRate?: number;
   paymentTerms?: string;
-  deliveryTerms?: string;     // e.g. Ex-Factory, FOR, CIF
+  incoterm?: string;     // e.g. Ex-Factory, FOR, CIF
   qualitySpec?: string;       // brief quality / grade notes
   packagingSpec?: string;     // packaging instructions
   status: PurchaseOrderStatus;

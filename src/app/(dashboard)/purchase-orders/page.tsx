@@ -130,17 +130,25 @@ export default function PurchaseOrdersPage() {
               )}
             </div>
 
-            <button
-              onClick={() => setShowFilters(!showFilters)}
-              className={cn(
-                'flex items-center gap-2 px-6 py-3 border rounded-2xl text-[10px] font-mono uppercase tracking-widest transition-all cursor-pointer',
-                Object.values(filters).some(a => a.length > 0)
-                  ? 'bg-amber-500/10 border-amber-500 text-amber-400'
-                  : 'bg-white/5 border-white/10 text-white/90 hover:bg-white/10'
-              )}
-            >
-              <Filter size={14} /> Filters
-            </button>
+            <div className="flex items-center gap-3">
+              <Link
+                href="/purchase-orders/new"
+                className="flex items-center gap-2 px-6 py-3 bg-amber-500 text-black hover:bg-amber-400 rounded-2xl text-[10px] font-mono font-bold uppercase tracking-widest transition-all cursor-pointer"
+              >
+                + New PO
+              </Link>
+              <button
+                onClick={() => setShowFilters(!showFilters)}
+                className={cn(
+                  'flex items-center gap-2 px-6 py-3 border rounded-2xl text-[10px] font-mono uppercase tracking-widest transition-all cursor-pointer',
+                  Object.values(filters).some(a => a.length > 0)
+                    ? 'bg-amber-500/10 border-amber-500 text-amber-400'
+                    : 'bg-white/5 border-white/10 text-white/90 hover:bg-white/10'
+                )}
+              >
+                <Filter size={14} /> Filters
+              </button>
+            </div>
           </div>
 
           <AnimatePresence>

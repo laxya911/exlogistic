@@ -1,4 +1,5 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useLayoutEffect, useId } from 'react';
+import { createPortal } from 'react-dom';
 import { Search, Plus, X, Check } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '@/lib/utils';
@@ -34,16 +35,52 @@ export function SearchableSelect({
   const [isOpen, setIsOpen] = useState(false);
   const [search, setSearch] = useState('');
   const wrapperRef = useRef<HTMLDivElement>(null);
+  const portalId = useId();
+
+  const [dropdownStyle, setDropdownStyle] = useState<React.CSSProperties>({});
+
+  const updatePosition = () => {
+    if (isOpen && wrapperRef.current) {
+      const rect = wrapperRef.current.getBoundingClientRect();
+      setDropdownStyle({
+        position: 'fixed',
+        top: rect.bottom + 8,
+        left: rect.left,
+        width: rect.width,
+        zIndex: 99999
+      });
+    }
+  };
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (wrapperRef.current && !wrapperRef.current.contains(event.target as Node)) {
+      const target = event.target as Node;
+      const portalEl = document.getElementById(`searchable-portal-${portalId}`);
+      if (
+        wrapperRef.current && 
+        !wrapperRef.current.contains(target) &&
+        (!portalEl || !portalEl.contains(target))
+      ) {
         setIsOpen(false);
       }
     }
+    
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+    if (isOpen) {
+      window.addEventListener('scroll', updatePosition, true);
+      window.addEventListener('resize', updatePosition);
+    }
+    
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      window.removeEventListener('scroll', updatePosition, true);
+      window.removeEventListener('resize', updatePosition);
+    };
+  }, [isOpen]);
+
+  useLayoutEffect(() => {
+    updatePosition();
+  }, [isOpen]);
 
   const filteredOptions = options.filter(opt => 
     opt.label.toLowerCase().includes(search.toLowerCase())
@@ -79,24 +116,27 @@ export function SearchableSelect({
   };
 
   return (
-    <div ref={wrapperRef} className={cn("relative w-full", className)}>
+    <div ref={wrapperRef} className={cn("relative w-full", isOpen ? "z-50" : "z-auto", className)}>
       <div 
         className="w-full bg-[#0b0b0b] border border-white/10 rounded-xl py-3 px-4 text-sm font-mono text-white focus:outline-none cursor-pointer flex justify-between items-center"
         onClick={() => setIsOpen(!isOpen)}
       >
-        <span className={!value || (multiple && value.length === 0) ? 'text-white/50' : 'text-white'}>
+        <span className={!value || (multiple && value.length === 0) ? 'text-white/50' : 'text-white truncate pr-4'}>
           {getDisplayValue()}
         </span>
       </div>
 
-      <AnimatePresence>
-        {isOpen && (
-          <motion.div
-            initial={{ opacity: 0, y: 5 }}
+      {typeof document !== 'undefined' && createPortal(
+        <AnimatePresence>
+          {isOpen && (
+            <motion.div
+            id={`searchable-portal-${portalId}`}
+            initial={{ opacity: 0, y: -5 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 5 }}
+            exit={{ opacity: 0, y: -5 }}
             transition={{ duration: 0.15 }}
-            className="absolute z-50 w-full mt-2 bg-[#111] border border-white/10 rounded-xl shadow-2xl overflow-hidden"
+            style={dropdownStyle}
+            className="bg-[#111] border border-white/10 rounded-xl shadow-2xl overflow-hidden"
           >
             <div className="p-2 border-b border-white/5 flex items-center gap-2">
               <Search size={14} className="text-white/50 ml-2" />
@@ -140,7 +180,7 @@ export function SearchableSelect({
             
             {(onAddClick || onAddNew) && (
               <div 
-                className="p-2 border-t border-white/5 bg-white/[0.02]"
+                className="p-2 border-t border-white/5 bg-white/2"
               >
                 <button
                   type="button"
@@ -157,8 +197,10 @@ export function SearchableSelect({
               </div>
             )}
           </motion.div>
-        )}
-      </AnimatePresence>
+          )}
+        </AnimatePresence>,
+        document.body
+      )}
     </div>
   );
 }
