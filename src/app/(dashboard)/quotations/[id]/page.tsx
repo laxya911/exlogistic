@@ -23,6 +23,7 @@ export default function QuotationDetailPage() {
   const [customer, setCustomer] = useState<Customer | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
   const [ports, setPorts] = useState<Port[]>([]);
+  const [taxes, setTaxes] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [communicationNote, setCommunicationNote] = useState('');
 
@@ -49,10 +50,12 @@ export default function QuotationDetailPage() {
         setCustomer(cData);
       }
 
-      const [pRes] = await Promise.all([
-        fetch('/api/products').then(r => r.json())
+      const [pRes, tRes] = await Promise.all([
+        fetch('/api/products').then(r => r.json()),
+        fetch('/api/reference/taxes').then(r => r.json())
       ]);
       setProducts(pRes);
+      setTaxes(tRes);
       
       setPorts([
         { id: 'TYO', name: 'Tokyo Port', code: 'JP TYO', country: 'Japan', type: 'SEA', entityStatus: 'ACTIVE', createdAt: '', updatedAt: '' },
@@ -73,66 +76,101 @@ export default function QuotationDetailPage() {
   };
 
   const updateItem = (idx: number, field: string, value: any) => {
-    const newItems = [...formState.items];
-    const item = { ...newItems[idx], [field]: value };
-    
-    if (field === 'variantId') {
-      let sellingPrice = 0;
-      for (const p of products) {
-        const v = p.variants?.find((v: any) => v.id === value);
-        if (v) {
-          item.productId = p.id;
-          item.name = p.name;
-          item.sku = v.sku;
-          item.uom = p.uom || 'MT';
-          sellingPrice = v.sellingPrice || p.sellingPrice || 0;
-          break;
+    setFormState((prev: any) => {
+      const newItems = [...prev.items];
+      const item = { ...newItems[idx], [field]: value };
+      
+      if (field === 'variantId') {
+        let sellingPrice = 0;
+        for (const p of products) {
+          const v = p.variants?.find((v: any) => v.id === value);
+          if (v) {
+            item.productId = p.id;
+            item.name = p.name;
+            item.sku = v.sku;
+            item.uom = p.uom || 'MT';
+            sellingPrice = v.sellingPrice || p.sellingPrice || 0;
+            break;
+          }
+        }
+        
+        const margin = prev.marginPercentage || 0;
+        const factor = margin > 0 ? 1 - (margin / 100) : 1;
+        
+        item.basePrice = sellingPrice; 
+        item.unitPrice = factor > 0 ? Number((item.basePrice / factor).toFixed(2)) : item.basePrice;
+        
+        // Auto-assign sales tax from variant
+        const variant = products.find((p: any) => p.id === item.productId)?.variants?.find((v: any) => v.id === value);
+        if (variant && variant.salesTaxId) {
+          item.taxId = variant.salesTaxId;
         }
       }
       
-      const margin = formState.marginPercentage || 0;
-      const factor = margin > 0 ? 1 - (margin / 100) : 1;
+      if (field === 'quantity') {
+        item.total = (item.quantity || 0) * (item.unitPrice || 0);
+      }
       
-      item.basePrice = sellingPrice; 
-      item.unitPrice = factor > 0 ? Number((item.basePrice / factor).toFixed(2)) : item.basePrice;
-      item.total = (item.quantity || 0) * item.unitPrice;
-    }
-    
-    if (field === 'quantity') {
-      item.total = (item.quantity || 0) * (item.unitPrice || 0);
-    }
-    
-    if (field === 'unitPrice') {
-      const margin = formState.marginPercentage || 0;
-      const factor = margin > 0 ? 1 - (margin / 100) : 1;
-      item.basePrice = factor > 0 ? Number((value * factor).toFixed(2)) : value;
-      item.total = (item.quantity || 0) * value;
-    }
-    
-    newItems[idx] = item;
-    setFormState({ ...formState, items: newItems });
+      if (field === 'unitPrice') {
+        const margin = prev.marginPercentage || 0;
+        const factor = margin > 0 ? 1 - (margin / 100) : 1;
+        item.basePrice = factor > 0 ? Number((value * factor).toFixed(2)) : value;
+      }
+      
+      newItems[idx] = item;
+      return { ...prev, items: newItems };
+    });
   };
 
   const removeItem = (idx: number) => {
-    const newItems = [...formState.items];
-    newItems.splice(idx, 1);
-    updateFormState('items', newItems);
+    setFormState((prev: any) => {
+      const newItems = [...prev.items];
+      newItems.splice(idx, 1);
+      return { ...prev, items: newItems };
+    });
   };
 
   const addItem = () => {
-    updateFormState('items', [...formState.items, { variantId: '', productId: '', quantity: 1, unitPrice: 0, total: 0, uom: 'MT' }]);
+    setFormState((prev: any) => ({
+      ...prev,
+      items: [...prev.items, { variantId: '', productId: '', quantity: 1, unitPrice: 0, total: 0, uom: 'MT' }]
+    }));
   };
 
-  const calculatedItems = formState.items || [];
-  const costOfGoods = calculatedItems.reduce((acc: number, item: any) => acc + (item.total || 0), 0);
-  const totalValue = useMemo(() => {
-    const margin = formState.marginPercentage || 0;
-    if (margin === 0) return costOfGoods;
-    const factor = 1 - (margin / 100);
-    if (factor <= 0) return costOfGoods;
-    return Math.round(costOfGoods / factor);
-  }, [costOfGoods, formState.marginPercentage]);
-  const grossProfit = totalValue - costOfGoods;
+  const computedItems = useMemo(() => {
+    return (formState.items || []).map((item: any) => {
+      const tax = taxes.find(t => t.id === item.taxId);
+      const qty = item.quantity || 0;
+      const price = item.unitPrice || 0;
+      
+      let untaxed = price;
+      let taxAmount = 0;
+      
+      if (tax) {
+        if (tax.includedInPrice) {
+          untaxed = price / (1 + (tax.ratePercentage / 100));
+          taxAmount = price - untaxed;
+        } else {
+          taxAmount = price * (tax.ratePercentage / 100);
+        }
+      }
+      
+      return {
+        ...item,
+        taxAmount: Number((taxAmount * qty).toFixed(2)),
+        taxRate: tax?.ratePercentage || 0,
+        totalPrice: Number(((untaxed + taxAmount) * qty).toFixed(2)),
+        untaxedTotal: Number((untaxed * qty).toFixed(2))
+      };
+    });
+  }, [formState.items, taxes]);
+
+  const untaxedAmount = computedItems.reduce((sum: number, item: any) => sum + (item.untaxedTotal || 0), 0);
+  const totalTaxAmount = computedItems.reduce((sum: number, item: any) => sum + (item.taxAmount || 0), 0);
+  const totalValue = computedItems.reduce((sum: number, item: any) => sum + (item.totalPrice || 0), 0);
+  
+  const costOfGoods = (formState.items || []).reduce((sum: number, item: any) => sum + ((item.basePrice || 0) * (item.quantity || 0)), 0);
+  const grossProfit = untaxedAmount - costOfGoods;
 
   const handleEditToggle = () => {
     if (!isEditing) {
@@ -157,8 +195,7 @@ export default function QuotationDetailPage() {
             name: products.find(p => p.id === i.productId)?.name || '',
             sku: products.find(p => p.id === i.productId)?.sku || '',
             uom: products.find(p => p.id === i.productId)?.uom || 'MT',
-            basePrice,
-            total: (i.quantity || 0) * (i.unitPrice || 0)
+            basePrice
           };
         }) || []
       });
@@ -171,7 +208,7 @@ export default function QuotationDetailPage() {
     const newItems = (formState.items || []).map((item: any) => {
       const base = item.basePrice || item.unitPrice;
       const newPrice = factor > 0 ? Number((base / factor).toFixed(2)) : base;
-      return { ...item, unitPrice: newPrice, total: newPrice * (item.quantity || 0) };
+      return { ...item, unitPrice: newPrice };
     });
     setFormState({ ...formState, marginPercentage: margin, items: newItems });
   };
@@ -180,21 +217,24 @@ export default function QuotationDetailPage() {
     if (!quotation) return;
     setSaving(true);
     try {
-      const finalItems = formState.items.map((item: any) => ({
+      const finalItems = computedItems.map((item: any) => ({
         variantId: item.variantId,
         productId: item.productId,
         quantity: item.quantity,
         unitPrice: item.unitPrice,
-        totalPrice: item.total
+        taxId: item.taxId || null,
+        taxRate: item.taxRate || 0,
+        taxAmount: item.taxAmount || 0,
+        totalPrice: item.totalPrice || 0
       }));
-      
-      const totalValueFinal = finalItems.reduce((acc: number, cur: any) => acc + cur.totalPrice, 0);
 
       const payload = {
         ...quotation,
         ...formState,
         validityDate: new Date(Date.now() + (formState.validityDays || 30) * 86400000).toISOString(),
-        totalValue: totalValueFinal,
+        totalValue,
+        untaxedAmount,
+        totalTaxAmount,
         items: finalItems
       };
       delete payload.validityDays;
@@ -465,7 +505,7 @@ export default function QuotationDetailPage() {
                     <div key={doc.id} className="flex justify-between items-center p-3.5 bg-white/2 border border-white/5 rounded-xl text-[11px] font-mono">
                       <div className="flex items-center gap-2">
                         <FileText size={14} className="text-blue-400" />
-                        <span className="text-white/80 font-bold truncate max-w-[150px]">{doc.name}</span>
+                        <span className="text-white/80 font-bold truncate max-w-37.5">{doc.name}</span>
                       </div>
                       <a href={doc.url} className="text-white/80 hover:text-white transition-colors" title="Download Vault PDF">
                         <ExternalLink size={12} />
@@ -483,11 +523,11 @@ export default function QuotationDetailPage() {
             {isEditing ? (
               <LineItemsTable 
                 isEditing={isEditing}
-                items={calculatedItems}
+                items={isEditing ? computedItems : quotation.items}
                 updateItem={updateItem}
                 removeItem={removeItem}
                 addItem={addItem}
-                variantOptions={variantOptions}
+                products={products}
                 formatCurrency={formatCurrency}
                 getProductName={getProductName}
                 marginPercentage={formState.marginPercentage || 0}
@@ -495,6 +535,9 @@ export default function QuotationDetailPage() {
                 costOfGoods={costOfGoods}
                 grossProfit={grossProfit}
                 totalValue={totalValue}
+                untaxedAmount={untaxedAmount}
+                totalTaxAmount={totalTaxAmount}
+                taxes={taxes}
               />
             ) : (
               <div className="glass p-8 rounded-4xl border border-white/5 space-y-6">
@@ -508,7 +551,8 @@ export default function QuotationDetailPage() {
                       <tr>
                         <th className="pb-4">Commodity SKU</th>
                         <th className="pb-4 text-right">Quantity</th>
-                        <th className="pb-4 text-right">Selling Price</th>
+                        <th className="pb-4 text-right">Unit Price</th>
+                        <th className="pb-4 text-right">Tax</th>
                         <th className="pb-4 text-right">Total Price</th>
                       </tr>
                     </thead>
@@ -522,6 +566,10 @@ export default function QuotationDetailPage() {
                           </td>
                           <td className="py-4 text-right font-bold">{item.quantity} MT</td>
                           <td className="py-4 text-right font-bold">{formatCurrency(item.unitPrice)}</td>
+                          <td className="py-4 text-right font-bold text-white/70">
+                            {item.tax ? item.tax.name : (item.taxId ? (taxes.find(t => t.id === item.taxId)?.name || 'Tax') : '-')}
+                            {item.taxAmount ? ` (${formatCurrency(item.taxAmount)})` : ''}
+                          </td>
                           <td className="py-4 text-right font-bold text-white">{formatCurrency(item.totalPrice)}</td>
                         </tr>
                       ))}
@@ -533,11 +581,19 @@ export default function QuotationDetailPage() {
                   <div className="w-full max-w-sm space-y-2.5">
                     <div className="flex justify-between text-white/70">
                       <span>Proposed Margin Percentage</span>
-                      <span>{quotation.marginPercentage}%</span>
+                      <span>{quotation.marginPercentage || 0}%</span>
                     </div>
-                    <div className="h-px bg-white/5 my-1" />
+                    <div className="flex justify-between text-white/70 pt-2">
+                      <span>Untaxed Amount</span>
+                      <span className="font-bold text-white">{formatCurrency(quotation.untaxedAmount || 0)}</span>
+                    </div>
+                    <div className="flex justify-between text-white/70 pt-2">
+                      <span>Total Tax Amount</span>
+                      <span className="font-bold text-white">{formatCurrency(quotation.totalTaxAmount || 0)}</span>
+                    </div>
+                    <div className="h-px bg-white/5 my-3" />
                     <div className="flex justify-between text-base font-bold text-white">
-                      <span>Total Proposal Value</span>
+                      <span>Total Proposal Value (Gross)</span>
                       <span className="text-blue-400">{formatCurrency(quotation.totalValue)}</span>
                     </div>
                   </div>

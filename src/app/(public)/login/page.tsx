@@ -35,7 +35,7 @@ export default function LoginPage() {
         setLoading(false);
       } else {
         toast.success('Successfully logged in');
-        router.push('/dashboard');
+        router.push('/launcher');
         router.refresh();
       }
     } catch (err) {
@@ -61,7 +61,7 @@ export default function LoginPage() {
           className="text-center mb-10"
         >
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl glass border border-white/10 mb-6 shadow-2xl shadow-blue-500/10">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-blue-600 to-cyan-400 rotate-12" />
+            <div className="w-8 h-8 rounded-lg bg-linear-to-tr from-blue-600 to-cyan-400 rotate-12" />
           </div>
           <h1 className="text-3xl font-display font-medium tracking-tight mb-2">ExLogis ERP</h1>
           <p className="text-white/50 text-sm font-mono tracking-widest uppercase">Global Export Matrix</p>
@@ -72,9 +72,9 @@ export default function LoginPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, ease: "easeOut", delay: 0.1 }}
-          className="glass rounded-[2rem] border border-white/5 p-8 sm:p-10 shadow-2xl relative overflow-hidden"
+          className="glass rounded-4xl border border-white/5 p-8 sm:p-10 shadow-2xl relative overflow-hidden"
         >
-          <div className="absolute inset-0 bg-gradient-to-b from-white/[0.03] to-transparent pointer-events-none" />
+          <div className="absolute inset-0 bg-linear-to-b from-white/03 to-transparent pointer-events-none" />
           
           <h2 className="text-xl font-medium mb-8">Sign in to your account</h2>
 
@@ -141,7 +141,7 @@ export default function LoginPage() {
               disabled={loading}
               className="w-full bg-blue-600 hover:bg-blue-500 text-white rounded-2xl py-4 font-medium transition-all flex items-center justify-center gap-2 mt-4 disabled:opacity-50 disabled:cursor-not-allowed group relative overflow-hidden"
             >
-              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
+              <div className="absolute inset-0 bg-linear-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
               {loading ? (
                 <Loader2 size={18} className="animate-spin" />
               ) : (

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 
 type PageContextType = {
   title: string;
@@ -16,7 +16,7 @@ const PageContext = createContext<PageContextType>({
   setSubtitle: () => {}
 });
 
-export const PageProvider = ({ children }: { children: React.ReactNode }) => {
+export const PageProvider = ({ children }: { children: ReactNode }) => {
   const [title, setTitle] = useState('');
   const [subtitle, setSubtitle] = useState('');
 

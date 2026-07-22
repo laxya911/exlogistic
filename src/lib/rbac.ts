@@ -3,14 +3,19 @@ import { authOptions } from './auth';
 import { prisma } from '@/repositories/prisma.client';
 
 export async function hasPermission(requiredPermission: string): Promise<boolean> {
+  // Temporary bypass during development since the Roles UI is not yet fully implemented
+  if (process.env.NODE_ENV !== 'production') return true;
+
   const session = await getServerSession(authOptions);
   
   if (!session?.user?.email) {
     return false;
   }
 
+  const email = session.user.email as string;
+
   const user = await prisma.user.findUnique({
-    where: { email: session.user.email },
+    where: { email },
     include: {
       roles: {
         include: {

@@ -12,37 +12,90 @@ import { formatCurrency, cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
 import { toast } from 'sonner';
 import { CostingScenario } from '@/types';
+import { SearchableSelect } from '@/components/ui/searchable-select';
+
+const MOCK_FX_RATES: Record<string, number> = {
+  USD: 1.0,
+  EUR: 1.09,
+  GBP: 1.27,
+  CNY: 0.14,
+  JPY: 0.0065,
+  INR: 0.012,
+  AED: 0.27,
+};
+
+const CONTAINER_CAPACITIES: Record<string, { maxWeight: number, maxCBM: number }> = {
+  '20GP': { maxWeight: 28000, maxCBM: 33 },
+  '40GP': { maxWeight: 28800, maxCBM: 67 },
+  '40HQ': { maxWeight: 28600, maxCBM: 76 },
+  '20RF': { maxWeight: 27000, maxCBM: 28 },
+};
 
 // ──────────────────────────────────────────
 // Costing calculation helper
 // ──────────────────────────────────────────
 function calcScenario(params: {
-  qty: number; unitPrice: number;
+  items: { qty: number; unitPrice: number; weight: number; cbm: number; productId: string; _meta?: { name: string, sku: string } }[];
+  fxRate: number; // Purchase Currency to Target Currency
   oceanFrtPerContainer: number; containerCount: number;
   originH: number; destH: number;
   insuranceRate: number; customsRate: number;
   inspection: number; banking: number; misc: number;
   targetMargin: number;
 }) {
-  const { qty, unitPrice, oceanFrtPerContainer, containerCount, originH, destH,
+  const { items, fxRate, oceanFrtPerContainer, containerCount, originH, destH,
     insuranceRate, customsRate, inspection, banking, misc, targetMargin } = params;
 
-  const productCost = qty * unitPrice;
-  const totalFreight = oceanFrtPerContainer * containerCount + originH + destH;
-  const cifValue = productCost + totalFreight;
-  const insuranceAmt = productCost * (insuranceRate / 100);
+  // Total product cost in Target Currency
+  const totalProductCost = items.reduce((sum, item) => sum + (item.qty * item.unitPrice * fxRate), 0);
+  
+  const totalWeight = items.reduce((sum, item) => sum + (item.qty * item.weight), 0);
+  const totalCBM = items.reduce((sum, item) => sum + (item.qty * item.cbm), 0);
+  const totalItemsCount = items.reduce((sum, item) => sum + item.qty, 0);
+
+  const totalFreight = (oceanFrtPerContainer * containerCount) + originH + destH; // Target Currency
+  const cifValue = totalProductCost + totalFreight;
+  const insuranceAmt = totalProductCost * (insuranceRate / 100);
   const customsAmt = cifValue * (customsRate / 100);
-  const totalLanded = productCost + totalFreight + insuranceAmt + customsAmt + inspection + banking + misc;
-  const costPerUnit = qty > 0 ? totalLanded / qty : 0;
-  const sellingPerUnit = targetMargin < 100 ? costPerUnit / (1 - targetMargin / 100) : 0;
-  const profitPerUnit = sellingPerUnit - costPerUnit;
-  const totalRevenue = sellingPerUnit * qty;
-  const totalProfit = profitPerUnit * qty;
-  const breakEven = sellingPerUnit > 0 ? Math.ceil(totalLanded / sellingPerUnit) : 0;
+  const totalLanded = totalProductCost + totalFreight + insuranceAmt + customsAmt + inspection + banking + misc;
+  
+  let totalRevenue = 0;
+  let totalProfit = 0;
+
+  // Apportion costs back to items (by value proportion)
+  const computedItems = items.map(item => {
+    const itemTotalProductCost = (item.qty * item.unitPrice * fxRate);
+    const valueProportion = totalProductCost > 0 ? (itemTotalProductCost / totalProductCost) : (items.length > 0 ? 1 / items.length : 0);
+    const itemTotalLanded = totalLanded * valueProportion;
+    
+    const landedCostPerUnit = item.qty > 0 ? itemTotalLanded / item.qty : 0;
+    const targetSellingPricePerUnit = targetMargin < 100 ? landedCostPerUnit / (1 - targetMargin / 100) : 0;
+    const grossProfitPerUnit = targetSellingPricePerUnit - landedCostPerUnit;
+    
+    totalRevenue += (targetSellingPricePerUnit * item.qty);
+    totalProfit += (grossProfitPerUnit * item.qty);
+
+    return {
+      ...item,
+      totalProductCost: itemTotalProductCost,
+      landedCostPerUnit,
+      targetSellingPricePerUnit,
+      grossProfitPerUnit
+    };
+  });
+
+  const breakEven = totalRevenue > 0 ? Math.ceil(totalLanded / (totalRevenue / totalItemsCount)) : 0;
+  
+  // Averages for generic comparison display
+  const avgCostPerUnit = totalItemsCount > 0 ? totalLanded / totalItemsCount : 0;
+  const avgSellingPerUnit = totalItemsCount > 0 ? totalRevenue / totalItemsCount : 0;
+  const avgProfitPerUnit = totalItemsCount > 0 ? totalProfit / totalItemsCount : 0;
 
   return {
-    productCost, totalFreight, insuranceAmt, customsAmt, totalLanded,
-    costPerUnit, sellingPerUnit, profitPerUnit, totalRevenue, totalProfit, breakEven
+    totalProductCost, totalFreight, insuranceAmt, customsAmt, totalLanded,
+    computedItems, totalWeight, totalCBM, totalItemsCount,
+    avgCostPerUnit, avgSellingPerUnit, avgProfitPerUnit,
+    totalRevenue, totalProfit, breakEven
   };
 }
 
@@ -81,6 +134,215 @@ function MarginGauge({ value, max = 50 }: { value: number; max?: number }) {
 }
 
 // ──────────────────────────────────────────
+// Variant Selector Modal
+// ──────────────────────────────────────────
+function VariantSelectorModal({ product, isOpen, onClose, onSelect, addedVariantIds }: { product: any, isOpen: boolean, onClose: () => void, onSelect: (id: string) => void, addedVariantIds: string[] }) {
+  const [selectedAttrs, setSelectedAttrs] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    if (isOpen) setSelectedAttrs({});
+  }, [isOpen]);
+
+  if (!isOpen || !product) return null;
+
+  // Extract attributes if available
+  const attributeMap: Record<string, Set<string>> = {};
+  let hasAttributes = false;
+  product.variants.forEach((v: any) => {
+    if (v.attributes && v.attributes.length > 0) {
+      hasAttributes = true;
+      v.attributes.forEach((attrOpt: any) => {
+        const attrName = attrOpt.attributeValue.attribute.name;
+        const attrVal = attrOpt.attributeValue.value;
+        if (!attributeMap[attrName]) attributeMap[attrName] = new Set();
+        attributeMap[attrName].add(attrVal);
+      });
+    }
+  });
+
+  // Find matching variant based on selected attributes
+  let matchedVariant: any = null;
+  if (hasAttributes) {
+    matchedVariant = product.variants.find((v: any) => {
+      if (!v.attributes) return false;
+      const vAttrs = v.attributes.map((a: any) => ({ name: a.attributeValue.attribute.name, val: a.attributeValue.value }));
+      return Object.keys(attributeMap).every(attrName => 
+        vAttrs.some((a: any) => a.name === attrName && a.val === selectedAttrs[attrName])
+      );
+    });
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+      <div className="bg-[#111] border border-white/10 rounded-2xl p-6 w-full max-w-md shadow-2xl">
+        <div className="flex justify-between items-center mb-6">
+          <h3 className="text-white font-mono font-bold">Select Variant: {product.name}</h3>
+          <button onClick={onClose} className="text-white/50 hover:text-white transition-colors cursor-pointer">
+            <X size={20} />
+          </button>
+        </div>
+
+        {hasAttributes ? (
+          <div className="space-y-6">
+            {Object.keys(attributeMap).map(attrName => (
+              <div key={attrName} className="space-y-2">
+                <label className="text-[10px] font-mono text-white/50 uppercase tracking-widest">{attrName}</label>
+                <div className="flex flex-wrap gap-2">
+                  {Array.from(attributeMap[attrName]).map(val => (
+                    <button
+                      key={val}
+                      onClick={() => setSelectedAttrs(prev => ({ ...prev, [attrName]: val }))}
+                      className={cn(
+                        "px-4 py-2 rounded-lg text-sm font-bold border transition-colors cursor-pointer",
+                        selectedAttrs[attrName] === val
+                          ? "bg-emerald-500/20 border-emerald-500 text-emerald-400"
+                          : "bg-white/5 border-white/10 text-white/70 hover:bg-white/10"
+                      )}
+                    >
+                      {val}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ))}
+
+            <div className="pt-4 border-t border-white/10">
+              {matchedVariant ? (
+                addedVariantIds.includes(matchedVariant.id) ? (
+                  <button disabled className="w-full py-3 rounded-xl bg-white/5 text-white/40 font-bold cursor-not-allowed">
+                    Variant Already Added
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => onSelect(matchedVariant.id)}
+                    className="w-full py-3 rounded-xl bg-emerald-500 text-black font-bold uppercase tracking-wide hover:bg-emerald-400 transition-colors cursor-pointer flex justify-between px-6"
+                  >
+                    <span>Add {matchedVariant.sku}</span>
+                    <span>{formatCurrency(matchedVariant.purchasePrice, matchedVariant.currency || 'USD')}</span>
+                  </button>
+                )
+              ) : (
+                <button disabled className="w-full py-3 rounded-xl bg-white/5 text-white/40 font-bold cursor-not-allowed">
+                  {Object.keys(selectedAttrs).length === Object.keys(attributeMap).length 
+                    ? "Combination Unavailable" 
+                    : "Select all options"}
+                </button>
+              )}
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-2 max-h-[60vh] overflow-y-auto pr-2">
+            {product.variants.map((v: any) => {
+              const isAdded = addedVariantIds.includes(v.id);
+              return (
+                <button
+                  key={v.id}
+                  disabled={isAdded}
+                  onClick={() => onSelect(v.id)}
+                  className={cn(
+                    "w-full flex justify-between items-center p-4 rounded-xl border text-left transition-colors",
+                    isAdded 
+                      ? "bg-white/5 border-white/5 opacity-50 cursor-not-allowed" 
+                      : "bg-white/2 border-white/10 hover:border-emerald-500/50 hover:bg-emerald-500/5 cursor-pointer"
+                  )}
+                >
+                  <div>
+                    <p className="text-sm font-bold text-white/90">{v.title || v.sku}</p>
+                    <p className="text-[10px] font-mono text-white/50">{v.sku}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm font-sans text-emerald-400 font-bold">{formatCurrency(v.purchasePrice, v.currency || 'USD')}</p>
+                    <p className="text-[10px] font-mono text-white/50">{v.grossWeight}kg | {v.volumeCBM}m³</p>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ──────────────────────────────────────────
+// Container Blueprint Component
+// ──────────────────────────────────────────
+const ITEM_COLORS = [
+  'bg-blue-400', 'bg-amber-400', 'bg-emerald-400', 'bg-purple-400',
+  'bg-rose-400', 'bg-cyan-400', 'bg-fuchsia-400', 'bg-lime-400'
+];
+
+function ContainerBlueprint({ items, totalCBM, maxCBM }: { items: any[], totalCBM: number, maxCBM: number }) {
+  // Calculate width percentages for each item relative to the max capacity
+  const segments = items.map((item, idx) => {
+    const itemTotalCBM = item.qty * item.cbm;
+    const widthPct = Math.min(100, (itemTotalCBM / maxCBM) * 100);
+    return {
+      ...item,
+      color: ITEM_COLORS[idx % ITEM_COLORS.length],
+      widthPct
+    };
+  });
+
+  const remainingPct = Math.max(0, 100 - (totalCBM / maxCBM) * 100);
+  const isOverloaded = totalCBM > maxCBM;
+
+  return (
+    <div className="mt-8">
+      <div className="flex justify-between items-center text-[9px] font-mono text-white/50 uppercase tracking-widest mb-3">
+        <span>[ Rear Doors ]</span>
+        <span>Container Blueprint ({maxCBM} CBM)</span>
+        <span>[ Nose / Front ]</span>
+      </div>
+      
+      {/* Container Box */}
+      <div className="relative w-full h-24 border-[3px] border-white/20 rounded-sm p-1 bg-[#0a0a0a] shadow-inner flex flex-row-reverse overflow-hidden">
+        {/* Draw Segments (Loaded back-to-front so flex-row-reverse pushes them to the Nose first) */}
+        {segments.map((seg, i) => (
+          <motion.div
+            key={i}
+            initial={{ width: 0 }}
+            animate={{ width: `${seg.widthPct}%` }}
+            className={cn('h-full border-r border-black/20 flex items-center justify-center overflow-hidden', seg.color)}
+            title={`${seg._meta?.name || 'Item'} - ${seg.qty * seg.cbm} CBM`}
+          >
+            {seg.widthPct > 5 && (
+              <span className="text-black/60 font-bold text-[10px] font-mono truncate px-1">
+                {seg._meta?.sku || 'Item'}
+              </span>
+            )}
+          </motion.div>
+        ))}
+        {/* Free Space Indicator */}
+        {!isOverloaded && remainingPct > 0 && (
+          <div className="h-full bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGcgc3Ryb2tlPSJyZ2JhKDI1NSwgMjU1LCAyNTUsIDAuMDUpIiBzdHJva2Utd2lkdGg9IjIiIGZpbGw9Im5vbmUiPjxwb2x5Z29uIHBvaW50cz0iMCA0MCA0MCAwIi8+PC9nPjwvc3ZnPg==')] flex items-center justify-center flex-grow">
+            <span className="text-white/20 text-[10px] font-mono uppercase">Free Space</span>
+          </div>
+        )}
+        {/* Overload Indicator */}
+        {isOverloaded && (
+          <div className="absolute inset-y-0 left-0 w-8 bg-rose-500/80 backdrop-blur-sm flex items-center justify-center border-l-4 border-rose-600 shadow-[0_0_15px_rgba(244,63,94,0.5)] z-10">
+            <span className="text-white text-[9px] font-bold rotate-180" style={{ writingMode: 'vertical-rl' }}>OVERLOAD</span>
+          </div>
+        )}
+      </div>
+
+      {/* Legend */}
+      <div className="flex flex-wrap gap-4 mt-4 justify-center">
+        {segments.map((seg, i) => (
+          <div key={i} className="flex items-center gap-1.5">
+            <div className={cn('w-2 h-2 rounded-sm', seg.color)} />
+            <span className="text-[10px] font-mono text-white/70">
+              {seg._meta?.name || 'Item'} ({(seg.qty * seg.cbm).toFixed(1)} CBM)
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ──────────────────────────────────────────
 // Main page
 // ──────────────────────────────────────────
 export default function CostingPage() {
@@ -90,9 +352,9 @@ export default function CostingPage() {
   const [loading, setLoading] = useState(true);
 
   // — Live Builder State —
-  const [productId, setProductId] = useState('');
-  const [qty, setQty] = useState(600);
-  const [unitPrice, setUnitPrice] = useState(42);
+  const [items, setItems] = useState<{ productId: string, qty: number, unitPrice: number, weight: number, cbm: number, _meta?: { name: string, sku: string } }[]>([]);
+  const [purchaseCurrency, setPurchaseCurrency] = useState('USD');
+  const [targetCurrency, setTargetCurrency] = useState('USD');
   const [containerType, setContainerType] = useState('20GP');
   const [containerCount, setContainerCount] = useState(1);
   const [oceanFrt, setOceanFrt] = useState(2800);
@@ -112,6 +374,8 @@ export default function CostingPage() {
   const [showSaved, setShowSaved] = useState(true);
   const [compareIds, setCompareIds] = useState<string[]>([]);
   const [savingScenario, setSavingScenario] = useState(false);
+  const [pendingVariantProduct, setPendingVariantProduct] = useState<any | null>(null);
+  const [pendingVariantRowIdx, setPendingVariantRowIdx] = useState<number | null>(null);
 
   useEffect(() => { fetchAll(); }, []);
 
@@ -127,37 +391,39 @@ export default function CostingPage() {
       setSuppliers(sRes);
       setSavedScenarios(scRes);
       if (pRes.length > 0) {
-        setProductId(pRes[0].id);
-        setUnitPrice(pRes[0].purchasePrice || 42);
+        // Start with an empty list for a clean view
       }
     } catch { toast.error('Failed to load costing data'); }
     finally { setLoading(false); }
   };
 
-  // Update unit price when product changes
-  useEffect(() => {
-    const p = products.find(x => x.id === productId);
-    if (p) setUnitPrice(p.purchasePrice || 42);
-  }, [productId, products]);
+  // Update FX Rate based on selected currencies
+  const fxRate = useMemo(() => {
+    const pRate = MOCK_FX_RATES[purchaseCurrency] || 1;
+    const tRate = MOCK_FX_RATES[targetCurrency] || 1;
+    return pRate / tRate;
+  }, [purchaseCurrency, targetCurrency]);
 
-  // Update banking rate calculation
+  // Update banking rate calculation based on Total Product Cost
   const bankingAmt = useMemo(() => {
-    const p = qty * unitPrice;
-    return Math.round(p * 0.0025 * 100) / 100;
-  }, [qty, unitPrice]);
+    const totalProductVal = items.reduce((sum, item) => sum + (item.qty * item.unitPrice * fxRate), 0);
+    return Math.round(totalProductVal * 0.0025 * 100) / 100;
+  }, [items, fxRate]);
 
   const live = useMemo(() => calcScenario({
-    qty, unitPrice, oceanFrtPerContainer: oceanFrt, containerCount,
+    items, fxRate, oceanFrtPerContainer: oceanFrt, containerCount,
     originH, destH, insuranceRate, customsRate,
     inspection, banking: bankingAmt, misc, targetMargin
-  }), [qty, unitPrice, oceanFrt, containerCount, originH, destH,
+  }), [items, fxRate, oceanFrt, containerCount, originH, destH,
     insuranceRate, customsRate, inspection, bankingAmt, misc, targetMargin]);
 
-  const selectedProduct = products.find(p => p.id === productId);
-  const selectedSupplier = suppliers.find(s => s.id === selectedProduct?.supplierId);
+  // Selected supplier can just be the supplier of the first item
+  const selectedSupplier = suppliers.find(s => s.id === products.find(p => p.id === items[0]?.productId)?.supplierId);
 
   const handleReset = () => {
-    setQty(600); setUnitPrice(42); setOceanFrt(2800); setContainerCount(1);
+    setItems([]);
+    setPurchaseCurrency('USD'); setTargetCurrency('USD');
+    setOceanFrt(2800); setContainerCount(1);
     setOriginH(280); setDestH(420); setInsuranceRate(0.5); setCustomsRate(5.0);
     setInspection(180); setMisc(120); setTargetMargin(22); setScenarioName('');
     toast.success('Scenario reset to defaults');
@@ -169,12 +435,22 @@ export default function CostingPage() {
     try {
       const payload: Partial<CostingScenario> = {
         scenarioName: scenarioName.trim(),
-        items: [{ productId, quantity: qty, unitPurchasePrice: unitPrice, totalProductCost: live.productCost }],
-        freight: { originPort, destinationPort: destPort, containerType, containerCount, oceanFreightPerContainer: oceanFrt, originHandling: originH, destinationHandling: destH, totalFreight: live.totalFreight },
-        costs: { productCost: live.productCost, freightCost: live.totalFreight, insuranceAmount: live.insuranceAmt, customsDuty: live.customsAmt, inspection, bankingCharges: bankingAmt, miscCharges: misc, totalLandedCost: live.totalLanded },
+        items: items.map((item, idx) => ({
+          productId: item.productId,
+          quantity: item.qty,
+          unitPurchasePrice: item.unitPrice,
+          totalProductCost: live.computedItems[idx].totalProductCost,
+          volumeCBM: item.cbm,
+          grossWeight: item.weight,
+          landedCostPerUnit: live.computedItems[idx].landedCostPerUnit,
+          targetSellingPricePerUnit: live.computedItems[idx].targetSellingPricePerUnit,
+          grossProfitPerUnit: live.computedItems[idx].grossProfitPerUnit
+        })),
+        freight: { originPort, destinationPort: destPort, containerType, containerCount, oceanFreightPerContainer: oceanFrt, originHandling: originH, destinationHandling: destH, totalFreight: live.totalFreight, totalVolumeCBM: live.totalCBM, totalWeightKG: live.totalWeight },
+        costs: { productCost: live.totalProductCost, freightCost: live.totalFreight, insuranceAmount: live.insuranceAmt, customsDuty: live.customsAmt, inspection, bankingCharges: bankingAmt, miscCharges: misc, totalLandedCost: live.totalLanded },
         rates: { insuranceRate, customsRate, targetMargin, bankingRate: 0.25 },
-        result: { costPerUnit: live.costPerUnit, targetSellingPricePerUnit: live.sellingPerUnit, grossProfitPerUnit: live.profitPerUnit, totalRevenue: live.totalRevenue, totalGrossProfit: live.totalProfit, grossMarginPct: targetMargin, breakEvenQty: live.breakEven },
-        currency: 'USD', exchangeRate: 83.5, isFavourite: false
+        result: { costPerUnit: live.avgCostPerUnit, targetSellingPricePerUnit: live.avgSellingPerUnit, grossProfitPerUnit: live.avgProfitPerUnit, totalRevenue: live.totalRevenue, totalGrossProfit: live.totalProfit, grossMarginPct: targetMargin, breakEvenQty: live.breakEven },
+        currency: targetCurrency, exchangeRate: fxRate, isFavourite: false
       };
       const res = await fetch('/api/costing', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
       if (!res.ok) throw new Error('Save failed');
@@ -203,9 +479,61 @@ export default function CostingPage() {
     } catch { toast.error('Delete failed'); }
   };
 
+  const handleProductSelect = (productId: string, idx: number) => {
+    const p = products.find(x => x.id === productId);
+    if (!p) return;
+    
+    // Check if product has variants
+    if (p.variants && p.variants.length > 1) {
+      setPendingVariantProduct(p);
+      setPendingVariantRowIdx(idx);
+    } else {
+      // Add default or single variant
+      const v = p.variants?.[0];
+      const newItems = [...items];
+      newItems[idx] = { 
+        ...newItems[idx], 
+        productId: v ? v.id : p.id, 
+        unitPrice: v ? v.purchasePrice : (p.purchasePrice || 0), 
+        weight: v ? (v.grossWeight || 1) : (p.grossWeight || 1), 
+        cbm: v ? (v.volumeCBM || 0.1) : (p.cbm || 0.1),
+        _meta: { name: p.name, sku: v ? v.sku : p.sku }
+      };
+      setItems(newItems);
+    }
+  };
+
+  const handleVariantSelect = (variantId: string) => {
+    if (!pendingVariantProduct || pendingVariantRowIdx === null) return;
+    const v = pendingVariantProduct.variants.find((x: any) => x.id === variantId);
+    if (v) {
+      const newItems = [...items];
+      newItems[pendingVariantRowIdx] = {
+        ...newItems[pendingVariantRowIdx],
+        productId: v.id,
+        unitPrice: v.purchasePrice || 0,
+        weight: v.grossWeight || 1,
+        cbm: v.volumeCBM || 0.1,
+        _meta: { name: pendingVariantProduct.name, sku: v.sku }
+      };
+      setItems(newItems);
+    }
+    setPendingVariantProduct(null);
+    setPendingVariantRowIdx(null);
+  };
+
   const loadScenario = (sc: CostingScenario) => {
-    const item = sc.items[0];
-    if (item) { setProductId(item.productId); setQty(item.quantity); setUnitPrice(item.unitPurchasePrice); }
+    if (sc.items && sc.items.length > 0) {
+      setItems(sc.items.map(item => ({
+        productId: item.productId,
+        qty: item.quantity,
+        unitPrice: item.unitPurchasePrice,
+        weight: item.grossWeight || 25,
+        cbm: item.volumeCBM || 0.04
+      })));
+    }
+    setPurchaseCurrency('USD'); // Defaulting since it wasn't saved in old model
+    setTargetCurrency(sc.currency || 'USD');
     setOceanFrt(sc.freight.oceanFreightPerContainer);
     setContainerCount(sc.freight.containerCount);
     setContainerType(sc.freight.containerType);
@@ -230,12 +558,12 @@ export default function CostingPage() {
 
   const exportCSV = () => {
     const row = [
-      scenarioName || 'Draft Scenario', qty, unitPrice, live.productCost,
+      scenarioName || 'Draft Scenario', live.totalItemsCount, items.length, live.totalProductCost,
       live.totalFreight, live.insuranceAmt, live.customsAmt, inspection, misc,
-      live.totalLanded, live.costPerUnit, live.sellingPerUnit, live.profitPerUnit,
+      live.totalLanded, live.avgCostPerUnit, live.avgSellingPerUnit, live.avgProfitPerUnit,
       live.totalRevenue, live.totalProfit, targetMargin
     ];
-    const headers = ['Scenario', 'Qty', 'Unit Cost', 'Product Cost', 'Freight', 'Insurance', 'Customs', 'Inspection', 'Misc', 'Total Landed', 'Cost/Unit', 'Selling/Unit', 'Profit/Unit', 'Total Revenue', 'Total Profit', 'Margin%'];
+    const headers = ['Scenario', 'Total Qty', 'Unique Items', 'Product Cost', 'Freight', 'Insurance', 'Customs', 'Inspection', 'Misc', 'Total Landed', 'Avg Cost/Unit', 'Avg Selling/Unit', 'Avg Profit/Unit', 'Total Revenue', 'Total Profit', 'Margin%'];
     const csv = [headers.join(','), row.join(',')].join('\n');
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
@@ -257,10 +585,10 @@ export default function CostingPage() {
         {/* Live KPIs */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {[
-            { label: 'Total Landed Cost', value: formatCurrency(live.totalLanded), color: 'text-blue-400', icon: DollarSign },
-            { label: 'Cost Per Unit', value: formatCurrency(live.costPerUnit), color: 'text-amber-400', icon: Package },
-            { label: 'Selling Price / Unit', value: formatCurrency(live.sellingPerUnit), color: 'text-emerald-400', icon: Target },
-            { label: 'Total Profit', value: formatCurrency(live.totalProfit), color: 'text-purple-400', icon: TrendingUp },
+            { label: 'Total Landed Cost', value: formatCurrency(live.totalLanded, targetCurrency), color: 'text-blue-400', icon: DollarSign },
+            { label: 'Avg Cost Per Unit', value: formatCurrency(live.avgCostPerUnit, targetCurrency), color: 'text-amber-400', icon: Package },
+            { label: 'Avg Selling / Unit', value: formatCurrency(live.avgSellingPerUnit, targetCurrency), color: 'text-emerald-400', icon: Target },
+            { label: 'Total Profit', value: formatCurrency(live.totalProfit, targetCurrency), color: 'text-purple-400', icon: TrendingUp },
           ].map((k, i) => (
             <motion.div key={i} animate={{ opacity: 1 }} className="glass p-5 rounded-3xl border border-white/5">
               <div className="flex justify-between items-start mb-2">
@@ -280,44 +608,147 @@ export default function CostingPage() {
           {/* ── LEFT: Parameter Builder ── */}
           <div className="xl:col-span-2 space-y-6">
 
-            {/* Product & Volume */}
+            {/* Currency & Logistics Profile */}
             <div className="glass p-8 rounded-4xl border border-white/5 space-y-6">
               <div className="flex justify-between items-center pb-4 border-b border-white/5">
                 <h3 className="text-xs font-mono text-white/70 uppercase tracking-widest flex items-center gap-2">
-                  <Package size={14} className="text-emerald-400" /> Commodity & Volume
+                  <Calculator size={14} className="text-blue-400" /> Currency & Logistics Profile
                 </h3>
                 <button onClick={handleReset} className="flex items-center gap-1.5 text-[9px] font-mono text-white/80 hover:text-white uppercase cursor-pointer bg-transparent border-none">
                   <RefreshCw size={11} /> Reset
                 </button>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="md:col-span-2 space-y-1.5">
-                  <label className={labelCls}>Product (Commodity)</label>
-                  <select value={productId} onChange={e => setProductId(e.target.value)}
-                    className={inputCls + ' cursor-pointer'}>
-                    {products.map(p => <option key={p.id} value={p.id} className="bg-[#0c0c0c]">{p.name} ({p.sku})</option>)}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="space-y-1.5">
+                  <label className={labelCls}>Purchase Currency</label>
+                  <select value={purchaseCurrency} onChange={e => setPurchaseCurrency(e.target.value)} className={inputCls + ' cursor-pointer'}>
+                    {Object.keys(MOCK_FX_RATES).map(c => <option key={c} value={c} className="bg-[#0c0c0c]">{c}</option>)}
                   </select>
                 </div>
                 <div className="space-y-1.5">
-                  <label className={labelCls}>Unit Purchase Price (USD)</label>
-                  <input type="number" value={unitPrice} min={0.01} step={0.5} onChange={e => setUnitPrice(Number(e.target.value))} className={inputCls} />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="col-span-2 space-y-1.5">
-                  <label className={labelCls}>Quantity (Units / Bags / MT)</label>
-                  <input type="number" value={qty} min={1} onChange={e => setQty(Number(e.target.value))} className={inputCls} />
+                  <label className={labelCls}>Target Currency</label>
+                  <select value={targetCurrency} onChange={e => setTargetCurrency(e.target.value)} className={inputCls + ' cursor-pointer'}>
+                    {Object.keys(MOCK_FX_RATES).map(c => <option key={c} value={c} className="bg-[#0c0c0c]">{c}</option>)}
+                  </select>
                 </div>
                 <div className="space-y-1.5">
                   <label className={labelCls}>Container Type</label>
                   <select value={containerType} onChange={e => setContainerType(e.target.value)} className={inputCls + ' cursor-pointer'}>
-                    {['20GP', '40GP', '40HQ', '20RF'].map(t => <option key={t} value={t} className="bg-[#0c0c0c]">{t}</option>)}
+                    {Object.keys(CONTAINER_CAPACITIES).map(t => <option key={t} value={t} className="bg-[#0c0c0c]">{t}</option>)}
                   </select>
                 </div>
                 <div className="space-y-1.5">
                   <label className={labelCls}>Container Count</label>
                   <input type="number" value={containerCount} min={1} max={20} onChange={e => setContainerCount(Number(e.target.value))} className={inputCls} />
                 </div>
+              </div>
+            </div>
+
+            {/* Commodity Items */}
+            <div className="glass p-8 rounded-4xl border border-white/5 space-y-4">
+              <div className="flex justify-between items-center pb-4 border-b border-white/5">
+                <h3 className="text-xs font-mono text-white/70 uppercase tracking-widest flex items-center gap-2">
+                  <Package size={14} className="text-emerald-400" /> Commodity Line Items
+                </h3>
+              </div>
+              
+              <div className="space-y-3">
+                {items.length === 0 && (
+                  <div className="p-6 rounded-2xl border border-white/5 bg-white/2 text-center">
+                    <p className="text-[11px] font-mono text-white/40 uppercase tracking-widest">No line items added yet</p>
+                    <p className="text-[10px] font-mono text-white/30 mt-1">Start by adding a product to this container.</p>
+                  </div>
+                )}
+                {items.map((item, idx) => (
+                  <div key={idx} className="flex flex-wrap md:flex-nowrap items-end gap-3 p-4 rounded-2xl bg-white/2 border border-white/5 relative group">
+                    <div className="w-full md:w-2/5 space-y-1.5">
+                       <label className={labelCls}>Product</label>
+                      <SearchableSelect
+                        options={products.map(p => {
+                          const addedVariantIds = items.map(i => i.productId);
+                          const hasAvailableVariants = p.variants?.some((v: any) => !addedVariantIds.includes(v.id)) ?? true;
+                          const isAlreadyAdded = !p.variants?.length ? addedVariantIds.includes(p.id) : !hasAvailableVariants;
+                          return {
+                            label: `${p.name}` + (isAlreadyAdded ? ' [Added]' : ''),
+                            value: isAlreadyAdded ? '' : p.id
+                          };
+                        }).concat(
+                          item._meta ? [{ label: `${item._meta.name} - ${item._meta.sku}`, value: item.productId }] : []
+                        ).filter(o => o.value !== '')}
+                        value={item.productId}
+                        onChange={(val) => val && handleProductSelect(val, idx)}
+                        placeholder="Search product..."
+                        className="bg-white/5 border border-white/10"
+                      />
+                      {item._meta && <p className="text-[9px] text-emerald-400/80 mt-1 uppercase font-mono">{item._meta.name} - {item._meta.sku}</p>}
+                    </div>
+                    <div className="w-full md:w-1/5 space-y-1.5">
+                      <label className={labelCls}>Qty</label>
+                      <input type="number" value={item.qty} min={1} onChange={e => {
+                        const newItems = [...items]; newItems[idx].qty = Number(e.target.value); setItems(newItems);
+                      }} className={inputCls} />
+                    </div>
+                    <div className="w-full md:w-1/5 space-y-1.5">
+                      <label className={labelCls}>Unit Cost ({purchaseCurrency})</label>
+                      <input type="number" value={item.unitPrice} min={0.01} step={0.5} onChange={e => {
+                        const newItems = [...items]; newItems[idx].unitPrice = Number(e.target.value); setItems(newItems);
+                      }} className={inputCls} />
+                    </div>
+                    <div className="w-full md:w-1/5 pb-2 text-right">
+                      <p className="text-[9px] text-white/50 uppercase font-mono mb-1">Total ({targetCurrency})</p>
+                      <p className="font-bold font-sans text-white/90">{formatCurrency(item.qty * item.unitPrice * fxRate)}</p>
+                    </div>
+                    <button onClick={() => setItems(items.filter((_, i) => i !== idx))}
+                      className="absolute -right-2 -top-2 p-1.5 bg-rose-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer shadow-lg z-10">
+                      <X size={12} />
+                    </button>
+                  </div>
+                ))}
+                
+                {/* Temporary Add Button */}
+                <button onClick={() => setItems([...items, { productId: '', qty: 100, unitPrice: 0, weight: 1, cbm: 0.1 }])} 
+                  className="w-full flex items-center justify-center gap-2 text-[10px] font-mono text-emerald-400 hover:text-emerald-300 uppercase cursor-pointer bg-emerald-500/5 hover:bg-emerald-500/10 py-3 rounded-xl border border-emerald-500/10 transition-colors mt-4">
+                  <PlusCircle size={12} /> Add Line Item
+                </button>
+              </div>
+            </div>
+
+            <div className="glass p-8 rounded-4xl border border-white/5 space-y-4">
+
+            {/* Freight Parameters */}
+              <h3 className="text-xs font-mono text-white/70 uppercase tracking-widest flex items-center gap-2 pb-4 border-b border-white/5">
+                <Truck size={14} className="text-blue-400" /> Container Utilization
+              </h3>
+              
+              {/* Capacity Utilization Progress */}
+              <div className="p-5 rounded-2xl bg-white/2 border border-white/5 space-y-4">
+                <div className="flex justify-between items-center text-[10px] font-mono">
+                  <span className="text-white/70 uppercase">Capacity Utilization ({containerCount}x {containerType})</span>
+                  <div className="flex gap-4">
+                    <span><span className="text-blue-400">Vol:</span> {live.totalCBM.toFixed(1)} / {(CONTAINER_CAPACITIES[containerType].maxCBM * containerCount).toFixed(1)} CBM</span>
+                    <span><span className="text-amber-400">Wt:</span> {live.totalWeight.toLocaleString()} / {(CONTAINER_CAPACITIES[containerType].maxWeight * containerCount).toLocaleString()} KG</span>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <div className="relative h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
+                    <motion.div initial={{ width: 0 }} animate={{ width: `${Math.min(100, (live.totalCBM / (CONTAINER_CAPACITIES[containerType].maxCBM * containerCount)) * 100)}%` }}
+                      className={cn('absolute left-0 top-0 bottom-0', (live.totalCBM > CONTAINER_CAPACITIES[containerType].maxCBM * containerCount) ? 'bg-rose-500' : 'bg-blue-400')} />
+                  </div>
+                  <div className="relative h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
+                    <motion.div initial={{ width: 0 }} animate={{ width: `${Math.min(100, (live.totalWeight / (CONTAINER_CAPACITIES[containerType].maxWeight * containerCount)) * 100)}%` }}
+                      className={cn('absolute left-0 top-0 bottom-0', (live.totalWeight > CONTAINER_CAPACITIES[containerType].maxWeight * containerCount) ? 'bg-rose-500' : 'bg-amber-400')} />
+                  </div>
+                </div>
+                {(live.totalCBM > CONTAINER_CAPACITIES[containerType].maxCBM * containerCount || live.totalWeight > CONTAINER_CAPACITIES[containerType].maxWeight * containerCount) && (
+                  <p className="text-[10px] text-rose-400 font-mono uppercase mt-2 text-center">Warning: Cargo exceeds container capacity!</p>
+                )}
+                
+                {/* Visual Blueprint */}
+                <ContainerBlueprint 
+                  items={items} 
+                  totalCBM={live.totalCBM} 
+                  maxCBM={CONTAINER_CAPACITIES[containerType].maxCBM * containerCount} 
+                />
               </div>
             </div>
 
@@ -352,7 +783,7 @@ export default function CostingPage() {
               </div>
               <div className="p-4 rounded-2xl bg-blue-500/5 border border-blue-500/10 flex justify-between items-center text-xs font-mono">
                 <span className="text-white/80 uppercase text-[9px]">Total Freight Cost ({containerCount}x {containerType})</span>
-                <span className="text-blue-400 font-bold font-sans">{formatCurrency(live.totalFreight)}</span>
+                <span className="text-blue-400 font-bold font-sans">{formatCurrency(live.totalFreight, targetCurrency)}</span>
               </div>
             </div>
 
@@ -393,8 +824,8 @@ export default function CostingPage() {
               </h3>
               <div className="space-y-2 text-xs font-mono">
                 {[
-                  { label: 'Product / FOB Cost', value: live.productCost, pct: live.totalLanded > 0 ? (live.productCost / live.totalLanded) * 100 : 0, color: 'bg-blue-500' },
-                  { label: `Ocean Freight (${containerCount}x ${containerType} @ ${formatCurrency(oceanFrt)}/CTR)`, value: live.totalFreight, pct: live.totalLanded > 0 ? (live.totalFreight / live.totalLanded) * 100 : 0, color: 'bg-purple-500' },
+                  { label: 'Product / FOB Cost', value: live.totalProductCost, pct: live.totalLanded > 0 ? (live.totalProductCost / live.totalLanded) * 100 : 0, color: 'bg-blue-500' },
+                  { label: `Ocean Freight (${containerCount}x ${containerType} @ ${formatCurrency(oceanFrt, purchaseCurrency)}/CTR)`, value: live.totalFreight, pct: live.totalLanded > 0 ? (live.totalFreight / live.totalLanded) * 100 : 0, color: 'bg-purple-500' },
                   { label: `Customs Duty (${customsRate}% CIF)`, value: live.customsAmt, pct: live.totalLanded > 0 ? (live.customsAmt / live.totalLanded) * 100 : 0, color: 'bg-amber-500' },
                   { label: `Marine Insurance (${insuranceRate}%)`, value: live.insuranceAmt, pct: live.totalLanded > 0 ? (live.insuranceAmt / live.totalLanded) * 100 : 0, color: 'bg-cyan-500' },
                   { label: 'Inspection + Banking + Misc', value: inspection + bankingAmt + misc, pct: live.totalLanded > 0 ? ((inspection + bankingAmt + misc) / live.totalLanded) * 100 : 0, color: 'bg-rose-500' },
@@ -403,7 +834,7 @@ export default function CostingPage() {
                     <div className="flex-1 min-w-0">
                       <div className="flex justify-between items-center mb-1.5">
                         <span className="text-white/70 text-[9px] uppercase truncate">{row.label}</span>
-                        <span className="text-white/80 font-bold ml-3 shrink-0">{formatCurrency(row.value)}</span>
+                        <span className="text-white/80 font-bold ml-3 shrink-0">{formatCurrency(row.value, targetCurrency)}</span>
                       </div>
                       <div className="w-full h-1 bg-white/5 rounded-full overflow-hidden">
                         <motion.div
@@ -419,14 +850,14 @@ export default function CostingPage() {
                 ))}
                 <div className="flex justify-between items-center pt-3 text-sm font-bold border-t border-white/10">
                   <span className="text-white/90 font-mono text-xs uppercase">Total Landed Cost</span>
-                  <span className="text-blue-400 font-sans text-xl">{formatCurrency(live.totalLanded)}</span>
+                  <span className="text-blue-400 font-sans text-xl">{formatCurrency(live.totalLanded, targetCurrency)}</span>
                 </div>
               </div>
             </div>
           </div>
 
           {/* ── RIGHT: Results + Saved Scenarios ── */}
-          <div className="space-y-6">
+          <div className="space-y-6 xl:col-span-1 sticky top-6 h-fit">
 
             {/* Margin Gauge */}
             <div className="glass p-8 rounded-4xl border border-white/5 space-y-5">
@@ -434,10 +865,10 @@ export default function CostingPage() {
               <div className="space-y-3 text-xs font-mono border-t border-white/5 pt-5">
                 {[
                   { label: 'Break-even Quantity', value: `${live.breakEven.toLocaleString()} units` },
-                  { label: 'Gross Profit / Unit', value: formatCurrency(live.profitPerUnit) },
-                  { label: 'Target Selling Price', value: formatCurrency(live.sellingPerUnit) },
-                  { label: 'Total Revenue', value: formatCurrency(live.totalRevenue) },
-                  { label: 'Total Gross Profit', value: formatCurrency(live.totalProfit) },
+                  { label: 'Avg Gross Profit / Unit', value: formatCurrency(live.avgProfitPerUnit, targetCurrency) },
+                  { label: 'Avg Target Selling Price', value: formatCurrency(live.avgSellingPerUnit, targetCurrency) },
+                  { label: 'Total Revenue', value: formatCurrency(live.totalRevenue, targetCurrency) },
+                  { label: 'Total Gross Profit', value: formatCurrency(live.totalProfit, targetCurrency) },
                 ].map(item => (
                   <div key={item.label} className="flex justify-between items-center">
                     <span className="text-white/70 uppercase text-[9px]">{item.label}</span>
@@ -524,10 +955,10 @@ export default function CostingPage() {
                               </div>
                             </div>
                           </td>
-                          <td className="py-4 px-5 text-right text-white/70">{formatCurrency(sc.costs.productCost)}</td>
-                          <td className="py-4 px-5 text-right text-white/70">{formatCurrency(sc.costs.freightCost)}</td>
-                          <td className="py-4 px-5 text-right font-bold text-white/80">{formatCurrency(sc.costs.totalLandedCost)}</td>
-                          <td className="py-4 px-5 text-right text-emerald-400 font-bold">{formatCurrency(sc.result.targetSellingPricePerUnit)}</td>
+                          <td className="py-4 px-5 text-right text-white/70">{formatCurrency(sc.costs.productCost, sc.currency || 'USD')}</td>
+                          <td className="py-4 px-5 text-right text-white/70">{formatCurrency(sc.costs.freightCost, sc.currency || 'USD')}</td>
+                          <td className="py-4 px-5 text-right font-bold text-white/80">{formatCurrency(sc.costs.totalLandedCost, sc.currency || 'USD')}</td>
+                          <td className="py-4 px-5 text-right text-emerald-400 font-bold">{formatCurrency(sc.result.targetSellingPricePerUnit, sc.currency || 'USD')}</td>
                           <td className="py-4 px-5 text-right">
                             <span className={cn('text-[9px] font-bold px-2 py-0.5 rounded border',
                               sc.result.grossMarginPct >= 25 ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20' :
@@ -536,7 +967,7 @@ export default function CostingPage() {
                               {sc.result.grossMarginPct}%
                             </span>
                           </td>
-                          <td className="py-4 px-5 text-right text-purple-400 font-bold">{formatCurrency(sc.result.totalGrossProfit)}</td>
+                          <td className="py-4 px-5 text-right text-purple-400 font-bold">{formatCurrency(sc.result.totalGrossProfit, sc.currency || 'USD')}</td>
                           <td className="py-4 px-5 text-right">
                             <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                               <button onClick={() => loadScenario(sc)} title="Load into builder" className="p-1.5 rounded hover:bg-white/10 text-white/80 hover:text-white cursor-pointer bg-transparent border-none"><Copy size={11} /></button>
@@ -580,15 +1011,15 @@ export default function CostingPage() {
                   </thead>
                   <tbody className="divide-y divide-white/5">
                     {[
-                      { label: 'Quantity', key: (s: CostingScenario) => `${s.items[0]?.quantity.toLocaleString()} units` },
-                      { label: 'Product Cost', key: (s: CostingScenario) => formatCurrency(s.costs.productCost) },
-                      { label: 'Total Freight', key: (s: CostingScenario) => formatCurrency(s.costs.freightCost) },
-                      { label: 'Customs Duty', key: (s: CostingScenario) => formatCurrency(s.costs.customsDuty) },
-                      { label: 'Total Landed Cost', key: (s: CostingScenario) => formatCurrency(s.costs.totalLandedCost) },
-                      { label: 'Cost / Unit', key: (s: CostingScenario) => formatCurrency(s.result.costPerUnit) },
-                      { label: 'Selling Price / Unit', key: (s: CostingScenario) => formatCurrency(s.result.targetSellingPricePerUnit) },
+                      { label: 'Total Qty', key: (s: CostingScenario) => `${s.items.reduce((sum, i) => sum + i.quantity, 0).toLocaleString()} units` },
+                      { label: 'Product Cost', key: (s: CostingScenario) => formatCurrency(s.costs.productCost, s.currency || 'USD') },
+                      { label: 'Total Freight', key: (s: CostingScenario) => formatCurrency(s.costs.freightCost, s.currency || 'USD') },
+                      { label: 'Customs Duty', key: (s: CostingScenario) => formatCurrency(s.costs.customsDuty, s.currency || 'USD') },
+                      { label: 'Total Landed Cost', key: (s: CostingScenario) => formatCurrency(s.costs.totalLandedCost, s.currency || 'USD') },
+                      { label: 'Avg Cost / Unit', key: (s: CostingScenario) => formatCurrency(s.result.costPerUnit, s.currency || 'USD') },
+                      { label: 'Avg Selling / Unit', key: (s: CostingScenario) => formatCurrency(s.result.targetSellingPricePerUnit, s.currency || 'USD') },
                       { label: 'Gross Margin', key: (s: CostingScenario) => `${s.result.grossMarginPct}%` },
-                      { label: 'Total Gross Profit', key: (s: CostingScenario) => formatCurrency(s.result.totalGrossProfit) },
+                      { label: 'Total Gross Profit', key: (s: CostingScenario) => formatCurrency(s.result.totalGrossProfit, s.currency || 'USD') },
                       { label: 'Break-even Qty', key: (s: CostingScenario) => `${s.result.breakEvenQty.toLocaleString()}` },
                     ].map(row => (
                       <tr key={row.label} className="hover:bg-white/2">
@@ -603,6 +1034,14 @@ export default function CostingPage() {
           )}
         </AnimatePresence>
 
+        {/* Variant Selection Modal */}
+        <VariantSelectorModal
+          isOpen={!!pendingVariantProduct}
+          product={pendingVariantProduct}
+          onClose={() => { setPendingVariantProduct(null); setPendingVariantRowIdx(null); }}
+          onSelect={handleVariantSelect}
+          addedVariantIds={items.map(i => i.productId)}
+        />
       </div>
     </>
   );

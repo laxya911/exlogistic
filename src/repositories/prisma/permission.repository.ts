@@ -1,5 +1,5 @@
 import { prisma } from '../prisma.client';
-import { Permission } from '@prisma/client';
+import { Permission } from '@generated/client';
 
 export const permissionRepository = {
   findAll: async () => {

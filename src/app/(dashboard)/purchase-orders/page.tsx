@@ -249,7 +249,7 @@ export default function PurchaseOrdersPage() {
                       <span className="px-2 py-0.5 rounded border border-white/5 text-[9px] text-white/70">{o.currency || 'INR'}</span>
                     </td>
                     <td className="py-4 px-6 text-right">
-                      <span className={cn('px-2 py-0.5 rounded text-[8px] font-mono font-bold uppercase border', getStatusStyle(o.status))}>
+                      <span className={cn('whitespace-nowrap px-2 py-0.5 rounded text-[8px] font-mono font-bold uppercase border', getStatusStyle(o.status))}>
                         {o.status.replace('_', ' ')}
                       </span>
                     </td>

@@ -33,8 +33,10 @@ export class PrismaProductRepository {
       
       // Backward compatibility mapped from default variant
       sku: defaultVariant?.sku || '',
-      purchasePrice: defaultVariant?.purchasePrice || 0,
-      sellingPrice: defaultVariant?.sellingPrice || 0,
+      basePurchasePrice: p.basePurchasePrice || 0,
+      baseSellingPrice: p.baseSellingPrice || 0,
+      purchasePrice: defaultVariant?.purchasePrice || p.basePurchasePrice || 0,
+      sellingPrice: defaultVariant?.sellingPrice || p.baseSellingPrice || 0,
       currency: defaultVariant?.currency || 'USD',
       grossWeight: defaultVariant?.grossWeight || 0,
       netWeight: defaultVariant?.netWeight || 0,
@@ -60,7 +62,9 @@ export class PrismaProductRepository {
       purchaseHistory: [],
       sellingHistory: [],
       inventorySummary: [],
-      pricingHistory: []
+      pricingHistory: [],
+      totalOnHand: p.variants?.reduce((sum: number, v: any) => sum + (v.inventory?.reduce((invSum: number, inv: any) => invSum + (inv.quantityOnHand || 0), 0) || 0), 0) || 0,
+      totalAllocated: p.variants?.reduce((sum: number, v: any) => sum + (v.inventory?.reduce((invSum: number, inv: any) => invSum + (inv.quantityAllocated || 0), 0) || 0), 0) || 0,
     } as Product;
   }
 
@@ -70,7 +74,7 @@ export class PrismaProductRepository {
       include: {
         brand: true,
         categories: { include: { category: true } },
-        variants: { include: { images: true } },
+        variants: { include: { images: true, inventory: true, attributes: { include: { attributeValue: { include: { attribute: true } } } } } },
         suppliers: true,
         documents: true,
         certifications: true,
@@ -86,7 +90,7 @@ export class PrismaProductRepository {
       include: {
         brand: true,
         categories: { include: { category: true } },
-        variants: { include: { images: true } },
+        variants: { include: { images: true, inventory: true, attributes: { include: { attributeValue: { include: { attribute: true } } } } } },
         suppliers: true,
         documents: true,
         certifications: true,
@@ -145,8 +149,12 @@ export class PrismaProductRepository {
         sku: v.sku || `${data.sku}-${index}`,
         title: v.title || 'Default',
         isDefault: index === 0,
-        purchasePrice: Number(v.purchasePrice) || 0,
-        sellingPrice: Number(v.sellingPrice) || 0,
+        extraPurchasePrice: Number(v.extraPurchasePrice) || 0,
+        extraSellingPrice: Number(v.extraSellingPrice) || 0,
+        purchasePrice: (Number(data.basePurchasePrice) || 0) + (Number(v.extraPurchasePrice) || 0),
+        sellingPrice: (Number(data.baseSellingPrice) || 0) + (Number(v.extraSellingPrice) || 0),
+        salesTaxId: v.salesTaxId || undefined,
+        purchaseTaxId: v.purchaseTaxId || undefined,
         currency: v.currency || 'USD',
         grossWeight: Number(v.weight) || data.grossWeight || 0,
         netWeight: Number(v.netWeight) || data.netWeight || 0,
@@ -161,8 +169,10 @@ export class PrismaProductRepository {
       sku: data.sku!,
       title: 'Default',
       isDefault: true,
-      purchasePrice: Number(data.purchasePrice) || 0,
-      sellingPrice: Number(data.sellingPrice) || 0,
+      extraPurchasePrice: 0,
+      extraSellingPrice: 0,
+      purchasePrice: Number(data.basePurchasePrice) || 0,
+      sellingPrice: Number(data.baseSellingPrice) || 0,
       currency: data.currency || 'USD',
       grossWeight: data.grossWeight || 0,
       netWeight: data.netWeight || 0,
@@ -186,6 +196,8 @@ export class PrismaProductRepository {
         shelfLife: data.shelfLife,
         storageConditions: data.storageConditions,
         japanImportNotes: data.japanImportNotes,
+        basePurchasePrice: Number(data.basePurchasePrice) || 0,
+        baseSellingPrice: Number(data.baseSellingPrice) || 0,
         
         brand: data.brandId ? { connect: { id: data.brandId } } : undefined,
         
@@ -315,8 +327,12 @@ export class PrismaProductRepository {
           const variantData = {
             title: v.title || 'Default',
             isDefault: index === 0,
-            purchasePrice: Number(v.purchasePrice) || 0,
-            sellingPrice: Number(v.sellingPrice) || 0,
+            extraPurchasePrice: Number(v.extraPurchasePrice) || 0,
+            extraSellingPrice: Number(v.extraSellingPrice) || 0,
+            purchasePrice: (Number(data.basePurchasePrice) || 0) + (Number(v.extraPurchasePrice) || 0),
+            sellingPrice: (Number(data.baseSellingPrice) || 0) + (Number(v.extraSellingPrice) || 0),
+            salesTaxId: v.salesTaxId || null,
+            purchaseTaxId: v.purchaseTaxId || null,
             currency: v.currency || 'USD',
             grossWeight: Number(v.weight) || data.grossWeight || 0,
             netWeight: Number(v.netWeight) || data.netWeight || 0,
@@ -356,6 +372,36 @@ export class PrismaProductRepository {
               }
             });
           }
+        }
+      } else {
+        // Recalculate existing variants if base prices changed
+        const existingVariants = await tx.productVariant.findMany({ where: { productId: id } });
+        if (existingVariants.length === 0) {
+           // Ensure default variant exists
+           await tx.productVariant.create({
+             data: {
+               productId: id,
+               sku: data.sku || `DEFAULT-${id}`,
+               title: 'Default',
+               isDefault: true,
+               extraPurchasePrice: 0,
+               extraSellingPrice: 0,
+               purchasePrice: Number(data.basePurchasePrice || p.basePurchasePrice) || 0,
+               sellingPrice: Number(data.baseSellingPrice || p.baseSellingPrice) || 0,
+               currency: 'USD',
+               status: 'ACTIVE'
+             }
+           });
+        } else {
+           for (const ev of existingVariants) {
+             await tx.productVariant.update({
+               where: { id: ev.id },
+               data: {
+                 purchasePrice: (Number(data.basePurchasePrice || p.basePurchasePrice) || 0) + (Number(ev.extraPurchasePrice) || 0),
+                 sellingPrice: (Number(data.baseSellingPrice || p.baseSellingPrice) || 0) + (Number(ev.extraSellingPrice) || 0)
+               }
+             });
+           }
         }
       }
 

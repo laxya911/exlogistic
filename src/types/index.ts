@@ -45,11 +45,15 @@ export interface ProductVariant extends BaseEntity {
   grossWeight?: number;
   volumeCBM?: number;
   packagingType?: string;
-  
   // Commercial
   purchasePrice: number;
   sellingPrice: number;
+  extraPurchasePrice: number;
+  extraSellingPrice: number;
   currency: string;
+  
+  salesTaxId?: string;
+  purchaseTaxId?: string;
   
   images: any[];
   attributes: any[];
@@ -83,6 +87,8 @@ export interface Product extends BaseEntity {
   description: string;
   hsnCode: string;
   countryOfOrigin: string;
+  basePurchasePrice: number;
+  baseSellingPrice: number;
   purchasePrice: number;
   sellingPrice: number;
   currency: string;
@@ -110,6 +116,8 @@ export interface Product extends BaseEntity {
   inventorySummary: InventoryLocation[];
   pricingHistory: PricingHistoryEntry[];
   notes?: string;
+  totalOnHand?: number;
+  totalAllocated?: number;
 }
 
 export interface PurchaseHistoryEntry {
@@ -301,6 +309,8 @@ export interface Quotation extends BaseEntity {
   destinationPortId: string;
   containerType: '20GP' | '40GP' | '40HQ';
   items: QuotationItem[];
+  untaxedAmount?: number;
+  totalTaxAmount?: number;
   totalValue: number;
   marginPercentage: number;
   status: QuotationStatus;
@@ -317,6 +327,10 @@ export interface QuotationItem {
   variant?: any;
   quantity: number;
   unitPrice: number;
+  taxId?: string;
+  taxRate?: number;
+  taxAmount?: number;
+  tax?: any;
   totalPrice: number;
 }
 
@@ -338,6 +352,8 @@ export interface SalesOrder extends BaseEntity {
   date: string;
   expectedShipmentDate: string;
   items: QuotationItem[];
+  untaxedAmount?: number;
+  totalTaxAmount?: number;
   totalValue: number;
   marginPercentage?: number;
   currency?: string;
@@ -373,6 +389,8 @@ export interface PurchaseOrder extends BaseEntity {
   actualDeliveryDate?: string;
   items: QuotationItem[];
   totalValue: number;
+  untaxedAmount?: number;
+  totalTaxAmount?: number;
   currency?: string;
   exchangeRate?: number;
   paymentTerms?: string;
@@ -534,6 +552,13 @@ export interface CostingScenarioItem {
   quantity: number;
   unitPurchasePrice: number;
   totalProductCost: number;
+  
+  // Computed values
+  volumeCBM: number;
+  grossWeight: number;
+  landedCostPerUnit?: number;
+  targetSellingPricePerUnit?: number;
+  grossProfitPerUnit?: number;
 }
 
 export interface CostingScenarioFreight {
@@ -545,6 +570,8 @@ export interface CostingScenarioFreight {
   originHandling: number;
   destinationHandling: number;
   totalFreight: number;
+  totalVolumeCBM?: number;
+  totalWeightKG?: number;
 }
 
 export interface CostingScenarioCosts {

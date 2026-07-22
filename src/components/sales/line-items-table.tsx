@@ -1,7 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
 import { Box, Calculator, Plus, Trash2, TrendingUp } from 'lucide-react';
 import { SearchableSelect } from '@/components/ui/searchable-select';
+import { VariantSelectionModal } from '@/components/sales/variant-selection-modal';
+import { toast } from 'sonner';
 
 export function LineItemsTable({
   isEditing,
@@ -9,7 +11,7 @@ export function LineItemsTable({
   updateItem,
   removeItem,
   addItem,
-  variantOptions,
+  products,
   formatCurrency,
   getProductName,
   marginPercentage,
@@ -17,6 +19,9 @@ export function LineItemsTable({
   costOfGoods,
   grossProfit,
   totalValue,
+  untaxedAmount = 0,
+  totalTaxAmount = 0,
+  taxes = [],
   isPurchaseOrder = false
 }: {
   isEditing: boolean;
@@ -24,7 +29,7 @@ export function LineItemsTable({
   updateItem: (idx: number, field: string, value: any) => void;
   removeItem: (idx: number) => void;
   addItem: () => void;
-  variantOptions: any[];
+  products: any[];
   formatCurrency: (val: number) => string;
   getProductName: (id: string) => string;
   marginPercentage: number;
@@ -32,8 +37,73 @@ export function LineItemsTable({
   costOfGoods: number;
   grossProfit: number;
   totalValue: number;
+  untaxedAmount?: number;
+  totalTaxAmount?: number;
+  taxes?: any[];
   isPurchaseOrder?: boolean;
 }) {
+  const [activeModalRow, setActiveModalRow] = useState<number | null>(null);
+  const [selectedProductForModal, setSelectedProductForModal] = useState<any>(null);
+
+  const handleProductChange = (idx: number, productId: string) => {
+    const prod = products.find((p: any) => p.id === productId);
+    if (!prod) return;
+
+    if (!prod.variants || prod.variants.length === 0) {
+      toast.error('This product has no variants configured. Please generate variants first.');
+      updateItem(idx, 'productId', '');
+      return;
+    }
+
+    if (prod.variants.length === 1) {
+      // Auto select the only variant
+      const variant = prod.variants[0];
+      if (items.some((item, i) => i !== idx && item.variantId === variant.id)) {
+        toast.error('This product is already added to the list.');
+        return;
+      }
+
+      const standardPrice = isPurchaseOrder 
+        ? (variant.purchasePrice || prod.basePurchasePrice || 0)
+        : (variant.sellingPrice || prod.baseSellingPrice || 0);
+      const taxId = isPurchaseOrder 
+        ? (variant.purchaseTaxId || '')
+        : (variant.salesTaxId || '');
+      
+      // We must issue sequential updates for this row
+      updateItem(idx, 'variantId', variant.id);
+      updateItem(idx, 'productId', prod.id);
+      updateItem(idx, 'unitPrice', standardPrice);
+      updateItem(idx, 'taxId', taxId);
+    } else {
+      // Open modal
+      setSelectedProductForModal(prod);
+      setActiveModalRow(idx);
+    }
+  };
+
+  const handleVariantSelect = (variantId: string) => {
+    if (activeModalRow === null || !selectedProductForModal) return;
+    
+    const variant = selectedProductForModal.variants?.find((v: any) => v.id === variantId);
+    if (!variant) return;
+
+    const standardPrice = isPurchaseOrder 
+      ? (variant.purchasePrice || selectedProductForModal.basePurchasePrice || 0)
+      : (variant.sellingPrice || selectedProductForModal.baseSellingPrice || 0);
+    const taxId = isPurchaseOrder 
+      ? (variant.purchaseTaxId || '')
+      : (variant.salesTaxId || '');
+
+    updateItem(activeModalRow, 'variantId', variantId);
+    updateItem(activeModalRow, 'productId', selectedProductForModal.id);
+    updateItem(activeModalRow, 'unitPrice', standardPrice);
+    updateItem(activeModalRow, 'taxId', taxId);
+
+    setActiveModalRow(null);
+    setSelectedProductForModal(null);
+  };
+
   if (!isEditing) {
     return (
       <div className="glass p-8 rounded-4xl border border-white/5 space-y-6">
@@ -47,6 +117,7 @@ export function LineItemsTable({
                 <th className="pb-4">Product SKU</th>
                 <th className="pb-4 text-right">Qty</th>
                 <th className="pb-4 text-right">Unit Price</th>
+                <th className="pb-4 text-right">Tax</th>
                 <th className="pb-4 text-right">Total</th>
               </tr>
             </thead>
@@ -60,7 +131,11 @@ export function LineItemsTable({
                   </td>
                   <td className="py-4 text-right text-white/90 font-bold">{item.quantity} MT</td>
                   <td className="py-4 text-right text-white/90 font-bold">{formatCurrency(item.unitPrice)}</td>
-                  <td className="py-4 text-right text-white font-bold">{formatCurrency(item.totalPrice)}</td>
+                  <td className="py-4 text-right text-white/90 font-bold">
+                    {item.taxId ? (taxes?.find(t => t.id === item.taxId)?.name || 'Tax') : '-'} 
+                    {item.taxAmount ? ` (${formatCurrency(item.taxAmount)})` : ''}
+                  </td>
+                  <td className="py-4 text-right text-white font-bold">{formatCurrency(item.totalPrice || item.total)}</td>
                 </tr>
               ))}
             </tbody>
@@ -74,8 +149,16 @@ export function LineItemsTable({
               </div>
             )}
             <div className="flex justify-between font-bold text-base border-t border-white/5 pt-2">
-              <span className="text-white/80">{isPurchaseOrder ? 'Procurement Value' : 'Contract Value'}</span>
-              <span className="text-blue-400 font-sans text-lg">{formatCurrency(totalValue)}</span>
+              <span className="text-white/80">Untaxed Amount</span>
+              <span className="text-white font-sans text-lg">{formatCurrency(untaxedAmount)}</span>
+            </div>
+            <div className="flex justify-between font-bold text-base border-t border-white/5 pt-2">
+              <span className="text-white/80">Total Tax</span>
+              <span className="text-white/60 font-sans text-lg">{formatCurrency(totalTaxAmount)}</span>
+            </div>
+            <div className="flex justify-between font-bold text-base border-t border-white/5 pt-2">
+              <span className="text-white/80">{isPurchaseOrder ? 'Procurement Total (Gross)' : 'Contract Total (Gross)'}</span>
+              <span className="text-blue-400 font-sans text-xl">{formatCurrency(totalValue)}</span>
             </div>
           </div>
         </div>
@@ -100,6 +183,7 @@ export function LineItemsTable({
                 <th className="py-3 px-6 text-[10px] font-mono uppercase tracking-widest text-white/40">SKU / Variant</th>
                 <th className="py-3 px-6 text-[10px] font-mono uppercase tracking-widest text-white/40 w-40 min-w-[160px]">Qty</th>
                 <th className="py-3 px-6 text-[10px] font-mono uppercase tracking-widest text-white/40 w-40 min-w-[160px]">Unit Price</th>
+                <th className="py-3 px-6 text-[10px] font-mono uppercase tracking-widest text-white/40 w-32 min-w-[140px]">Tax</th>
                 <th className="py-3 px-6 text-[10px] font-mono uppercase tracking-widest text-white/40 w-32">Total</th>
                 <th className="py-3 px-4 w-12"></th>
               </tr>
@@ -110,11 +194,19 @@ export function LineItemsTable({
                   <td className="py-3 px-6 text-xs text-white/30 font-mono">{String(i + 1).padStart(2, '0')}</td>
                   <td className="py-3 px-6">
                     <SearchableSelect
-                      options={variantOptions}
-                      value={item.variantId}
-                      onChange={(val) => updateItem(i, 'variantId', val)}
-                      placeholder="Search products..."
+                      options={products.map((p: any) => ({
+                        value: p.id,
+                        label: p.name
+                      }))}
+                      value={item.productId}
+                      onChange={(val) => handleProductChange(i, val)}
+                      placeholder="Select Product..."
                     />
+                    {item.variantId && item.productId && (
+                      <p className="text-[9px] text-white/40 mt-1 pl-1">
+                        SKU: {products.find((p: any) => p.id === item.productId)?.variants?.find((v: any) => v.id === item.variantId)?.sku || 'N/A'}
+                      </p>
+                    )}
                   </td>
                   <td className="py-3 px-6">
                     <div className="flex items-center bg-white/5 border border-white/10 rounded-xl px-2 focus-within:border-blue-500/50 transition-all">
@@ -136,8 +228,23 @@ export function LineItemsTable({
                       />
                     </div>
                   </td>
+                  <td className="py-3 px-6">
+                    <select
+                      value={item.taxId || ''}
+                      onChange={e => updateItem(i, 'taxId', e.target.value)}
+                      className="w-full bg-white/5 border border-white/10 rounded-xl px-2 py-2.5 text-xs text-white/90 outline-none focus:border-blue-500/50 transition-all font-mono"
+                    >
+                      <option value="">No Tax</option>
+                      {taxes?.map(t => (
+                        <option key={t.id} value={t.id}>{t.name} ({t.ratePercentage}%)</option>
+                      ))}
+                    </select>
+                    {item.taxAmount > 0 && (
+                      <div className="text-[10px] text-white/40 mt-1 text-right">{formatCurrency(item.taxAmount)}</div>
+                    )}
+                  </td>
                   <td className="py-3 px-6 text-sm text-white/70 font-mono">
-                    {formatCurrency(item.total)}
+                    {formatCurrency(item.total || item.totalPrice)}
                   </td>
                   <td className="py-3 px-6 text-right">
                     <button type="button" onClick={() => removeItem(i)} className="p-2 text-white/30 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-all">
@@ -190,15 +297,36 @@ export function LineItemsTable({
                   <span className="text-emerald-400/70">Est. Gross Profit:</span>
                   <span className="font-mono text-emerald-400">+{formatCurrency(grossProfit)}</span>
                 </div>
+                <div className="flex justify-between text-xs">
+                  <span className="text-white/40">Untaxed Amount:</span>
+                  <span className="font-mono text-white/70">{formatCurrency(untaxedAmount)}</span>
+                </div>
+                <div className="flex justify-between text-xs">
+                  <span className="text-white/40">Total Tax:</span>
+                  <span className="font-mono text-white/70">{formatCurrency(totalTaxAmount)}</span>
+                </div>
               </>
             )}
             <div className="flex justify-between items-center text-lg pt-2 mt-2 border-t border-white/5">
-              <span className="text-white/70 font-bold whitespace-nowrap mr-4">{isPurchaseOrder ? 'Total Procurement Cost:' : 'Total Sales:'}</span>
+              <span className="text-white/70 font-bold whitespace-nowrap mr-4">{isPurchaseOrder ? 'Total Procurement Cost:' : 'Total (Gross):'}</span>
               <span className="font-mono text-white font-bold">{formatCurrency(totalValue)}</span>
             </div>
           </div>
         </div>
       </div>
+
+      {selectedProductForModal && (
+        <VariantSelectionModal
+          product={selectedProductForModal}
+          isOpen={activeModalRow !== null}
+          onClose={() => {
+            setActiveModalRow(null);
+            setSelectedProductForModal(null);
+          }}
+          onSelect={handleVariantSelect}
+          selectedVariantIds={items.map(i => i.variantId).filter(Boolean)}
+        />
+      )}
     </div>
   );
 }

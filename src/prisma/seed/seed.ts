@@ -1,5 +1,5 @@
 import 'dotenv/config';
-import { PrismaClient, EntityStatus, TransactionStatus } from '@prisma/client';
+import { PrismaClient, EntityStatus, TransactionStatus } from '@generated/client';
 import { Pool } from 'pg';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { db } from '../../lib/db';

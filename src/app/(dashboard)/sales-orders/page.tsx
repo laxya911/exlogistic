@@ -112,6 +112,12 @@ export default function SalesOrdersPage() {
             </div>
 
             <div className="flex items-center gap-3 w-full md:w-auto">
+              <Link
+                href="/sales-orders/new"
+                className="flex items-center gap-2 px-6 py-3 bg-blue-500 text-black hover:bg-blue-400 rounded-2xl text-[10px] font-mono font-bold uppercase tracking-widest transition-all cursor-pointer"
+              >
+                + New Order
+              </Link>
               <button
                 onClick={() => setShowFilters(!showFilters)}
                 className={cn(
@@ -231,7 +237,7 @@ export default function SalesOrdersPage() {
                         {o.orderNo}
                       </Link>
                     </td>
-                    <td className="py-4 px-6 text-white/70 truncate max-w-[180px]">{getCustomerName(o.customerId)}</td>
+                    <td className="py-4 px-6 text-white/70 truncate max-w-45">{getCustomerName(o.customerId)}</td>
                     <td className="py-4 px-6 text-white/70">{formatDate(o.date)}</td>
                     <td className="py-4 px-6 text-white/70">{formatDate(o.expectedShipmentDate)}</td>
                     <td className="py-4 px-6">
@@ -239,7 +245,7 @@ export default function SalesOrdersPage() {
                     </td>
                     <td className="py-4 px-6 text-right font-bold text-white/80">{formatCurrency(o.totalValue)}</td>
                     <td className="py-4 px-6 text-right">
-                      <span className={cn('px-2 py-0.5 rounded text-[8px] font-mono font-bold uppercase border', getStatusStyle(o.status))}>
+                      <span className={cn('whitespace-nowrap px-2 py-0.5 rounded text-[8px] font-mono font-bold uppercase border', getStatusStyle(o.status))}>
                         {o.status}
                       </span>
                     </td>

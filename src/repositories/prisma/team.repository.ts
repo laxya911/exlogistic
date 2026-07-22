@@ -1,5 +1,5 @@
 import { prisma } from '../prisma.client';
-import { Team } from '@prisma/client';
+import { Team } from '@generated/client';
 
 export const teamRepository = {
   findAll: async () => {

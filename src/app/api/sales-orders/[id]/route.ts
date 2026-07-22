@@ -45,6 +45,15 @@ export async function PUT(
         
         // Trigger generic workflow engine
         await WorkflowEngine.evaluateRules('SalesOrder', id, 'SHIPPED', oldStatus);
+
+        // Inventory logic: Deduct stock for each line item (it was previously allocated)
+        if (updated && updated.items) {
+          for (const item of updated.items) {
+            if (item.variantId) {
+              await inventoryService.adjustStock(item.variantId, item.quantity, 'SHIPMENT', 'SALES_ORDER', id, 'Sales Order Shipped');
+            }
+          }
+        }
         
         return NextResponse.json({ message: 'Shipment booking triggered', order: updated });
       }

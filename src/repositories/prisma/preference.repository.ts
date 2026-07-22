@@ -1,5 +1,5 @@
 import { prisma } from '../prisma.client';
-import { SystemPreference } from '@prisma/client';
+import { SystemPreference } from '@generated/client';
 
 export const preferenceRepository = {
   get: async () => {

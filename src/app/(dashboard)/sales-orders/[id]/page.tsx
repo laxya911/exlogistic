@@ -25,6 +25,7 @@ export default function SalesOrderDetailPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [suppliers, setSuppliers] = useState<any[]>([]);
   const [orderDocuments, setOrderDocuments] = useState<any[]>([]);
+  const [taxes, setTaxes] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [noteText, setNoteText] = useState('');
 
@@ -47,16 +48,18 @@ export default function SalesOrderDetailPage() {
       const orderData: SalesOrder = await res.json();
       setOrder(orderData);
 
-      const [cRes, pRes, dRes, sRes] = await Promise.all([
+      const [cRes, pRes, dRes, sRes, tRes] = await Promise.all([
         fetch(`/api/customers/${orderData.customerId}`).then(r => r.ok ? r.json() : null),
         fetch('/api/products').then(r => r.json()),
         fetch(`/api/documents?relatedId=${id}`).then(r => r.ok ? r.json() : []),
-        fetch('/api/suppliers').then(r => r.ok ? r.json() : [])
+        fetch('/api/suppliers').then(r => r.ok ? r.json() : []),
+        fetch('/api/reference/taxes').then(r => r.json())
       ]);
       setCustomer(cRes);
       setProducts(pRes);
       setOrderDocuments(dRes);
       setSuppliers(sRes);
+      setTaxes(tRes);
     } catch (e: any) {
       toast.error(e.message || 'Failed to load order');
       router.push('/sales-orders');
@@ -98,7 +101,7 @@ export default function SalesOrderDetailPage() {
     const newItems = (formState.items || []).map((item: any) => {
       const base = item.basePrice || item.unitPrice;
       const newPrice = factor > 0 ? Number((base / factor).toFixed(2)) : base;
-      return { ...item, unitPrice: newPrice, total: newPrice * (item.quantity || 0) };
+      return { ...item, unitPrice: newPrice };
     });
     setFormState({ ...formState, marginPercentage: margin, items: newItems });
   };
@@ -108,84 +111,122 @@ export default function SalesOrderDetailPage() {
   };
 
   const updateItem = (idx: number, field: string, value: any) => {
-    const newItems = [...formState.items];
-    const item = { ...newItems[idx], [field]: value };
-    
-    if (field === 'variantId') {
-      let sellingPrice = 0;
-      let purchasePrice = 0;
-      for (const p of products) {
-        const v = p.variants?.find((v: any) => v.id === value);
-        if (v) {
-          item.productId = p.id;
-          item.name = p.name;
-          item.sku = v.sku;
-          item.uom = p.uom || 'MT';
-          sellingPrice = v.sellingPrice || p.sellingPrice || 0;
-          purchasePrice = v.purchasePrice || p.purchasePrice || sellingPrice;
-          break;
+    setFormState((prev: any) => {
+      const newItems = [...prev.items];
+      const item = { ...newItems[idx], [field]: value };
+      
+      if (field === 'variantId') {
+        let sellingPrice = 0;
+        for (const p of products) {
+          const v = p.variants?.find((v: any) => v.id === value);
+          if (v) {
+            item.productId = p.id;
+            item.name = p.name;
+            item.sku = v.sku;
+            item.uom = p.uom || 'MT';
+            sellingPrice = v.sellingPrice || p.sellingPrice || 0;
+            break;
+          }
+        }
+        
+        const margin = prev.marginPercentage || 0;
+        const factor = margin > 0 ? 1 - (margin / 100) : 1;
+        
+        item.basePrice = sellingPrice; 
+        item.unitPrice = factor > 0 ? Number((item.basePrice / factor).toFixed(2)) : item.basePrice;
+        
+        // Auto-assign sales tax from variant
+        const variant = products.find((p: any) => p.id === item.productId)?.variants?.find((v: any) => v.id === value);
+        if (variant && variant.salesTaxId) {
+          item.taxId = variant.salesTaxId;
         }
       }
       
-      const margin = formState.marginPercentage || 0;
-      const factor = margin > 0 ? 1 - (margin / 100) : 1;
+      if (field === 'quantity') {
+        item.total = (item.quantity || 0) * (item.unitPrice || 0);
+      }
       
-      item.basePrice = purchasePrice || sellingPrice;
-      item.unitPrice = factor > 0 ? Number((item.basePrice / factor).toFixed(2)) : item.basePrice;
-      item.total = (item.quantity || 0) * item.unitPrice;
-    }
-    
-    if (field === 'quantity') {
-      item.total = (item.quantity || 0) * (item.unitPrice || 0);
-    }
-    
-    if (field === 'unitPrice') {
-      const margin = formState.marginPercentage || 0;
-      const factor = margin > 0 ? 1 - (margin / 100) : 1;
-      item.basePrice = factor > 0 ? Number((value * factor).toFixed(2)) : value;
-      item.total = (item.quantity || 0) * value;
-    }
-    
-    newItems[idx] = item;
-    updateFormState('items', newItems);
+      if (field === 'unitPrice') {
+        const margin = prev.marginPercentage || 0;
+        const factor = margin > 0 ? 1 - (margin / 100) : 1;
+        item.basePrice = factor > 0 ? Number((value * factor).toFixed(2)) : value;
+      }
+      
+      newItems[idx] = item;
+      return { ...prev, items: newItems };
+    });
   };
 
   const removeItem = (idx: number) => {
-    const newItems = [...formState.items];
-    newItems.splice(idx, 1);
-    updateFormState('items', newItems);
+    setFormState((prev: any) => {
+      const newItems = [...prev.items];
+      newItems.splice(idx, 1);
+      return { ...prev, items: newItems };
+    });
   };
 
   const addItem = () => {
-    updateFormState('items', [...formState.items, { variantId: '', productId: '', quantity: 1, unitPrice: 0, total: 0, uom: 'MT' }]);
+    setFormState((prev: any) => ({
+      ...prev,
+      items: [...prev.items, { variantId: '', productId: '', quantity: 1, unitPrice: 0, total: 0, uom: 'MT' }]
+    }));
   };
 
-  const calculatedItems = formState.items || [];
-  const costOfGoods = calculatedItems.reduce((acc: number, item: any) => acc + (item.total || 0), 0);
-  const totalValue = useMemo(() => {
-    const margin = formState.marginPercentage || 0;
-    if (margin === 0) return costOfGoods;
-    const factor = 1 - (margin / 100);
-    if (factor <= 0) return costOfGoods;
-    return Math.round(costOfGoods / factor);
-  }, [costOfGoods, formState.marginPercentage]);
-  const grossProfit = totalValue - costOfGoods;
+  const computedItems = useMemo(() => {
+    return (formState.items || []).map((item: any) => {
+      const tax = taxes.find(t => t.id === item.taxId);
+      const qty = item.quantity || 0;
+      const price = item.unitPrice || 0;
+      
+      let untaxed = price;
+      let taxAmount = 0;
+      
+      if (tax) {
+        if (tax.includedInPrice) {
+          untaxed = price / (1 + (tax.ratePercentage / 100));
+          taxAmount = price - untaxed;
+        } else {
+          taxAmount = price * (tax.ratePercentage / 100);
+        }
+      }
+      
+      return {
+        ...item,
+        taxAmount: Number((taxAmount * qty).toFixed(2)),
+        taxRate: tax?.ratePercentage || 0,
+        totalPrice: Number(((untaxed + taxAmount) * qty).toFixed(2)),
+        untaxedTotal: Number((untaxed * qty).toFixed(2))
+      };
+    });
+  }, [formState.items, taxes]);
+
+  const untaxedAmount = computedItems.reduce((sum: number, item: any) => sum + (item.untaxedTotal || 0), 0);
+  const totalTaxAmount = computedItems.reduce((sum: number, item: any) => sum + (item.taxAmount || 0), 0);
+  const totalValue = computedItems.reduce((sum: number, item: any) => sum + (item.totalPrice || 0), 0);
+  
+  const costOfGoods = (formState.items || []).reduce((sum: number, item: any) => sum + ((item.basePrice || 0) * (item.quantity || 0)), 0);
+  const grossProfit = untaxedAmount - costOfGoods;
 
   const handleSaveEdit = async () => {
     setSaving(true);
     try {
-      const finalItems = calculatedItems.map((item: any) => ({
+      const finalItems = computedItems.map((item: any) => ({
         variantId: item.variantId,
         productId: item.productId,
         quantity: item.quantity,
         unitPrice: item.unitPrice,
-        totalPrice: Number((item.unitPrice * item.quantity).toFixed(2))
+        taxId: item.taxId || null,
+        taxRate: item.taxRate || 0,
+        taxAmount: item.taxAmount || 0,
+        totalPrice: item.totalPrice || 0
       }));
 
       const payload = {
         ...formState,
         expectedShipment: formState.expectedShipmentDate ? new Date(formState.expectedShipmentDate).toISOString() : null,
         totalValue,
+        untaxedAmount,
+        totalTaxAmount,
         items: finalItems
       };
 
@@ -589,11 +630,11 @@ export default function SalesOrderDetailPage() {
           <div className="lg:col-span-8 space-y-8">
             <LineItemsTable 
               isEditing={isEditing}
-              items={isEditing ? calculatedItems : order.items}
+              items={isEditing ? computedItems : order.items}
               updateItem={updateItem}
               removeItem={removeItem}
               addItem={addItem}
-              variantOptions={variantOptions}
+              products={products}
               formatCurrency={formatCurrency}
               getProductName={getProductName}
               marginPercentage={isEditing ? (formState.marginPercentage || 0) : (order.marginPercentage || 0)}
@@ -601,6 +642,9 @@ export default function SalesOrderDetailPage() {
               costOfGoods={isEditing ? costOfGoods : 0}
               grossProfit={isEditing ? grossProfit : 0}
               totalValue={isEditing ? totalValue : order.totalValue}
+              untaxedAmount={isEditing ? untaxedAmount : (order.untaxedAmount || 0)}
+              totalTaxAmount={isEditing ? totalTaxAmount : (order.totalTaxAmount || 0)}
+              taxes={taxes}
             />
 
             {!isEditing && order.remarks && (

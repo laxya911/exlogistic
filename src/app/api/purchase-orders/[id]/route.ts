@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { purchaseOrderRepository } from '@/repositories/repository';
 import { purchaseOrderService } from '@/services/purchase-order.service';
+import { inventoryService } from '@/services/inventory.service';
 
 export async function GET(
   request: Request,
@@ -64,9 +65,23 @@ export async function PUT(
 
       if (action === 'receive') {
         existingPO.status = 'RECEIVED';
-        existingPO.actualDeliveryDate = new Date().toISOString();
         purchaseOrderService.logEvent(existingPO, 'RECEIVED', 'Goods Received & Quality Cleared', 'Cargo received at warehouse. Quality inspection passed. GRN issued.');
         const updated = await purchaseOrderRepository.update(id, existingPO);
+
+        // Update Inventory Stock for each item
+        if (existingPO.items && existingPO.items.length > 0) {
+          for (const item of existingPO.items) {
+            await inventoryService.adjustStock(
+              item.variantId,
+              item.quantity,
+              'RECEIPT',
+              'PURCHASE_ORDER',
+              id,
+              `GRN Issued for PO ${existingPO.poNo}`
+            );
+          }
+        }
+
         return NextResponse.json(updated);
       }
 

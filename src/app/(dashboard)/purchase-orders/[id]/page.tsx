@@ -14,6 +14,7 @@ import Link from 'next/link';
 import { PurchaseOrder, Supplier, Product } from '@/types';
 import { PurchaseOrderMetadataCard } from '@/components/purchase/purchase-order-metadata-card';
 import { LineItemsTable } from '@/components/sales/line-items-table';
+import { VariantSelectionModal } from '@/components/sales/variant-selection-modal';
 
 const STATUS_FLOW = ['DRAFT', 'ISSUED', 'ACKNOWLEDGED', 'IN_PRODUCTION', 'DISPATCHED', 'RECEIVED'] as const;
 
@@ -25,6 +26,7 @@ export default function PurchaseOrderDetailPage() {
   const [po, setPo] = useState<PurchaseOrder | null>(null);
   const [supplier, setSupplier] = useState<Supplier | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
+  const [taxes, setTaxes] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [noteText, setNoteText] = useState('');
 
@@ -32,6 +34,10 @@ export default function PurchaseOrderDetailPage() {
   const [isEditing, setIsEditing] = useState(false);
   const [formState, setFormState] = useState<any>({});
   const [saving, setSaving] = useState(false);
+
+  // Modal State
+  const [activeModalRow, setActiveModalRow] = useState<number | null>(null);
+  const [selectedProductForModal, setSelectedProductForModal] = useState<Product | null>(null);
 
   useEffect(() => { if (id) fetchData(); }, [id]);
 
@@ -43,12 +49,14 @@ export default function PurchaseOrderDetailPage() {
       const poData: PurchaseOrder = await res.json();
       setPo(poData);
 
-      const [sRes, pRes] = await Promise.all([
+      const [sRes, pRes, tRes] = await Promise.all([
         fetch(`/api/suppliers/${poData.supplierId}`).then(r => r.ok ? r.json() : null),
-        fetch('/api/products').then(r => r.json())
+        fetch('/api/products').then(r => r.json()),
+        fetch('/api/reference/taxes').then(r => r.json())
       ]);
       setSupplier(sRes);
       setProducts(pRes);
+      setTaxes(tRes);
     } catch (e: any) {
       toast.error(e.message || 'Failed to load PO');
       router.push('/purchase-orders');
@@ -100,40 +108,79 @@ export default function PurchaseOrderDetailPage() {
         incoterm: po?.incoterm || '',
         expectedDeliveryDate: po?.expectedDeliveryDate || '',
         paymentTerms: po?.paymentTerms || '',
-        items: po?.items?.map(i => ({
-          ...i,
-          name: products.find(p => p.id === i.productId)?.name || '',
-          sku: products.find(p => p.id === i.productId)?.sku || '',
-          uom: products.find(p => p.id === i.productId)?.uom || 'MT',
-          total: (i.quantity || 0) * (i.unitPrice || 0)
-        })) || []
+        items: po?.items?.map(i => {
+          const product = products.find(p => p.id === i.productId);
+          const variant = product?.variants?.find((v: any) => v.id === i.variantId);
+          return {
+            ...i,
+            name: product?.name || '',
+            sku: variant?.sku || '',
+            uom: product?.uom || 'MT',
+            taxId: i.taxId || variant?.purchaseTaxId || '',
+            total: (i.quantity || 0) * (i.unitPrice || 0)
+          };
+        }) || []
       });
     }
     setIsEditing(!isEditing);
   };
 
+  const computedItems = React.useMemo(() => {
+    return (formState.items || []).map((item: any) => {
+      const tax = taxes.find(t => t.id === item.taxId);
+      const qty = item.quantity || 0;
+      const price = item.unitPrice || 0;
+      
+      let untaxed = price;
+      let taxAmount = 0;
+      
+      if (tax) {
+        if (tax.includedInPrice) {
+          untaxed = price / (1 + (tax.ratePercentage / 100));
+          taxAmount = price - untaxed;
+        } else {
+          taxAmount = price * (tax.ratePercentage / 100);
+        }
+      }
+      
+      return {
+        ...item,
+        taxAmount: Number((taxAmount * qty).toFixed(2)),
+        taxRate: tax?.ratePercentage || 0,
+        totalPrice: Number(((untaxed + taxAmount) * qty).toFixed(2)),
+        untaxedTotal: Number((untaxed * qty).toFixed(2))
+      };
+    });
+  }, [formState.items, taxes]);
+
+  const untaxedAmount = computedItems.reduce((sum: number, item: any) => sum + (item.untaxedTotal || 0), 0);
+  const totalTaxAmount = computedItems.reduce((sum: number, item: any) => sum + (item.taxAmount || 0), 0);
+  const totalValue = computedItems.reduce((sum: number, item: any) => sum + (item.totalPrice || 0), 0);
+
   const handleSaveEdit = async () => {
     try {
       setSaving(true);
       
-      const itemsToSave = formState.items.map((i: any) => {
-        const product = products.find(p => p.id === i.productId);
-        const variant = product?.variants?.find((v: any) => v.id === i.variantId);
+      const itemsToSave = computedItems.map((i: any) => {
         return {
           productId: i.productId,
           variantId: i.variantId,
           quantity: i.quantity,
           unitPrice: i.unitPrice,
-          totalPrice: i.total
+          taxId: i.taxId || null,
+          taxRate: i.taxRate || 0,
+          taxAmount: i.taxAmount || 0,
+          totalPrice: i.totalPrice || 0
         };
       });
-      const totalValue = itemsToSave.reduce((sum: number, i: any) => sum + (i.totalPrice || 0), 0);
 
       const payload = {
         ...po,
         ...formState,
         items: itemsToSave,
-        totalValue
+        totalValue,
+        untaxedAmount,
+        totalTaxAmount
       };
 
       const res = await fetch(`/api/purchase-orders/${id}`, {
@@ -160,43 +207,29 @@ export default function PurchaseOrderDetailPage() {
   };
 
   const updateItem = (idx: number, field: string, value: any) => {
-    const newItems = [...formState.items];
-    const item = { ...newItems[idx], [field]: value };
-    
-    if (field === 'variantId') {
-      for (const p of products) {
-        const v = p.variants?.find((v: any) => v.id === value);
-        if (v) {
-          item.productId = p.id;
-          item.name = p.name;
-          item.sku = v.sku;
-          item.uom = p.uom || 'MT';
-          item.unitPrice = v.purchasePrice || p.purchasePrice || v.sellingPrice || p.sellingPrice || 0;
-          break;
-        }
-      }
-      item.total = (item.quantity || 0) * item.unitPrice;
-    }
-    
-    if (field === 'quantity' || field === 'unitPrice') {
-      item.total = (item.quantity || 0) * (item.unitPrice || 0);
-    }
-    
-    newItems[idx] = item;
-    updateFormState('items', newItems);
+    setFormState((prev: any) => {
+      const newItems = [...prev.items];
+      newItems[idx] = { ...newItems[idx], [field]: value };
+      return { ...prev, items: newItems };
+    });
   };
 
   const removeItem = (idx: number) => {
-    const newItems = [...formState.items];
-    newItems.splice(idx, 1);
-    updateFormState('items', newItems);
+    setFormState((prev: any) => {
+      const newItems = [...prev.items];
+      newItems.splice(idx, 1);
+      return { ...prev, items: newItems };
+    });
   };
 
   const addItem = () => {
-    updateFormState('items', [
-      ...formState.items,
-      { productId: '', variantId: '', quantity: 1, unitPrice: 0, total: 0 }
-    ]);
+    setFormState((prev: any) => ({
+      ...prev,
+      items: [
+        ...prev.items,
+        { productId: '', variantId: '', quantity: 1, unitPrice: 0, total: 0 }
+      ]
+    }));
   };
 
   const getStatusStyle = (status: string) => {
@@ -429,22 +462,21 @@ export default function PurchaseOrderDetailPage() {
             {/* Line Items */}
             <LineItemsTable 
               isEditing={isEditing}
-              items={isEditing ? formState.items : po.items}
+              items={isEditing ? computedItems : po.items}
               updateItem={updateItem}
               removeItem={removeItem}
               addItem={addItem}
-              variantOptions={products.flatMap(p => p.variants?.map((v: any) => ({
-                value: v.id,
-                label: `${p.name} (${v.sku})`,
-                description: `Stock: ${v.inventory || 0} ${p.uom || 'MT'} | Cost: ${formatCurrency(v.purchasePrice || p.purchasePrice || 0)}`
-              })) || [])}
+              products={products}
               formatCurrency={formatCurrency}
               getProductName={getProductName}
               marginPercentage={0}
               setMarginPercentage={() => {}}
-              costOfGoods={isEditing ? formState.items.reduce((s: number, i: any) => s + (i.total || 0), 0) : po.totalValue}
+              costOfGoods={isEditing ? untaxedAmount : (po.untaxedAmount || 0)}
               grossProfit={0}
-              totalValue={isEditing ? formState.items.reduce((s: number, i: any) => s + (i.total || 0), 0) : po.totalValue}
+              totalValue={isEditing ? totalValue : po.totalValue}
+              untaxedAmount={isEditing ? untaxedAmount : (po.untaxedAmount || 0)}
+              totalTaxAmount={isEditing ? totalTaxAmount : (po.totalTaxAmount || 0)}
+              taxes={taxes}
               isPurchaseOrder={true}
             />
 

@@ -6,6 +6,16 @@ import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'motion/react';
 import { SearchResult } from '@/services/search.service';
 
+const STATIC_ROUTES: SearchResult[] = [
+  { id: 'app-dashboard', title: 'Dashboard', subtitle: 'Analytics & Overview', type: 'PAGE' as any, url: '/dashboard', relevance: 1 },
+  { id: 'app-sales', title: 'Sales Orders', subtitle: 'Sales Module', type: 'PAGE' as any, url: '/sales-orders', relevance: 1 },
+  { id: 'app-quotations', title: 'Quotations', subtitle: 'Sales Module', type: 'PAGE' as any, url: '/quotations', relevance: 1 },
+  { id: 'app-purchases', title: 'Purchase Orders', subtitle: 'Purchase Module', type: 'PAGE' as any, url: '/purchase-orders', relevance: 1 },
+  { id: 'app-inventory', title: 'Inventory', subtitle: 'Products & Warehouses', type: 'PAGE' as any, url: '/products', relevance: 1 },
+  { id: 'app-logistics', title: 'Shipments', subtitle: 'Logistics Module', type: 'PAGE' as any, url: '/shipments', relevance: 1 },
+  { id: 'app-settings', title: 'Settings', subtitle: 'Configuration & Users', type: 'PAGE' as any, url: '/settings', relevance: 1 },
+];
+
 export function GlobalSearch() {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<SearchResult[]>([]);
@@ -18,8 +28,19 @@ export function GlobalSearch() {
 
   // Debounced Search
   useEffect(() => {
-    if (!query || query.trim().length < 2) {
+    if (!query) {
       setResults([]);
+      setLoading(false);
+      return;
+    }
+
+    const staticMatches = STATIC_ROUTES.filter(r => 
+      r.title.toLowerCase().includes(query.toLowerCase()) || 
+      r.url.toLowerCase().includes(query.toLowerCase())
+    );
+
+    if (query.trim().length < 2) {
+      setResults(staticMatches);
       setLoading(false);
       return;
     }
@@ -29,7 +50,11 @@ export function GlobalSearch() {
       try {
         const res = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
         const data = await res.json();
-        setResults(data.results || []);
+        
+        // Combine static matches + API results
+        const combined = [...staticMatches, ...(data.results || [])];
+        
+        setResults(combined);
         setSelectedIndex(-1);
       } catch (e) {
         console.error(e);

@@ -1,5 +1,5 @@
 import { prisma } from '../prisma.client';
-import { User, Prisma } from '@prisma/client';
+import { User, Prisma } from '@generated/client';
 import bcrypt from 'bcryptjs';
 
 export const userRepository = {

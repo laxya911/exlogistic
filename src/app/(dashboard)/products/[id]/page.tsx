@@ -22,6 +22,8 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
   const [dbBrands, setDbBrands] = useState<any[]>([]);
   const [dbSuppliers, setDbSuppliers] = useState<any[]>([]);
   const [dbForwarders, setDbForwarders] = useState<any[]>([]);
+  const [dbTaxes, setDbTaxes] = useState<any[]>([]);
+  const [dbAttributes, setDbAttributes] = useState<any[]>([]);
 
   // Form State: General
   const [name, setName] = useState('');
@@ -34,6 +36,10 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
   const [uom, setUom] = useState('BAG');
   const [supplierId, setSupplierId] = useState('');
   const [preferredForwarderId, setPreferredForwarderId] = useState('');
+
+  // Base Pricing
+  const [basePurchasePrice, setBasePurchasePrice] = useState<number>(0);
+  const [baseSellingPrice, setBaseSellingPrice] = useState<number>(0);
 
   // Form State: Packaging
   const [packageType, setPackageType] = useState('PP Woven Bag');
@@ -51,12 +57,15 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
   const [images, setImages] = useState<string[]>([]);
 
   // Variants State
-  const [attributes, setAttributes] = useState<{name: string, values: string}[]>([]);
+  const [attributes, setAttributes] = useState<{name: string, values: string[]}[]>([]);
   const [variants, setVariants] = useState<any[]>([]);
   const [existingVariantsCount, setExistingVariantsCount] = useState(0);
 
-  // Quick Add State
   const [quickAddType, setQuickAddType] = useState<'Category' | 'Brand' | 'Supplier' | null>(null);
+
+  // KPIs
+  const [totalOnHand, setTotalOnHand] = useState(0);
+  const [totalAllocated, setTotalAllocated] = useState(0);
 
   const fetchDropdowns = () => {
     Promise.all([
@@ -64,17 +73,19 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
       fetch('/api/brands').then(res => res.ok ? res.json() : []).catch(() => []),
       fetch('/api/suppliers').then(res => res.ok ? res.json() : []).catch(() => []),
       fetch('/api/forwarders').then(res => res.ok ? res.json() : []).catch(() => []),
-    ]).then(([cats, brands, suppliers, forwarders]) => {
+      fetch('/api/reference/taxes').then(res => res.ok ? res.json() : []).catch(() => []),
+      fetch('/api/attributes').then(res => res.ok ? res.json() : []).catch(() => []),
+    ]).then(([cats, brands, suppliers, forwarders, taxes, attrs]) => {
       setDbCategories(Array.isArray(cats) ? cats : []);
       setDbBrands(Array.isArray(brands) ? brands : []);
       setDbSuppliers(Array.isArray(suppliers) ? suppliers : []);
       setDbForwarders(Array.isArray(forwarders) ? forwarders : []);
+      setDbTaxes(Array.isArray(taxes) ? taxes : []);
+      setDbAttributes(Array.isArray(attrs) ? attrs : []);
     });
   };
 
-  useEffect(() => {
-    fetchDropdowns();
-
+  const fetchProductData = () => {
     if (!isNew) {
       fetch(`/api/products/${id}`)
         .then(res => res.json())
@@ -90,6 +101,9 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
           setSupplierId(data.supplierId || '');
           setPreferredForwarderId(data.preferredForwarderId || '');
           
+          setBasePurchasePrice(data.basePurchasePrice || 0);
+          setBaseSellingPrice(data.baseSellingPrice || 0);
+
           setPackageType(data.packageType || 'PP Woven Bag');
           setUnitsPerCarton(data.unitsPerCarton || 1);
           setGrossWeight(data.grossWeight || 25.2);
@@ -106,21 +120,53 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
           setExistingVariantsCount(data.variants?.length || 0);
           if (data.variants && data.variants.length > 0) {
             setVariants(data.variants);
+            
+            // Reconstruct attributes state from variant attributes for UI
+            const reconstructedAttrs: Record<string, Set<string>> = {};
+            data.variants.forEach((v: any) => {
+              if (v.attributes) {
+                v.attributes.forEach((va: any) => {
+                  const attrName = va.attributeValue?.attribute?.name;
+                  const attrVal = va.attributeValue?.value;
+                  if (attrName && attrVal) {
+                    if (!reconstructedAttrs[attrName]) reconstructedAttrs[attrName] = new Set();
+                    reconstructedAttrs[attrName].add(attrVal);
+                  }
+                });
+              }
+            });
+            
+            const newAttributesState = Object.keys(reconstructedAttrs).map(name => ({
+              name,
+              values: Array.from(reconstructedAttrs[name])
+            }));
+            
+            if (newAttributesState.length > 0) {
+              setAttributes(newAttributesState);
+            }
           }
+          
+          setTotalOnHand(data.totalOnHand || 0);
+          setTotalAllocated(data.totalAllocated || 0);
           
           setLoading(false);
         });
     }
+  };
+
+  useEffect(() => {
+    fetchDropdowns();
+    fetchProductData();
   }, [id, isNew]);
 
   const generateVariants = () => {
-    const validAttrs = attributes.filter(a => a.name.trim() && a.values.trim());
+    const validAttrs = attributes.filter(a => a.name.trim() && a.values.length > 0);
     if (validAttrs.length === 0) {
-      setVariants([{ title: 'Default', sku: sku || 'DEFAULT-SKU', purchasePrice: 0, sellingPrice: 0, attributeValues: {} }]);
+      setVariants([{ title: 'Default', sku: sku || 'DEFAULT-SKU', purchasePrice: basePurchasePrice, sellingPrice: baseSellingPrice, attributeValues: {} }]);
       return;
     }
 
-    const arrays = validAttrs.map(a => a.values.split(',').map(v => v.trim()).filter(Boolean));
+    const arrays = validAttrs.map(a => a.values.map(v => v.trim()).filter(Boolean));
     const cartesian = (...a: any[]) => a.reduce((a, b) => a.flatMap((d: any) => b.map((e: any) => [d, e].flat())));
     
     const combos = cartesian(...arrays);
@@ -129,18 +175,39 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
       validAttrs.forEach((attr, idx) => {
         attrVals[attr.name] = combo[idx];
       });
+      const partialMatch = variants.find(v => 
+        Object.entries(v.attributeValues || {}).every(([k, val]) => attrVals[k] === val)
+      );
+
       const titleSuffix = combo.join(' - ');
       return {
+        id: `NEW-${Math.random().toString(36).substr(2, 9)}`,
         title: `${name} (${titleSuffix})`,
         sku: `${sku || 'SKU'}-${combo.map((c: string) => c.substring(0,3).toUpperCase()).join('-')}`,
-        purchasePrice: 0,
-        sellingPrice: 0,
-        images: [],
+        purchasePrice: partialMatch?.purchasePrice || basePurchasePrice,
+        sellingPrice: partialMatch?.sellingPrice || baseSellingPrice,
+        salesTaxId: partialMatch?.salesTaxId || '',
+        purchaseTaxId: partialMatch?.purchaseTaxId || '',
+        images: partialMatch?.images || [],
         attributeValues: attrVals
       };
     });
 
     setVariants(newVariants);
+  };
+
+  const addManualVariant = () => {
+    setVariants([...variants, {
+      id: `NEW-${Math.random().toString(36).substr(2, 9)}`,
+      title: `${name} - Custom Variant`,
+      sku: `${sku || 'SKU'}-CUSTOM`,
+      purchasePrice: basePurchasePrice,
+      sellingPrice: baseSellingPrice,
+      salesTaxId: '',
+      purchaseTaxId: '',
+      images: [],
+      attributeValues: {}
+    }]);
   };
 
   const handleQuickAdd = async (name: string) => {
@@ -188,13 +255,14 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
     const payload = {
       name, sku, description, brandId, categoryIds, hsnCode, countryOfOrigin, uom,
       supplierId, preferredForwarderId,
+      basePurchasePrice, baseSellingPrice,
       packageType, unitsPerCarton, grossWeight: Number(grossWeight), netWeight: Number(netWeight), 
       cbm: Number(cbm), containerLoadingCapacity: Number(containerLoadingCapacity),
       shelfLife, storageConditions, certifications, japanImportNotes,
       images,
       attributes: attributes.filter(a => a.name.trim()).map(a => ({
         name: a.name.trim(),
-        values: a.values.split(',').map(v => v.trim()).filter(Boolean)
+        values: a.values.map(v => v.trim()).filter(Boolean)
       })),
       variants
     };
@@ -246,10 +314,10 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
                 <Layers size={14} /> Variants ({existingVariantsCount})
               </button>
               <button className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-white/70 font-mono text-[10px] uppercase">
-                <Package size={14} /> On Hand (0)
+                <Package size={14} /> On Hand ({totalOnHand})
               </button>
               <button className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-white/70 font-mono text-[10px] uppercase">
-                <ShoppingCart size={14} /> Sold (0)
+                <ShoppingCart size={14} /> Sold ({totalAllocated})
               </button>
             </div>
           )}
@@ -312,6 +380,29 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
                   <label className="text-[11px] font-mono text-white/80 uppercase tracking-wider block mb-1">Description</label>
                   <textarea rows={4} className="w-full bg-[#0b0b0b] border border-white/10 rounded-xl py-3 px-4 text-sm font-mono text-white focus:border-blue-500 focus:outline-none transition-colors" value={description} onChange={(e) => setDescription(e.target.value)} />
                 </div>
+                
+                <div className="space-y-4 pt-6 border-t border-white/5">
+                  <h3 className="text-xs font-mono font-bold uppercase tracking-widest text-blue-400">Base Pricing</h3>
+                  
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-mono uppercase tracking-widest text-white/50">Base Purchase Price (USD)</label>
+                      <input 
+                        type="number" step="0.01" min="0" value={basePurchasePrice} onChange={e => setBasePurchasePrice(parseFloat(e.target.value) || 0)}
+                        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white outline-none focus:border-blue-500/50 transition-all font-mono"
+                        placeholder="e.g. 100.00"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-mono uppercase tracking-widest text-white/50">Base Selling Price (USD)</label>
+                      <input 
+                        type="number" step="0.01" min="0" value={baseSellingPrice} onChange={e => setBaseSellingPrice(parseFloat(e.target.value) || 0)}
+                        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white outline-none focus:border-blue-500/50 transition-all font-mono"
+                        placeholder="e.g. 150.00"
+                      />
+                    </div>
+                  </div>
+                </div>
               </div>
               <div className="space-y-4">
                 <div>
@@ -373,7 +464,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
               <div className="flex justify-between items-center">
                 <h3 className="text-sm font-bold text-white">Variant Attributes</h3>
                 <button 
-                  onClick={() => setAttributes([...attributes, { name: '', values: '' }])}
+                  onClick={() => setAttributes([...attributes, { name: '', values: [] }])}
                   className="flex items-center gap-1.5 px-3 py-1.5 bg-white/5 hover:bg-white/10 rounded-lg text-xs font-mono font-bold uppercase cursor-pointer"
                 >
                   <Plus size={14} /> Add Attribute
@@ -384,28 +475,47 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
                 {attributes.map((attr, idx) => (
                   <div key={idx} className="flex gap-4 items-start bg-black/20 p-4 rounded-xl border border-white/5">
                     <div className="w-1/3">
-                      <label className="text-[10px] font-mono text-white/50 uppercase mb-1 block">Attribute Name (e.g. Color)</label>
-                      <input 
-                        className="w-full bg-white/5 border border-white/10 rounded-lg py-2 px-3 text-sm text-white" 
-                        value={attr.name} 
-                        onChange={(e) => {
+                      <label className="text-[10px] font-mono text-white/50 uppercase mb-1 block">Attribute Name</label>
+                      <SearchableSelect 
+                        options={dbAttributes.map(a => ({ id: a.name, label: a.name, value: a.name }))}
+                        value={attr.name}
+                        onChange={(val) => {
                           const newAttr = [...attributes];
-                          newAttr[idx].name = e.target.value;
+                          newAttr[idx].name = val as string;
                           setAttributes(newAttr);
-                        }} 
+                        }}
+                        placeholder="Select or Add Name"
+                        onAddClick={(val) => {
+                          if (val) {
+                            const newAttr = [...attributes];
+                            newAttr[idx].name = val;
+                            setAttributes(newAttr);
+                          }
+                        }}
                       />
                     </div>
                     <div className="flex-1">
-                      <label className="text-[10px] font-mono text-white/50 uppercase mb-1 block">Values (comma separated)</label>
-                      <input 
-                        className="w-full bg-white/5 border border-white/10 rounded-lg py-2 px-3 text-sm text-white" 
-                        value={attr.values} 
-                        placeholder="Red, Blue, Green"
-                        onChange={(e) => {
+                      <label className="text-[10px] font-mono text-white/50 uppercase mb-1 block">Values (Select multiple)</label>
+                      <SearchableSelect 
+                        multiple
+                        options={
+                          (dbAttributes.find(a => a.name === attr.name)?.values || [])
+                          .map((v: any) => ({ id: v.value, label: v.value, value: v.value }))
+                        }
+                        value={attr.values}
+                        onChange={(val) => {
                           const newAttr = [...attributes];
-                          newAttr[idx].values = e.target.value;
+                          newAttr[idx].values = val as string[];
                           setAttributes(newAttr);
-                        }} 
+                        }}
+                        placeholder="Select or Add Values"
+                        onAddClick={(val) => {
+                          if (val && !attr.values.includes(val)) {
+                            const newAttr = [...attributes];
+                            newAttr[idx].values = [...attr.values, val];
+                            setAttributes(newAttr);
+                          }
+                        }}
                       />
                     </div>
                     <button 
@@ -430,15 +540,18 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
               )}
 
               {variants.length > 0 && (
-                <div className="mt-8 border border-white/10 rounded-xl overflow-hidden">
-                  <table className="w-full text-left text-sm font-mono">
+                <div className="mt-8 border border-white/10 rounded-xl overflow-x-auto">
+                  <table className="w-full text-left text-sm font-mono min-w-max">
                     <thead className="bg-white/5 text-white/50 text-[10px] uppercase">
                       <tr>
                         <th className="py-3 px-4">Variant Name</th>
                         <th className="py-3 px-4">SKU</th>
+                        <th className="py-3 px-4">Extra Cost</th>
+                        <th className="py-3 px-4">Extra Price</th>
                         <th className="py-3 px-4">Image URL</th>
-                        <th className="py-3 px-4 w-24">Cost</th>
-                        <th className="py-3 px-4 w-24">Price</th>
+                        <th className="py-3 px-4">Sales Tax</th>
+                        <th className="py-3 px-4">Purchase Tax</th>
+                        <th className="py-3 px-4 w-8"></th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-white/5">
@@ -451,19 +564,47 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
                             }} />
                           </td>
                           <td className="py-2 px-4">
-                            <input className="w-full bg-transparent border-none text-white focus:outline-none text-[11px]" value={v.imageUrl || ''} placeholder="https://..." onChange={(e) => {
-                              const newV = [...variants]; newV[i].imageUrl = e.target.value; setVariants(newV);
+                            <input type="number" step="0.01" className="w-full bg-transparent border-none text-white focus:outline-none text-[11px]" value={v.extraPurchasePrice || ''} placeholder="0.00" onChange={(e) => {
+                              const newV = [...variants]; newV[i].extraPurchasePrice = Number(e.target.value); setVariants(newV);
                             }} />
                           </td>
                           <td className="py-2 px-4">
-                            <input type="number" className="w-full bg-transparent border-none text-white focus:outline-none text-[11px]" value={v.purchasePrice} onChange={(e) => {
-                              const newV = [...variants]; newV[i].purchasePrice = Number(e.target.value); setVariants(newV);
+                            <input type="number" step="0.01" className="w-full bg-transparent border-none text-white focus:outline-none text-[11px]" value={v.extraSellingPrice || ''} placeholder="0.00" onChange={(e) => {
+                              const newV = [...variants]; newV[i].extraSellingPrice = Number(e.target.value); setVariants(newV);
                             }} />
                           </td>
                           <td className="py-2 px-4">
-                            <input type="number" className="w-full bg-transparent border-none text-white focus:outline-none text-[11px]" value={v.sellingPrice} onChange={(e) => {
-                              const newV = [...variants]; newV[i].sellingPrice = Number(e.target.value); setVariants(newV);
+                            <input className="w-full bg-transparent border-none text-white focus:outline-none text-[11px]" value={v.images?.[0] || ''} placeholder="Image URL" onChange={(e) => {
+                              const newV = [...variants]; newV[i].images = [e.target.value]; setVariants(newV);
                             }} />
+                          </td>
+                          <td className="py-2 px-4">
+                            <select className="w-full bg-transparent border-none text-white focus:outline-none text-[11px] cursor-pointer" value={v.salesTaxId || ''} onChange={(e) => {
+                              const newV = [...variants]; newV[i].salesTaxId = e.target.value; setVariants(newV);
+                            }}>
+                              <option value="" className="bg-[#111]">No Tax</option>
+                              {dbTaxes.map(t => <option key={t.id} value={t.id} className="bg-[#111]">{t.name} ({t.ratePercentage}%)</option>)}
+                            </select>
+                          </td>
+                          <td className="py-2 px-4">
+                            <select className="w-full bg-transparent border-none text-white focus:outline-none text-[11px] cursor-pointer" value={v.purchaseTaxId || ''} onChange={(e) => {
+                              const newV = [...variants]; newV[i].purchaseTaxId = e.target.value; setVariants(newV);
+                            }}>
+                              <option value="" className="bg-[#111]">No Tax</option>
+                              {dbTaxes.map(t => <option key={t.id} value={t.id} className="bg-[#111]">{t.name} ({t.ratePercentage}%)</option>)}
+                            </select>
+                          </td>
+                          <td className="py-2 px-4 text-center">
+                            <button 
+                              onClick={() => {
+                                const newV = [...variants];
+                                newV.splice(i, 1);
+                                setVariants(newV);
+                              }}
+                              className="text-white/30 hover:text-red-400 cursor-pointer"
+                            >
+                              <Trash2 size={14} />
+                            </button>
                           </td>
                         </tr>
                       ))}
@@ -471,6 +612,15 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
                   </table>
                 </div>
               )}
+              
+              <div className="mt-4">
+                <button 
+                  onClick={addManualVariant}
+                  className="px-4 py-2 bg-white/5 text-white/70 rounded-lg text-xs font-mono uppercase cursor-pointer hover:bg-white/10"
+                >
+                  + Add Manual Variant
+                </button>
+              </div>
             </div>
           )}
 
@@ -547,7 +697,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
             </button>
           </div>
           {activeTab === 'inventory' && !isNew && (
-            <InventoryLedgerTab variants={variants} />
+            <InventoryLedgerTab variants={variants} onStockUpdated={fetchProductData} />
           )}
 
         </div>
@@ -556,7 +706,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
   );
 }
 
-function InventoryLedgerTab({ variants }: { variants: any[] }) {
+function InventoryLedgerTab({ variants, onStockUpdated }: { variants: any[], onStockUpdated: () => void }) {
   const [selectedVariantId, setSelectedVariantId] = useState<string>(variants.length > 0 ? variants[0].id : '');
   const [ledger, setLedger] = useState<any>(null);
   const [loading, setLoading] = useState(false);
@@ -595,6 +745,7 @@ function InventoryLedgerTab({ variants }: { variants: any[] }) {
       setLedger(data);
       setAdjQty(0);
       setAdjRemarks('');
+      onStockUpdated();
       alert('Stock adjusted successfully');
     } catch (e: any) {
       alert(e.message);
@@ -709,7 +860,7 @@ function InventoryLedgerTab({ variants }: { variants: any[] }) {
                           {tx.quantity > 0 ? '+' : ''}{tx.quantity}
                         </td>
                         <td className="py-3 pr-4 text-white/40">{tx.referenceType || '-'}</td>
-                        <td className="py-3 pr-4 text-white/40 truncate max-w-[100px]" title={tx.referenceId}>{tx.referenceId ? tx.referenceId.substring(0,8)+'...' : '-'}</td>
+                        <td className="py-3 pr-4 text-white/40 truncate max-w-25" title={tx.referenceId}>{tx.referenceId ? tx.referenceId.substring(0,8)+'...' : '-'}</td>
                         <td className="py-3 text-white/50">{tx.remarks || '-'}</td>
                       </tr>
                     ))}

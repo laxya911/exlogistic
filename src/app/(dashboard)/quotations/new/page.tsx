@@ -23,6 +23,7 @@ import { toast } from 'sonner';
 import { Customer, Product, Port } from '@/types';
 import { useQuotations } from '@/hooks/useQuotations';
 import { SearchableSelect } from '@/components/ui/searchable-select';
+import { VariantSelectionModal } from '@/components/sales/variant-selection-modal';
 
 export default function NewQuotationPage() {
   const router = useRouter();
@@ -32,6 +33,7 @@ export default function NewQuotationPage() {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [ports, setPorts] = useState<Port[]>([]);
+  const [taxes, setTaxes] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Form State
@@ -47,12 +49,16 @@ export default function NewQuotationPage() {
   const [marginPercentage, setMarginPercentage] = useState(25);
   
   // Quotation Items State
-  const [items, setItems] = useState<Array<{ variantId: string; productId: string; quantity: number; unitPrice: number }>>([
+  const [items, setItems] = useState<Array<{ variantId: string; productId: string; quantity: number; unitPrice: number; taxId?: string; basePrice?: number }>>([
     { variantId: '', productId: '', quantity: 100, unitPrice: 0 }
   ]);
 
   // Form errors
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
+
+  // Modal State
+  const [activeModalRow, setActiveModalRow] = useState<number | null>(null);
+  const [selectedProductForModal, setSelectedProductForModal] = useState<Product | null>(null);
 
   useEffect(() => {
     fetchMetadata();
@@ -60,12 +66,14 @@ export default function NewQuotationPage() {
 
   const fetchMetadata = async () => {
     try {
-      const [cRes, pRes] = await Promise.all([
+      const [cRes, pRes, tRes] = await Promise.all([
         fetch('/api/customers').then(r => r.json()),
-        fetch('/api/products').then(r => r.json())
+        fetch('/api/products').then(r => r.json()),
+        fetch('/api/reference/taxes').then(r => r.json())
       ]);
       setCustomers(cRes);
       setProducts(pRes);
+      setTaxes(tRes);
       
       setPorts([
         { id: 'TYO', name: 'Tokyo', code: 'JP TYO', country: 'Japan', type: 'SEA', entityStatus: 'ACTIVE', createdAt: '', updatedAt: '' },
@@ -76,11 +84,8 @@ export default function NewQuotationPage() {
 
       if (cRes.length > 0) setCustomerId(cRes[0].id);
       if (pRes.length > 0) {
-        // Set first product's first variant as default
-        const defaultProduct = pRes[0].id || '';
-        const defaultVariant = pRes[0].variants?.[0]?.id || '';
-        const defaultPrice = pRes[0].variants?.[0]?.sellingPrice || pRes[0].sellingPrice || 120;
-        setItems([{ variantId: defaultVariant, productId: defaultProduct, quantity: 100, unitPrice: defaultPrice }]);
+        // Initial empty state
+        setItems([{ variantId: '', productId: '', quantity: 100, unitPrice: 0, taxId: '', basePrice: 0 }]);
       }
     } catch (e) {
       toast.error('Failed to sync master matrix metadata');
@@ -89,38 +94,75 @@ export default function NewQuotationPage() {
     }
   };
 
-  const handleProductChange = (index: number, variantId: string) => {
-    let standardPrice = 0;
-    let parentProductId = '';
-    for (const p of products) {
-      const v = p.variants?.find((x: any) => x.id === variantId);
-      if (v) {
-        standardPrice = v.sellingPrice || 0;
-        parentProductId = p.id;
-        break;
+  const handleProductChange = (index: number, productId: string) => {
+    const prod = products.find(p => p.id === productId);
+    if (!prod) return;
+
+    if (!prod.variants || prod.variants.length <= 1) {
+      // Auto select the only variant
+      const variant = prod.variants?.[0];
+      if (variant && items.some((item, i) => i !== index && item.variantId === variant.id)) {
+        toast.error('This product is already added to the quotation.');
+        return;
       }
+
+      const standardPrice = variant?.sellingPrice || prod.sellingPrice || 0;
+      const salesTaxId = variant?.salesTaxId || '';
+      
+      setItems(prev => prev.map((item, i) => i === index ? {
+        ...item,
+        variantId: variant?.id || '',
+        productId: prod.id,
+        unitPrice: standardPrice,
+        basePrice: standardPrice,
+        taxId: salesTaxId
+      } : item));
+    } else {
+      // Open modal
+      setSelectedProductForModal(prod);
+      setActiveModalRow(index);
     }
-    
-    setItems(prev => prev.map((item, i) => i === index ? {
-      ...item,
-      variantId,
-      productId: parentProductId,
-      unitPrice: standardPrice
-    } : item));
   };
 
-  const updateItemField = (index: number, field: 'quantity' | 'unitPrice', value: number) => {
-    setItems(prev => prev.map((item, i) => i === index ? {
+  const handleVariantSelect = (variantId: string) => {
+    if (activeModalRow === null || !selectedProductForModal) return;
+    
+    const variant = selectedProductForModal.variants?.find((v: any) => v.id === variantId);
+    if (!variant) return;
+
+    const standardPrice = variant.sellingPrice || selectedProductForModal.sellingPrice || 0;
+    const salesTaxId = variant.salesTaxId || '';
+
+    setItems(prev => prev.map((item, i) => i === activeModalRow ? {
       ...item,
-      [field]: value
+      variantId,
+      productId: selectedProductForModal.id,
+      unitPrice: standardPrice,
+      basePrice: standardPrice,
+      taxId: salesTaxId
     } : item));
+
+    setActiveModalRow(null);
+    setSelectedProductForModal(null);
+  };
+
+  const updateItemField = (index: number, field: string, value: any) => {
+    setItems(prev => prev.map((item, i) => {
+      if (i === index) {
+        const newItem = { ...item, [field]: value };
+        if (field === 'unitPrice') {
+          const margin = marginPercentage || 0;
+          const factor = margin > 0 ? 1 - (margin / 100) : 1;
+          newItem.basePrice = factor > 0 ? Number((value * factor).toFixed(2)) : value;
+        }
+        return newItem;
+      }
+      return item;
+    }));
   };
 
   const addItemRow = () => {
-    const defaultProduct = products[0]?.id || '';
-    const defaultVariant = products[0]?.variants?.[0]?.id || '';
-    const defaultPrice = products[0]?.variants?.[0]?.sellingPrice || products[0]?.sellingPrice || 120;
-    setItems(prev => [...prev, { variantId: defaultVariant, productId: defaultProduct, quantity: 100, unitPrice: defaultPrice }]);
+    setItems(prev => [...prev, { variantId: '', productId: '', quantity: 100, unitPrice: 0, taxId: '', basePrice: 0 }]);
   };
 
   const removeItemRow = (index: number) => {
@@ -132,50 +174,70 @@ export default function NewQuotationPage() {
   };
 
   // Live Calculations
-  const calculatedItems = useMemo(() => {
-    return items.map(item => {
+  const computedItems = useMemo(() => {
+    return items.map((item: any) => {
       const prod = products.find(p => p.id === item.productId);
-      const total = item.quantity * item.unitPrice;
+      const tax = taxes.find(t => t.id === item.taxId);
+      const qty = item.quantity || 0;
+      const price = item.unitPrice || 0;
+      
+      let untaxed = price;
+      let taxAmount = 0;
+      
+      if (tax) {
+        if (tax.includedInPrice) {
+          untaxed = price / (1 + (tax.ratePercentage / 100));
+          taxAmount = price - untaxed;
+        } else {
+          taxAmount = price * (tax.ratePercentage / 100);
+        }
+      }
+
       return {
         ...item,
         name: prod?.name || 'Select Product...',
         sku: prod?.sku || 'N/A',
         uom: prod?.uom || 'MT',
-        total
+        taxAmount: Number((taxAmount * qty).toFixed(2)),
+        taxRate: tax?.ratePercentage || 0,
+        totalPrice: Number(((untaxed + taxAmount) * qty).toFixed(2)),
+        untaxedTotal: Number((untaxed * qty).toFixed(2))
       };
     });
-  }, [items, products]);
+  }, [items, products, taxes]);
 
-  const costOfGoods = useMemo(() => {
-    return calculatedItems.reduce((acc, item) => acc + item.total, 0);
-  }, [calculatedItems]);
+  const untaxedAmount = computedItems.reduce((sum: number, item: any) => sum + (item.untaxedTotal || 0), 0);
+  const totalTaxAmount = computedItems.reduce((sum: number, item: any) => sum + (item.taxAmount || 0), 0);
+  const totalValue = computedItems.reduce((sum: number, item: any) => sum + (item.totalPrice || 0), 0);
+  
+  const costOfGoods = items.reduce((sum: number, item: any) => sum + ((item.basePrice || 0) * (item.quantity || 0)), 0);
+  const grossProfit = untaxedAmount - costOfGoods;
 
-  // Margin calculation: totalValue = costOfGoods / (1 - marginPercentage/100)
-  const totalValue = useMemo(() => {
-    const factor = 1 - (marginPercentage / 100);
-    if (factor <= 0) return costOfGoods; // prevent division by zero
-    return Math.round(costOfGoods / factor);
-  }, [costOfGoods, marginPercentage]);
-
-  const grossProfit = useMemo(() => {
-    return totalValue - costOfGoods;
-  }, [totalValue, costOfGoods]);
+  const handleMarginChange = (margin: number) => {
+    const factor = margin > 0 ? 1 - (margin / 100) : 1;
+    const newItems = items.map((item: any) => {
+      const base = item.basePrice || item.unitPrice;
+      const newPrice = factor > 0 ? Number((base / factor).toFixed(2)) : base;
+      return { ...item, unitPrice: newPrice };
+    });
+    setMarginPercentage(margin);
+    setItems(newItems);
+  };
 
   // Adjust unitPrice in items payload to include margin before submission
   // so that totalPrice = unitPrice * qty reflects the proposal price!
   const finalItems = useMemo(() => {
-    const factor = 1 - (marginPercentage / 100);
-    return items.map(item => {
-      const markupPrice = factor > 0 ? Number((item.unitPrice / factor).toFixed(2)) : item.unitPrice;
-      return {
-        variantId: item.variantId,
-        productId: item.productId,
-        quantity: item.quantity,
-        unitPrice: markupPrice,
-        totalPrice: Number((markupPrice * item.quantity).toFixed(2))
-      };
-    });
-  }, [items, marginPercentage]);
+    return computedItems.map((item: any) => ({
+      variantId: item.variantId,
+      productId: item.productId,
+      quantity: item.quantity,
+      unitPrice: item.unitPrice,
+      taxId: item.taxId || null,
+      taxRate: item.taxRate || 0,
+      taxAmount: item.taxAmount || 0,
+      totalPrice: item.totalPrice || 0
+    }));
+  }, [computedItems]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -206,6 +268,8 @@ export default function NewQuotationPage() {
       destinationPortId,
       containerType,
       items: finalItems,
+      untaxedAmount,
+      totalTaxAmount,
       totalValue,
       marginPercentage,
       status: 'DRAFT' as const,
@@ -404,17 +468,22 @@ export default function NewQuotationPage() {
                   <div key={idx} className="flex flex-wrap gap-4 items-center p-4 bg-white/2 rounded-2xl border border-white/5 relative group">
                     {/* Commodity selector */}
                     <div className="flex-1 min-w-[200px] space-y-1">
-                      <label className="text-[8px] font-mono text-white/70 uppercase">Commodity / SKU</label>
+                      <label className="text-[8px] font-mono text-white/70 uppercase">Commodity Product</label>
                       <SearchableSelect
-                        options={products.flatMap(p => (p.variants || []).map((v: any) => ({
-                          value: v.id, 
-                          label: `${p.name} - ${v.sku}`
-                        })))}
-                        value={item.variantId}
+                        options={products.map(p => ({
+                          value: p.id, 
+                          label: p.name
+                        }))}
+                        value={item.productId}
                         onChange={(val) => handleProductChange(idx, val)}
-                        placeholder="Select Commodity..."
+                        placeholder="Select Product..."
                         className="text-xs"
                       />
+                      {item.variantId && item.productId && (
+                        <p className="text-[10px] text-white/50 mt-1 pl-1">
+                          SKU: {computedItems[idx]?.sku}
+                        </p>
+                      )}
                     </div>
 
                     {/* Quantity */}
@@ -429,9 +498,24 @@ export default function NewQuotationPage() {
                       />
                     </div>
 
+                    {/* Tax Dropdown */}
+                    <div className="w-32 space-y-1">
+                      <label className="text-[8px] font-mono text-white/70 uppercase">Tax</label>
+                      <select
+                        value={item.taxId || ''}
+                        onChange={(e) => updateItemField(idx, 'taxId', e.target.value)}
+                        className="w-full bg-[#0b0b0b] border border-white/10 rounded-lg p-2.5 text-xs text-white font-mono focus:outline-none"
+                      >
+                        <option value="">No Tax</option>
+                        {taxes.map(t => (
+                          <option key={t.id} value={t.id}>{t.name} ({t.ratePercentage}%)</option>
+                        ))}
+                      </select>
+                    </div>
+
                     {/* Cost price */}
                     <div className="w-28 space-y-1">
-                      <label className="text-[8px] font-mono text-white/70 uppercase">FOB Cost / Unit</label>
+                      <label className="text-[8px] font-mono text-white/70 uppercase">Unit Price</label>
                       <input 
                         type="number"
                         value={item.unitPrice}
@@ -444,8 +528,11 @@ export default function NewQuotationPage() {
 
                     {/* Total cost */}
                     <div className="w-28 text-right pr-4 space-y-1">
-                      <p className="text-[8px] font-mono text-white/70 uppercase">Total FOB Cost</p>
-                      <p className="font-sans font-bold text-xs text-white/80 py-2.5">{formatCurrency(item.quantity * item.unitPrice)}</p>
+                      <p className="text-[8px] font-mono text-white/70 uppercase">Gross Total</p>
+                      <p className="font-sans font-bold text-xs text-white py-2.5">{formatCurrency(computedItems[idx]?.totalPrice || 0)}</p>
+                      {computedItems[idx]?.taxAmount > 0 && (
+                        <p className="text-[9px] text-white/40 mt-[-8px]">Tax: {formatCurrency(computedItems[idx]?.taxAmount)}</p>
+                      )}
                     </div>
 
                     {/* Remove row */}
@@ -482,7 +569,7 @@ export default function NewQuotationPage() {
                     min="5" 
                     max="60" 
                     value={marginPercentage}
-                    onChange={(e) => setMarginPercentage(Number(e.target.value))}
+                    onChange={(e) => handleMarginChange(Number(e.target.value))}
                     className="w-full accent-emerald-500 cursor-pointer bg-white/10 rounded-lg h-2"
                   />
                   <div className="flex justify-between text-[9px] text-white/70 font-mono">
@@ -495,16 +582,24 @@ export default function NewQuotationPage() {
                 {/* Final calculations ledger */}
                 <div className="space-y-3 font-mono text-xs border-l border-white/5 pl-8">
                   <div className="flex justify-between">
-                    <span className="text-white/80">Total FOB Cargo Cost</span>
+                    <span className="text-white/80">Base Freight/Cargo Cost</span>
                     <span>{formatCurrency(costOfGoods)}</span>
                   </div>
                   <div className="flex justify-between text-emerald-400 font-bold">
                     <span>Configured Profit ({marginPercentage}%)</span>
                     <span>+ {formatCurrency(grossProfit)}</span>
                   </div>
+                  <div className="flex justify-between">
+                    <span className="text-white/80">Untaxed Amount</span>
+                    <span>{formatCurrency(untaxedAmount)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-white/80">Total Tax Amount</span>
+                    <span>{formatCurrency(totalTaxAmount)}</span>
+                  </div>
                   <div className="h-px bg-white/5 my-2" />
                   <div className="flex justify-between text-sm font-bold">
-                    <span className="text-white/80">Proposed Contract Value</span>
+                    <span className="text-white/80">Proposed Contract Value (Gross)</span>
                     <span className="text-blue-400 font-sans text-base">{formatCurrency(totalValue)}</span>
                   </div>
                 </div>
@@ -530,6 +625,19 @@ export default function NewQuotationPage() {
           </div>
         </form>
       </div>
+
+      {selectedProductForModal && (
+        <VariantSelectionModal
+          product={selectedProductForModal}
+          isOpen={activeModalRow !== null}
+          onClose={() => {
+            setActiveModalRow(null);
+            setSelectedProductForModal(null);
+          }}
+          onSelect={handleVariantSelect}
+          selectedVariantIds={items.map(i => i.variantId).filter(Boolean)}
+        />
+      )}
     </>
   );
 }

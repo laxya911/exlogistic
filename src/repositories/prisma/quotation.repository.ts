@@ -1,15 +1,15 @@
 import { prisma } from '../prisma.client';
-import { TransactionStatus } from '@prisma/client';
+import { TransactionStatus } from '@generated/client';
 
 export class PrismaQuotationRepository {
   private mapToFrontend(q: any): any {
     if (!q) return q;
     
-    // map items
     const mappedItems = q.items?.map((i: any) => ({
       ...i,
       productId: i.variant?.productId || i.productId || '',
-      totalPrice: i.quantity * (i.unitPrice || 0)
+      tax: i.tax,
+      totalPrice: i.quantity * (i.unitPrice || 0) + (i.taxAmount || 0)
     })) || [];
     
     let documents = q.documents;
@@ -43,6 +43,8 @@ export class PrismaQuotationRepository {
       rating: 4.5,
       version: q.version || 1,
       exchangeRate: q.exchangeRate || 1,
+      untaxedAmount: q.untaxedAmount || 0,
+      totalTaxAmount: q.totalTaxAmount || 0,
     };
   }
 
@@ -60,7 +62,7 @@ export class PrismaQuotationRepository {
 
   async getAll() {
     const data = await prisma.quotation.findMany({ 
-      include: { items: { include: { variant: { include: { product: true } } } } },
+      include: { items: { include: { variant: { include: { product: true } }, tax: true } } },
       orderBy: { createdAt: 'desc' }
     });
     return data.map((q) => this.mapToFrontend(q));
@@ -69,7 +71,7 @@ export class PrismaQuotationRepository {
   async getById(id: string) {
     const data = await prisma.quotation.findUnique({ 
       where: { id }, 
-      include: { items: { include: { variant: { include: { product: true } } } } } 
+      include: { items: { include: { variant: { include: { product: true } }, tax: true } } } 
     });
     return data ? this.mapToFrontend(data) : null;
   }
@@ -95,10 +97,13 @@ export class PrismaQuotationRepository {
             variantId: i.variantId || i.productId, // UI might still pass productId instead of variantId
             quantity: i.quantity,
             unitPrice: i.unitPrice,
+            taxId: i.taxId || null,
+            taxRate: i.taxRate || 0,
+            taxAmount: i.taxAmount || 0,
           })) || []
         }
       },
-      include: { items: { include: { variant: { include: { product: true } } } } }
+      include: { items: { include: { variant: { include: { product: true } }, tax: true } } }
     });
     return this.mapToFrontend(created);
   }
@@ -126,10 +131,13 @@ export class PrismaQuotationRepository {
             variantId: i.variantId || i.productId,
             quantity: i.quantity,
             unitPrice: i.unitPrice,
+            taxId: i.taxId || null,
+            taxRate: i.taxRate || 0,
+            taxAmount: i.taxAmount || 0,
           }))
         } : undefined
       },
-      include: { items: { include: { variant: { include: { product: true } } } } }
+      include: { items: { include: { variant: { include: { product: true } }, tax: true } } }
     });
     return this.mapToFrontend(updated);
   }

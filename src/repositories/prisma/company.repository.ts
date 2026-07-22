@@ -1,5 +1,5 @@
 import { prisma } from '../prisma.client';
-import { Company } from '@prisma/client';
+import { Company } from '@generated/client';
 import { auditLogger } from '@/lib/audit';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';

@@ -27,6 +27,7 @@ import { PageHeaderUpdater } from '@/components/layout/page-context';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { ReferenceManager } from '@/components/settings/ReferenceManager';
+import { CrudManager } from '@/components/settings/CrudManager';
 
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState('organization');
@@ -132,6 +133,7 @@ export default function SettingsPage() {
     { id: 'organization', label: 'Organization', icon: Building2 },
     { id: 'business-rules', label: 'Business Rules', icon: ShieldCheck },
     { id: 'logistics', label: 'Logistics Matrix', icon: Truck },
+    { id: 'financials', label: 'Financial & Taxes', icon: Coins },
     { id: 'system', label: 'System Prefs', icon: AppWindow },
     { id: 'notifications', label: 'Alert Routing', icon: Bell },
     { id: 'roles', label: 'Roles & Security', icon: ShieldCheck },
@@ -374,18 +376,6 @@ export default function SettingsPage() {
               {activeTab === 'logistics' && (
                 <div className="space-y-6">
                   <ReferenceManager 
-                    title="Currencies"
-                    type="currencies"
-                    icon={Coins}
-                    fields={[
-                      { key: 'code', label: 'Code', type: 'text' },
-                      { key: 'symbol', label: 'Symbol', type: 'text' },
-                      { key: 'exchangeRate', label: 'Exchange Rate', type: 'number' },
-                      { key: 'isDefault', label: 'Is Default', type: 'boolean' },
-                    ]}
-                  />
-
-                  <ReferenceManager 
                     title="Container Types"
                     type="containers"
                     icon={Box}
@@ -417,6 +407,23 @@ export default function SettingsPage() {
                       { key: 'type', label: 'Type (WEIGHT/VOLUME)', type: 'text' },
                     ]}
                   />
+                </div>
+              )}
+
+              {/* Financial & Taxes Tab */}
+              {activeTab === 'financials' && (
+                <div className="space-y-6">
+                  <ReferenceManager 
+                    title="Currencies"
+                    type="currencies"
+                    icon={Coins}
+                    fields={[
+                      { key: 'code', label: 'Code', type: 'text' },
+                      { key: 'symbol', label: 'Symbol', type: 'text' },
+                      { key: 'exchangeRate', label: 'Exchange Rate', type: 'number' },
+                      { key: 'isDefault', label: 'Is Default', type: 'boolean' },
+                    ]}
+                  />
 
                   <ReferenceManager 
                     title="Tax Settings"
@@ -425,6 +432,7 @@ export default function SettingsPage() {
                     fields={[
                       { key: 'name', label: 'Name', type: 'text' },
                       { key: 'ratePercentage', label: 'Rate %', type: 'number' },
+                      { key: 'includedInPrice', label: 'Included In Price', type: 'boolean' },
                     ]}
                   />
                 </div>
@@ -596,6 +604,36 @@ export default function SettingsPage() {
                       <button className="text-xs text-blue-400 hover:text-blue-300 font-medium">Edit Permissions</button>
                     </div>
                   </div>
+                </div>
+              )}
+
+              {/* Financials Tab */}
+              {activeTab === 'financials' && (
+                <div className="space-y-8">
+                  <CrudManager 
+                    title="Taxes"
+                    endpoint="/api/reference/taxes"
+                    icon={Receipt}
+                    fields={[
+                      { key: 'name', label: 'Tax Name', type: 'text' },
+                      { key: 'ratePercentage', label: 'Rate (%)', type: 'number' },
+                      { key: 'type', label: 'Tax Type', type: 'select', options: [
+                        { label: 'National', value: 'NATIONAL' },
+                        { label: 'International', value: 'INTERNATIONAL' }
+                      ]},
+                    ]}
+                  />
+                  <ReferenceManager 
+                    title="Currencies"
+                    type="currencies"
+                    icon={Coins}
+                    fields={[
+                      { key: 'code', label: 'Code (e.g. USD)', type: 'text' },
+                      { key: 'symbol', label: 'Symbol (e.g. $)', type: 'text' },
+                      { key: 'exchangeRate', label: 'Exchange Rate to Base', type: 'number' },
+                      { key: 'isDefault', label: 'Base Currency', type: 'boolean' }
+                    ]}
+                  />
                 </div>
               )}
 

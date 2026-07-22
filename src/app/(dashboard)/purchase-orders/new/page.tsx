@@ -10,14 +10,20 @@ import { PurchaseOrderMetadataCard } from '@/components/purchase/purchase-order-
 import { LineItemsTable } from '@/components/sales/line-items-table';
 import { formatCurrency } from '@/lib/utils';
 import { SearchableSelect } from '@/components/ui/searchable-select';
+import { VariantSelectionModal } from '@/components/sales/variant-selection-modal';
 
 export default function NewPurchaseOrderPage() {
   const router = useRouter();
   
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
+  const [taxes, setTaxes] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+
+  // Modal State
+  const [activeModalRow, setActiveModalRow] = useState<number | null>(null);
+  const [selectedProductForModal, setSelectedProductForModal] = useState<Product | null>(null);
 
   const [formState, setFormState] = useState<any>({
     supplierId: '',
@@ -34,12 +40,14 @@ export default function NewPurchaseOrderPage() {
 
   const fetchData = async () => {
     try {
-      const [sRes, pRes] = await Promise.all([
+      const [sRes, pRes, tRes] = await Promise.all([
         fetch('/api/suppliers').then(r => r.json()),
-        fetch('/api/products').then(r => r.json())
+        fetch('/api/products').then(r => r.json()),
+        fetch('/api/reference/taxes').then(r => r.json())
       ]);
       setSuppliers(sRes);
       setProducts(pRes);
+      setTaxes(tRes);
     } catch (e: any) {
       toast.error('Failed to load required data');
     } finally {
@@ -52,44 +60,63 @@ export default function NewPurchaseOrderPage() {
   };
 
   const updateItem = (idx: number, field: string, value: any) => {
-    const newItems = [...formState.items];
-    const item = { ...newItems[idx], [field]: value };
-    
-    if (field === 'variantId') {
-      for (const p of products) {
-        const v = p.variants?.find((v: any) => v.id === value);
-        if (v) {
-          item.productId = p.id;
-          item.name = p.name;
-          item.sku = v.sku;
-          item.uom = p.uom || 'MT';
-          item.unitPrice = v.purchasePrice || p.purchasePrice || v.sellingPrice || p.sellingPrice || 0;
-          break;
-        }
-      }
-      item.total = (item.quantity || 0) * item.unitPrice;
-    }
-    
-    if (field === 'quantity' || field === 'unitPrice') {
-      item.total = (item.quantity || 0) * (item.unitPrice || 0);
-    }
-    
-    newItems[idx] = item;
-    updateFormState('items', newItems);
+    setFormState((prev: any) => {
+      const newItems = [...prev.items];
+      newItems[idx] = { ...newItems[idx], [field]: value };
+      return { ...prev, items: newItems };
+    });
   };
 
+
   const removeItem = (idx: number) => {
-    const newItems = [...formState.items];
-    newItems.splice(idx, 1);
-    updateFormState('items', newItems);
+    setFormState((prev: any) => {
+      const newItems = [...prev.items];
+      newItems.splice(idx, 1);
+      return { ...prev, items: newItems };
+    });
   };
 
   const addItem = () => {
-    updateFormState('items', [
-      ...formState.items,
-      { productId: '', variantId: '', quantity: 1, unitPrice: 0, total: 0 }
-    ]);
+    setFormState((prev: any) => ({
+      ...prev,
+      items: [
+        ...prev.items,
+        { productId: '', variantId: '', quantity: 1, unitPrice: 0, total: 0 }
+      ]
+    }));
   };
+
+  const computedItems = React.useMemo(() => {
+    return (formState.items || []).map((item: any) => {
+      const tax = taxes.find(t => t.id === item.taxId);
+      const qty = item.quantity || 0;
+      const price = item.unitPrice || 0;
+      
+      let untaxed = price;
+      let taxAmount = 0;
+      
+      if (tax) {
+        if (tax.includedInPrice) {
+          untaxed = price / (1 + (tax.ratePercentage / 100));
+          taxAmount = price - untaxed;
+        } else {
+          taxAmount = price * (tax.ratePercentage / 100);
+        }
+      }
+      
+      return {
+        ...item,
+        taxAmount: Number((taxAmount * qty).toFixed(2)),
+        taxRate: tax?.ratePercentage || 0,
+        totalPrice: Number(((untaxed + taxAmount) * qty).toFixed(2)),
+        untaxedTotal: Number((untaxed * qty).toFixed(2))
+      };
+    });
+  }, [formState.items, taxes]);
+
+  const untaxedAmount = computedItems.reduce((sum: number, item: any) => sum + (item.untaxedTotal || 0), 0);
+  const totalTaxAmount = computedItems.reduce((sum: number, item: any) => sum + (item.taxAmount || 0), 0);
+  const totalValue = computedItems.reduce((sum: number, item: any) => sum + (item.totalPrice || 0), 0);
 
   const handleSave = async () => {
     if (!formState.supplierId) return toast.error('Please select a supplier');
@@ -98,16 +125,18 @@ export default function NewPurchaseOrderPage() {
     try {
       setSaving(true);
       
-      const itemsToSave = formState.items.map((i: any) => {
+      const itemsToSave = computedItems.map((i: any) => {
         return {
           productId: i.productId,
           variantId: i.variantId,
           quantity: i.quantity,
           unitPrice: i.unitPrice,
-          totalPrice: i.total
+          taxId: i.taxId || null,
+          taxRate: i.taxRate || 0,
+          taxAmount: i.taxAmount || 0,
+          totalPrice: i.totalPrice || 0
         };
       });
-      const totalValue = itemsToSave.reduce((sum: number, i: any) => sum + (i.totalPrice || 0), 0);
 
       const payload = {
         supplierId: formState.supplierId,
@@ -118,6 +147,8 @@ export default function NewPurchaseOrderPage() {
         paymentTerms: formState.paymentTerms,
         items: itemsToSave,
         totalValue,
+        untaxedAmount,
+        totalTaxAmount,
         status: 'DRAFT'
       };
 
@@ -195,22 +226,21 @@ export default function NewPurchaseOrderPage() {
           <div className="lg:col-span-8 space-y-8">
             <LineItemsTable 
               isEditing={true}
-              items={formState.items}
+              items={computedItems}
               updateItem={updateItem}
               removeItem={removeItem}
               addItem={addItem}
-              variantOptions={products.flatMap(p => p.variants?.map((v: any) => ({
-                value: v.id,
-                label: `${p.name} (${v.sku})`,
-                description: `Stock: ${v.inventory || 0} ${p.uom || 'MT'} | Cost: ${formatCurrency(v.purchasePrice || p.purchasePrice || 0)}`
-              })) || [])}
+              products={products}
               formatCurrency={formatCurrency}
               getProductName={getProductName}
               marginPercentage={0}
               setMarginPercentage={() => {}}
-              costOfGoods={formState.items.reduce((s: number, i: any) => s + (i.total || 0), 0)}
+              costOfGoods={untaxedAmount}
               grossProfit={0}
-              totalValue={formState.items.reduce((s: number, i: any) => s + (i.total || 0), 0)}
+              totalValue={totalValue}
+              untaxedAmount={untaxedAmount}
+              totalTaxAmount={totalTaxAmount}
+              taxes={taxes}
               isPurchaseOrder={true}
             />
           </div>

@@ -331,7 +331,7 @@ export default function AdvancedReportBuilder() {
 
             {/* Column Selection */}
             <div className="mb-6">
-              <label className="text-[10px] font-mono text-white/50 uppercase tracking-widest block mb-2 flex justify-between">
+              <label className="text-[10px] font-mono text-white/50 uppercase tracking-widest block mb-2 justify-between">
                 <span>Display Columns</span>
                 <span className="text-blue-400">{config.columns?.length || 0} selected</span>
               </label>

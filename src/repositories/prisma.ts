@@ -284,6 +284,7 @@ export class PrismaRepository<T = any> {
       delete cleanData.customerId;
       delete cleanData.supplierId;
       delete cleanData.quotationId;
+      delete cleanData.actualDeliveryDate;
       
       const updated = await this.delegate.update({ where: { id }, data: cleanData, include: this.defaultIncludes });
       return this.mapToMock(updated);

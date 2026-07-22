@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { MasterPage } from '@/components/layout/master-page';
 import { PageProvider } from '@/components/layout/page-context';
 
