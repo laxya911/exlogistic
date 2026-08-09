@@ -106,7 +106,7 @@ export function CrudManager({ title, endpoint, icon: Icon, fields }: CrudManager
   };
 
   return (
-    <div className="glass p-8 lg:p-10 rounded-[2.5rem] border border-white/5 flex flex-col h-full">
+    <div className="glass p-8 lg:p-10 rounded-[2.5rem] border border-border flex flex-col h-full">
       <div className="flex justify-between items-center mb-8">
         <h3 className="text-xl font-display font-medium flex items-center gap-3">
           <Icon className="text-blue-500/80" size={24} />
@@ -122,14 +122,14 @@ export function CrudManager({ title, endpoint, icon: Icon, fields }: CrudManager
 
       <div className="space-y-4 flex-1">
         {loading ? (
-          <div className="text-sm text-white/40 animate-pulse">Loading {title.toLowerCase()}...</div>
+          <div className="text-sm text-muted-foreground/40 animate-pulse">Loading {title.toLowerCase()}...</div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {isAdding && (
               <div className="p-4 rounded-xl bg-black/20 border border-emerald-500/30 space-y-3">
                 {fields.map(f => (
                   <div key={f.key}>
-                    <label className="text-[10px] font-mono text-white/50 uppercase">{f.label}</label>
+                    <label className="text-[10px] font-mono text-muted-foreground/50 uppercase">{f.label}</label>
                     {f.type === 'boolean' ? (
                       <input 
                         type="checkbox"
@@ -141,7 +141,7 @@ export function CrudManager({ title, endpoint, icon: Icon, fields }: CrudManager
                       <select
                         value={newItem[f.key] || ''}
                         onChange={e => setNewItem({...newItem, [f.key]: e.target.value})}
-                        className="w-full bg-[#0c0c0c] border border-white/10 rounded-lg py-1.5 px-3 text-sm focus:outline-none focus:border-emerald-500/50 mt-1"
+                        className="w-full bg-background border border-border rounded-lg py-1.5 px-3 text-sm focus:outline-none focus:border-emerald-500/50 mt-1"
                       >
                         <option value="">Select...</option>
                         {f.options?.map(opt => (
@@ -153,7 +153,7 @@ export function CrudManager({ title, endpoint, icon: Icon, fields }: CrudManager
                         type={f.type === 'number' ? 'number' : 'text'}
                         value={newItem[f.key] || ''}
                         onChange={e => setNewItem({...newItem, [f.key]: f.type === 'number' ? Number(e.target.value) : e.target.value})}
-                        className="w-full bg-white/5 border border-white/10 rounded-lg py-1.5 px-3 text-sm focus:outline-none focus:border-emerald-500/50 mt-1"
+                        className="w-full bg-muted border border-border rounded-lg py-1.5 px-3 text-sm focus:outline-none focus:border-emerald-500/50 mt-1"
                         placeholder={`Enter ${f.label.toLowerCase()}`}
                       />
                     )}
@@ -163,7 +163,7 @@ export function CrudManager({ title, endpoint, icon: Icon, fields }: CrudManager
                   <button onClick={handleCreate} className="flex-1 bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 py-1.5 rounded-lg text-xs font-medium flex justify-center items-center gap-1 transition-colors">
                     <Check size={14} /> Save
                   </button>
-                  <button onClick={() => setIsAdding(false)} className="flex-1 bg-white/5 hover:bg-white/10 text-white/70 py-1.5 rounded-lg text-xs font-medium flex justify-center items-center gap-1 transition-colors">
+                  <button onClick={() => setIsAdding(false)} className="flex-1 bg-muted hover:bg-accent text-muted-foreground py-1.5 rounded-lg text-xs font-medium flex justify-center items-center gap-1 transition-colors">
                     <X size={14} /> Cancel
                   </button>
                 </div>
@@ -171,25 +171,25 @@ export function CrudManager({ title, endpoint, icon: Icon, fields }: CrudManager
             )}
 
             {items.map(item => (
-              <div key={item.id} className="p-4 rounded-xl bg-white/2 border border-white/5 hover:bg-white/5 transition-colors group relative">
+              <div key={item.id} className="p-4 rounded-xl bg-white/2 border border-border hover:bg-muted transition-colors group relative">
                 
                 {editingId === item.id ? (
                   <div className="space-y-3">
                     {fields.map(f => (
                       <div key={f.key}>
-                        <label className="text-[10px] font-mono text-white/50 uppercase">{f.label}</label>
+                        <label className="text-[10px] font-mono text-muted-foreground/50 uppercase">{f.label}</label>
                         {f.type === 'boolean' ? (
                           <input 
                             type="checkbox"
                             checked={editItem[f.key] || false}
                             onChange={e => setEditItem({...editItem, [f.key]: e.target.checked})}
-                            className="ml-3 rounded border-white/10 bg-white/5 text-blue-500 focus:ring-blue-500/20"
+                            className="ml-3 rounded border-border bg-muted text-blue-500 focus:ring-blue-500/20"
                           />
                         ) : f.type === 'select' ? (
                           <select
                             value={editItem[f.key] || ''}
                             onChange={e => setEditItem({...editItem, [f.key]: e.target.value})}
-                            className="w-full bg-white/5 border border-white/10 rounded-lg py-1.5 px-3 text-sm focus:outline-none focus:border-blue-500/50 mt-1 appearance-none"
+                            className="w-full bg-muted border border-border rounded-lg py-1.5 px-3 text-sm focus:outline-none focus:border-blue-500/50 mt-1 appearance-none"
                           >
                             <option value="">Select...</option>
                             {f.options?.map(opt => (
@@ -201,7 +201,7 @@ export function CrudManager({ title, endpoint, icon: Icon, fields }: CrudManager
                             type={f.type === 'number' ? 'number' : 'text'}
                             value={editItem[f.key] || ''}
                             onChange={e => setEditItem({...editItem, [f.key]: f.type === 'number' ? Number(e.target.value) : e.target.value})}
-                            className="w-full bg-white/5 border border-white/10 rounded-lg py-1.5 px-3 text-sm focus:outline-none focus:border-blue-500/50 mt-1"
+                            className="w-full bg-muted border border-border rounded-lg py-1.5 px-3 text-sm focus:outline-none focus:border-blue-500/50 mt-1"
                             placeholder={`Enter ${f.label.toLowerCase()}`}
                           />
                         )}
@@ -211,7 +211,7 @@ export function CrudManager({ title, endpoint, icon: Icon, fields }: CrudManager
                       <button onClick={() => handleUpdate(item.id)} className="flex-1 bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 py-1.5 rounded-lg text-xs font-medium flex justify-center items-center gap-1 transition-colors">
                         <Check size={14} /> Save
                       </button>
-                      <button onClick={() => { setEditingId(null); setEditItem({}); }} className="flex-1 bg-white/5 hover:bg-white/10 text-white/70 py-1.5 rounded-lg text-xs font-medium flex justify-center items-center gap-1 transition-colors">
+                      <button onClick={() => { setEditingId(null); setEditItem({}); }} className="flex-1 bg-muted hover:bg-accent text-muted-foreground py-1.5 rounded-lg text-xs font-medium flex justify-center items-center gap-1 transition-colors">
                         <X size={14} /> Cancel
                       </button>
                     </div>
@@ -236,7 +236,7 @@ export function CrudManager({ title, endpoint, icon: Icon, fields }: CrudManager
                     </div>
                     <div className="space-y-1">
                       {fields.map((f, i) => (
-                        <div key={f.key} className={i === 0 ? "font-medium text-blue-400" : "text-sm text-white/60"}>
+                        <div key={f.key} className={i === 0 ? "font-medium text-blue-400" : "text-sm text-muted-foreground/60"}>
                           {i !== 0 && <span className="text-[10px] uppercase font-mono mr-2 text-white/30">{f.label}:</span>}
                           {f.type === 'boolean' 
                             ? (item[f.key] ? 'Yes' : 'No')

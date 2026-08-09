@@ -1,5 +1,6 @@
 import React from 'react';
 import { DocumentParty } from '@/types/document';
+import { formatDate } from '@/lib/utils';
 
 interface HeaderProps {
   title: string;
@@ -40,12 +41,12 @@ export function DocumentHeader({ title, documentNo, date, validityDate, issuer, 
         <div className="grid grid-cols-2 gap-4">
           <div>
             <h3 className="text-xs font-mono uppercase tracking-widest text-[#999999] mb-1">Issue Date</h3>
-            <p className="text-sm text-black font-medium">{new Date(date).toLocaleDateString()}</p>
+            <p className="text-sm text-black font-medium">{formatDate(date)}</p>
           </div>
           {validityDate && (
             <div>
               <h3 className="text-xs font-mono uppercase tracking-widest text-[#999999] mb-1">Valid Until</h3>
-              <p className="text-sm text-black font-medium">{new Date(validityDate).toLocaleDateString()}</p>
+              <p className="text-sm text-black font-medium">{formatDate(validityDate)}</p>
             </div>
           )}
         </div>

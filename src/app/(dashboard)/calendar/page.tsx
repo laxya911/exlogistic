@@ -108,30 +108,30 @@ export default function CalendarPage() {
       <PageHeaderUpdater title="Commercial Calendar" subtitle="Strategic Export Schedule & Deadlines" />
       <div className="flex gap-6 h-[calc(100vh-20rem)] min-h-[550px]">
         {/* Main Calendar View */}
-        <div className="flex-1 glass rounded-[2.5rem] border border-white/5 flex flex-col overflow-hidden relative">
+        <div className="flex-1 glass rounded-[2.5rem] border border-border flex flex-col overflow-hidden relative">
           
           {/* Header */}
-          <div className="p-6 border-b border-white/5 bg-white/2 flex justify-between items-center shrink-0">
+          <div className="p-6 border-b border-border bg-white/2 flex justify-between items-center shrink-0">
             <div className="flex items-center gap-6">
               <h3 className="text-2xl font-display font-medium min-w-[200px]">
-                {months[currentDate.getMonth()]} <span className="text-white/80">{currentDate.getFullYear()}</span>
+                {months[currentDate.getMonth()]} <span className="text-muted-foreground">{currentDate.getFullYear()}</span>
               </h3>
-              <div className="flex items-center gap-2 bg-white/5 rounded-xl p-1 border border-white/5">
+              <div className="flex items-center gap-2 bg-muted rounded-xl p-1 border border-border">
                 <button 
                   onClick={() => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1))}
-                  className="p-1.5 rounded-lg hover:bg-white/10 transition-colors cursor-pointer border-none"
+                  className="p-1.5 rounded-lg hover:bg-accent transition-colors cursor-pointer border-none"
                 >
                   <ChevronLeft size={18} />
                 </button>
                 <button 
                   onClick={() => setCurrentDate(new Date())}
-                  className="px-3 py-1.5 rounded-lg hover:bg-white/10 transition-colors text-[10px] font-mono uppercase tracking-widest cursor-pointer border-none"
+                  className="px-3 py-1.5 rounded-lg hover:bg-accent transition-colors text-[10px] font-mono uppercase tracking-widest cursor-pointer border-none"
                 >
                   Today
                 </button>
                 <button 
                   onClick={() => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1))}
-                  className="p-1.5 rounded-lg hover:bg-white/10 transition-colors cursor-pointer border-none"
+                  className="p-1.5 rounded-lg hover:bg-accent transition-colors cursor-pointer border-none"
                 >
                   <ChevronRight size={18} />
                 </button>
@@ -148,7 +148,7 @@ export default function CalendarPage() {
                     "flex items-center gap-2 px-3 py-1.5 rounded-lg text-[9px] font-mono uppercase tracking-widest transition-colors border cursor-pointer",
                     activeFilters.has(type) 
                       ? `${config.bg} ${config.text} ${config.border}`
-                      : "bg-white/5 text-white/80 border-white/5 hover:bg-white/10"
+                      : "bg-muted text-muted-foreground border-border hover:bg-accent"
                   )}
                 >
                   <div className={cn("w-1.5 h-1.5 rounded-full", activeFilters.has(type) ? config.dot : 'bg-white/20')} />
@@ -159,16 +159,16 @@ export default function CalendarPage() {
           </div>
 
           {/* Grid Header */}
-          <div className="grid grid-cols-7 border-b border-white/5 shrink-0 bg-white/1">
+          <div className="grid grid-cols-7 border-b border-border shrink-0 bg-white/1">
             {['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'].map((d) => (
-              <div key={d} className="py-4 text-center text-[9px] font-mono uppercase tracking-widest text-white/80 border-r border-white/5 last:border-r-0">
+              <div key={d} className="py-4 text-center text-[9px] font-mono uppercase tracking-widest text-muted-foreground border-r border-border last:border-r-0">
                 {d}
               </div>
             ))}
           </div>
 
           {/* Grid Body */}
-          <div className="grid grid-cols-7 flex-1 overflow-y-auto custom-scrollbar bg-[#050505]">
+          <div className="grid grid-cols-7 flex-1 overflow-y-auto custom-scrollbar bg-background">
             {days.map((d, i) => {
               // Calculate correct date string for this cell
               const cellDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + d.monthOffset, d.day);
@@ -185,7 +185,7 @@ export default function CalendarPage() {
                   key={i} 
                   onClick={() => setSelectedDate(isSelected ? null : dateStr)}
                   className={cn(
-                    "min-h-[120px] p-2 border-r border-b border-white/5 transition-all cursor-pointer relative group",
+                    "min-h-[120px] p-2 border-r border-b border-border transition-all cursor-pointer relative group",
                     !d.current && "bg-white/1 opacity-40 hover:opacity-100",
                     isToday && "bg-blue-500/5",
                     isSelected && "ring-1 ring-inset ring-blue-500/50 bg-blue-500/10",
@@ -195,12 +195,12 @@ export default function CalendarPage() {
                   <div className="flex justify-between items-start mb-2 px-1">
                     <span className={cn(
                       "text-xs font-mono font-medium flex items-center justify-center w-6 h-6 rounded-full",
-                      isToday ? "bg-blue-500 text-black" : (d.current ? "text-white/90" : "text-white/80")
+                      isToday ? "bg-blue-500 text-black" : (d.current ? "text-foreground/90" : "text-muted-foreground")
                     )}>
                       {d.day}
                     </span>
                     {dayEvents.length > 0 && (
-                      <span className="text-[9px] font-mono text-white/80 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <span className="text-[9px] font-mono text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity">
                         {dayEvents.length}
                       </span>
                     )}
@@ -225,7 +225,7 @@ export default function CalendarPage() {
                       );
                     })}
                     {overflowCount > 0 && (
-                      <div className="px-2 py-1 text-[8px] font-mono text-white/70 uppercase tracking-widest text-center hover:text-white transition-colors">
+                      <div className="px-2 py-1 text-[8px] font-mono text-muted-foreground uppercase tracking-widest text-center hover:text-foreground transition-colors">
                         + {overflowCount} More
                       </div>
                     )}
@@ -243,36 +243,36 @@ export default function CalendarPage() {
               initial={{ opacity: 0, x: 20, width: 0 }}
               animate={{ opacity: 1, x: 0, width: 400 }}
               exit={{ opacity: 0, x: 20, width: 0 }}
-              className="glass rounded-[2.5rem] border border-white/5 overflow-hidden flex flex-col shrink-0"
+              className="glass rounded-[2.5rem] border border-border overflow-hidden flex flex-col shrink-0"
             >
-              <div className="p-6 border-b border-white/5 flex justify-between items-center bg-white/2">
+              <div className="p-6 border-b border-border flex justify-between items-center bg-white/2">
                 <div>
                   <h4 className="text-lg font-display font-medium">
                     {new Date(selectedDate).toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}
                   </h4>
-                  <p className="text-[10px] font-mono text-white/70 uppercase tracking-widest">
+                  <p className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest">
                     {selectedDayEvents.length} Events Scheduled
                   </p>
                 </div>
                 <button 
                   onClick={() => setSelectedDate(null)}
-                  className="p-2 rounded-xl hover:bg-white/10 transition-colors border-none cursor-pointer"
+                  className="p-2 rounded-xl hover:bg-accent transition-colors border-none cursor-pointer"
                 >
-                  <X size={16} className="text-white/80" />
+                  <X size={16} className="text-muted-foreground" />
                 </button>
               </div>
 
-              <div className="flex-1 overflow-y-auto p-6 space-y-4 custom-scrollbar bg-[#050505]">
+              <div className="flex-1 overflow-y-auto p-6 space-y-4 custom-scrollbar bg-background">
                 {selectedDayEvents.length === 0 ? (
                   <div className="py-20 text-center">
                     <CalendarIcon size={32} className="mx-auto text-white/10 mb-4" />
-                    <p className="text-[10px] font-mono text-white/80 uppercase tracking-widest">No events on this day</p>
+                    <p className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest">No events on this day</p>
                   </div>
                 ) : (
                   selectedDayEvents.map(e => {
                     const style = EVENT_COLORS[e.type];
                     return (
-                      <div key={e.id} className="p-4 rounded-2xl glass border border-white/5 hover:border-white/10 transition-colors group relative overflow-hidden">
+                      <div key={e.id} className="p-4 rounded-2xl glass border border-border hover:border-border transition-colors group relative overflow-hidden">
                         <div className={cn("absolute left-0 top-0 bottom-0 w-1", style.dot)} />
                         
                         <div className="flex items-start gap-3 pl-2">
@@ -281,13 +281,13 @@ export default function CalendarPage() {
                           </div>
                           <div className="flex-1 min-w-0">
                             <div className="flex justify-between items-start mb-1">
-                              <p className="text-sm font-bold text-white/90 leading-tight">{e.title}</p>
+                              <p className="text-sm font-bold text-foreground/90 leading-tight">{e.title}</p>
                             </div>
                             <div className="flex items-center gap-2 mt-2">
                               <span className={cn("text-[9px] font-mono uppercase tracking-widest border px-2 py-0.5 rounded", style.text, style.border, style.bg)}>
                                 {style.label}
                               </span>
-                              <span className="text-white/70 text-[10px]">•</span>
+                              <span className="text-muted-foreground text-[10px]">•</span>
                               <span className="text-[9px] font-mono text-blue-400 hover:underline cursor-pointer truncate">
                                 Ref: {e.relatedId}
                               </span>

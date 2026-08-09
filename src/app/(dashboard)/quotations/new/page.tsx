@@ -239,7 +239,7 @@ export default function NewQuotationPage() {
     }));
   }, [computedItems]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setValidationErrors([]);
 
@@ -295,7 +295,7 @@ export default function NewQuotationPage() {
         <div className="flex justify-between items-center">
           <button 
             onClick={() => router.push('/quotations')}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-[10px] font-mono uppercase text-white/90 hover:bg-white/10 hover:text-white cursor-pointer"
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-muted border border-border text-[10px] font-mono uppercase text-foreground/90 hover:bg-accent hover:text-foreground cursor-pointer"
           >
             <ArrowLeft size={12} /> Back to Vault
           </button>
@@ -317,15 +317,15 @@ export default function NewQuotationPage() {
 
         <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
           {/* Left panel: Parameters Configuration */}
-          <div className="lg:col-span-4 glass p-8 rounded-4xl border border-white/5 space-y-6">
-            <h3 className="text-sm font-mono text-white/70 uppercase tracking-widest flex items-center gap-2 pb-4 border-b border-white/5">
+          <div className="lg:col-span-4 glass p-8 rounded-4xl border border-border space-y-6">
+            <h3 className="text-sm font-mono text-muted-foreground uppercase tracking-widest flex items-center gap-2 pb-4 border-b border-border">
               <Calculator size={14} className="text-blue-400" /> Commercial Parameters
             </h3>
 
             <div className="space-y-4 font-mono text-xs">
               {/* Customer */}
               <div className="space-y-1.5">
-                <label className="text-[9px] text-white/80 uppercase">Customer CRM Node</label>
+                <label className="text-[9px] text-muted-foreground uppercase">Customer CRM Node</label>
                 <SearchableSelect
                   options={customers.map(c => ({ value: c.id, label: `${c.name} (${c.country})` }))}
                   value={customerId}
@@ -337,7 +337,7 @@ export default function NewQuotationPage() {
               {/* Incoterms & Container */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <label className="text-[9px] text-white/80 uppercase">Incoterm Rule</label>
+                  <label className="text-[9px] text-muted-foreground uppercase">Incoterm Rule</label>
                   <SearchableSelect
                     options={[
                       { value: 'FOB', label: 'FOB' },
@@ -353,7 +353,7 @@ export default function NewQuotationPage() {
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-[9px] text-white/80 uppercase">Container Allocation</label>
+                  <label className="text-[9px] text-muted-foreground uppercase">Container Allocation</label>
                   <SearchableSelect
                     options={[
                       { value: '20GP', label: "20' Dry Container (20GP)" },
@@ -370,7 +370,7 @@ export default function NewQuotationPage() {
               {/* Ports selection */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <label className="text-[9px] text-white/80 uppercase">Origin Port</label>
+                  <label className="text-[9px] text-muted-foreground uppercase">Origin Port</label>
                   <SearchableSelect
                     options={ports.map(p => ({ value: p.id, label: p.name }))}
                     value={originPortId}
@@ -380,7 +380,7 @@ export default function NewQuotationPage() {
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-[9px] text-white/80 uppercase">Discharge Port</label>
+                  <label className="text-[9px] text-muted-foreground uppercase">Discharge Port</label>
                   <SearchableSelect
                     options={ports.map(p => ({ value: p.id, label: p.name }))}
                     value={destinationPortId}
@@ -393,7 +393,7 @@ export default function NewQuotationPage() {
               {/* Currency & Payment Terms */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <label className="text-[9px] text-white/80 uppercase">Currency</label>
+                  <label className="text-[9px] text-muted-foreground uppercase">Currency</label>
                   <SearchableSelect
                     options={[
                       { value: 'USD', label: 'USD ($)' },
@@ -407,12 +407,12 @@ export default function NewQuotationPage() {
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-[9px] text-white/80 uppercase">Validity Period (Days)</label>
+                  <label className="text-[9px] text-muted-foreground uppercase">Validity Period (Days)</label>
                   <input 
                     type="number" 
                     value={validityDays}
                     onChange={(e) => setValidityDays(Number(e.target.value))}
-                    className="w-full bg-[#0b0b0b] border border-white/10 rounded-xl py-3 px-4 text-xs font-mono text-white focus:outline-none"
+                    className="w-full bg-background border border-border rounded-xl py-3 px-4 text-xs font-mono text-foreground focus:outline-none"
                     min={1}
                   />
                 </div>
@@ -420,7 +420,7 @@ export default function NewQuotationPage() {
 
               {/* Payment Terms */}
               <div className="space-y-1.5">
-                <label className="text-[9px] text-white/80 uppercase">Invoicing Payment Terms</label>
+                <label className="text-[9px] text-muted-foreground uppercase">Invoicing Payment Terms</label>
                 <SearchableSelect
                   options={[
                     { value: '30 Days Net', label: '30 Days Net' },
@@ -435,12 +435,12 @@ export default function NewQuotationPage() {
 
               {/* Remarks */}
               <div className="space-y-1.5">
-                <label className="text-[9px] text-white/80 uppercase">Negotiation Remarks / Clauses</label>
+                <label className="text-[9px] text-muted-foreground uppercase">Negotiation Remarks / Clauses</label>
                 <textarea 
                   value={remarks}
                   onChange={(e) => setRemarks(e.target.value)}
                   placeholder="Insert special cargo parameters or quality inspection requirements..."
-                  className="w-full bg-[#0b0b0b] border border-white/10 rounded-xl p-3 text-xs font-mono text-white focus:outline-none min-h-[80px]"
+                  className="w-full bg-background border border-border rounded-xl p-3 text-xs font-mono text-foreground focus:outline-none min-h-20"
                 />
               </div>
             </div>
@@ -448,15 +448,15 @@ export default function NewQuotationPage() {
 
           {/* Right Panel: Items Configurator Grid */}
           <div className="lg:col-span-8 space-y-8">
-            <div className="glass p-8 rounded-4xl border border-white/5 space-y-6">
-              <div className="flex justify-between items-center pb-4 border-b border-white/5">
-                <h3 className="text-sm font-mono text-white/70 uppercase tracking-widest flex items-center gap-2">
+            <div className="glass p-8 rounded-4xl border border-border space-y-6">
+              <div className="flex justify-between items-center pb-4 border-b border-border">
+                <h3 className="text-sm font-mono text-muted-foreground uppercase tracking-widest flex items-center gap-2">
                   <Layers size={14} className="text-blue-400" /> Commodity Line Items
                 </h3>
                 <button 
                   type="button" 
                   onClick={addItemRow}
-                  className="flex items-center gap-1 px-3 py-1.5 bg-white/5 hover:bg-white/10 text-white/90 hover:text-white rounded-lg text-[9px] font-mono uppercase cursor-pointer border-none"
+                  className="flex items-center gap-1 px-3 py-1.5 bg-muted hover:bg-accent text-foreground/90 hover:text-foreground rounded-lg text-[9px] font-mono uppercase cursor-pointer border-none"
                 >
                   <Plus size={12} /> Add Commodity
                 </button>
@@ -465,10 +465,10 @@ export default function NewQuotationPage() {
               {/* Items Table Form */}
               <div className="space-y-4">
                 {items.map((item, idx) => (
-                  <div key={idx} className="flex flex-wrap gap-4 items-center p-4 bg-white/2 rounded-2xl border border-white/5 relative group">
+                  <div key={idx} className="flex flex-wrap gap-4 items-center p-4 bg-white/2 rounded-2xl border border-border relative group">
                     {/* Commodity selector */}
-                    <div className="flex-1 min-w-[200px] space-y-1">
-                      <label className="text-[8px] font-mono text-white/70 uppercase">Commodity Product</label>
+                    <div className="flex-1 min-w-50 space-y-1">
+                      <label className="text-[8px] font-mono text-muted-foreground uppercase">Commodity Product</label>
                       <SearchableSelect
                         options={products.map(p => ({
                           value: p.id, 
@@ -480,7 +480,7 @@ export default function NewQuotationPage() {
                         className="text-xs"
                       />
                       {item.variantId && item.productId && (
-                        <p className="text-[10px] text-white/50 mt-1 pl-1">
+                        <p className="text-[10px] text-muted-foreground/50 mt-1 pl-1">
                           SKU: {computedItems[idx]?.sku}
                         </p>
                       )}
@@ -488,23 +488,23 @@ export default function NewQuotationPage() {
 
                     {/* Quantity */}
                     <div className="w-24 space-y-1">
-                      <label className="text-[8px] font-mono text-white/70 uppercase">Quantity (MT)</label>
+                      <label className="text-[8px] font-mono text-muted-foreground uppercase">Quantity (MT)</label>
                       <input 
                         type="number"
                         value={item.quantity}
                         onChange={(e) => updateItemField(idx, 'quantity', Number(e.target.value))}
-                        className="w-full bg-[#0b0b0b] border border-white/10 rounded-lg p-2.5 text-xs text-white font-mono focus:outline-none text-right"
+                        className="w-full bg-background border border-border rounded-lg p-2.5 text-xs text-foreground font-mono focus:outline-none text-right"
                         min={1}
                       />
                     </div>
 
                     {/* Tax Dropdown */}
                     <div className="w-32 space-y-1">
-                      <label className="text-[8px] font-mono text-white/70 uppercase">Tax</label>
+                      <label className="text-[8px] font-mono text-muted-foreground uppercase">Tax</label>
                       <select
                         value={item.taxId || ''}
                         onChange={(e) => updateItemField(idx, 'taxId', e.target.value)}
-                        className="w-full bg-[#0b0b0b] border border-white/10 rounded-lg p-2.5 text-xs text-white font-mono focus:outline-none"
+                        className="w-full bg-background border border-border rounded-lg p-2.5 text-xs text-foreground font-mono focus:outline-none"
                       >
                         <option value="">No Tax</option>
                         {taxes.map(t => (
@@ -515,12 +515,12 @@ export default function NewQuotationPage() {
 
                     {/* Cost price */}
                     <div className="w-28 space-y-1">
-                      <label className="text-[8px] font-mono text-white/70 uppercase">Unit Price</label>
+                      <label className="text-[8px] font-mono text-muted-foreground uppercase">Unit Price</label>
                       <input 
                         type="number"
                         value={item.unitPrice}
                         onChange={(e) => updateItemField(idx, 'unitPrice', Number(e.target.value))}
-                        className="w-full bg-[#0b0b0b] border border-white/10 rounded-lg p-2.5 text-xs text-white font-mono focus:outline-none text-right"
+                        className="w-full bg-background border border-border rounded-lg p-2.5 text-xs text-foreground font-mono focus:outline-none text-right"
                         min={0.01}
                         step="0.01"
                       />
@@ -528,10 +528,10 @@ export default function NewQuotationPage() {
 
                     {/* Total cost */}
                     <div className="w-28 text-right pr-4 space-y-1">
-                      <p className="text-[8px] font-mono text-white/70 uppercase">Gross Total</p>
-                      <p className="font-sans font-bold text-xs text-white py-2.5">{formatCurrency(computedItems[idx]?.totalPrice || 0)}</p>
+                      <p className="text-[8px] font-mono text-muted-foreground uppercase">Gross Total</p>
+                      <p className="font-sans font-bold text-xs text-foreground py-2.5">{formatCurrency(computedItems[idx]?.totalPrice || 0)}</p>
                       {computedItems[idx]?.taxAmount > 0 && (
-                        <p className="text-[9px] text-white/40 mt-[-8px]">Tax: {formatCurrency(computedItems[idx]?.taxAmount)}</p>
+                        <p className="text-[9px] text-muted-foreground/40 -mt-2">Tax: {formatCurrency(computedItems[idx]?.taxAmount)}</p>
                       )}
                     </div>
 
@@ -552,8 +552,8 @@ export default function NewQuotationPage() {
             </div>
 
             {/* Profit Margin Simulator cost sheet */}
-            <div className="glass p-8 rounded-4xl border border-white/5 space-y-6">
-              <h3 className="text-sm font-mono text-white/70 uppercase tracking-widest flex items-center gap-2 pb-4 border-b border-white/5">
+            <div className="glass p-8 rounded-4xl border border-border space-y-6">
+              <h3 className="text-sm font-mono text-muted-foreground uppercase tracking-widest flex items-center gap-2 pb-4 border-b border-border">
                 <TrendingUp size={14} className="text-emerald-400" /> Margin & Cost Sheet Simulator
               </h3>
 
@@ -561,7 +561,7 @@ export default function NewQuotationPage() {
                 {/* Margin slider */}
                 <div className="space-y-4">
                   <div className="flex justify-between items-center text-xs font-mono">
-                    <span className="text-white/70">Target Profit Margin</span>
+                    <span className="text-muted-foreground">Target Profit Margin</span>
                     <span className="text-emerald-400 font-bold">{marginPercentage}%</span>
                   </div>
                   <input 
@@ -570,9 +570,9 @@ export default function NewQuotationPage() {
                     max="60" 
                     value={marginPercentage}
                     onChange={(e) => handleMarginChange(Number(e.target.value))}
-                    className="w-full accent-emerald-500 cursor-pointer bg-white/10 rounded-lg h-2"
+                    className="w-full accent-emerald-500 cursor-pointer bg-accent rounded-lg h-2"
                   />
-                  <div className="flex justify-between text-[9px] text-white/70 font-mono">
+                  <div className="flex justify-between text-[9px] text-muted-foreground font-mono">
                     <span>5% Minimum</span>
                     <span>30% Standard</span>
                     <span>60% Aggressive</span>
@@ -580,9 +580,9 @@ export default function NewQuotationPage() {
                 </div>
 
                 {/* Final calculations ledger */}
-                <div className="space-y-3 font-mono text-xs border-l border-white/5 pl-8">
+                <div className="space-y-3 font-mono text-xs border-l border-border pl-8">
                   <div className="flex justify-between">
-                    <span className="text-white/80">Base Freight/Cargo Cost</span>
+                    <span className="text-muted-foreground">Base Freight/Cargo Cost</span>
                     <span>{formatCurrency(costOfGoods)}</span>
                   </div>
                   <div className="flex justify-between text-emerald-400 font-bold">
@@ -590,27 +590,27 @@ export default function NewQuotationPage() {
                     <span>+ {formatCurrency(grossProfit)}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-white/80">Untaxed Amount</span>
+                    <span className="text-muted-foreground">Untaxed Amount</span>
                     <span>{formatCurrency(untaxedAmount)}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-white/80">Total Tax Amount</span>
+                    <span className="text-muted-foreground">Total Tax Amount</span>
                     <span>{formatCurrency(totalTaxAmount)}</span>
                   </div>
-                  <div className="h-px bg-white/5 my-2" />
+                  <div className="h-px bg-muted my-2" />
                   <div className="flex justify-between text-sm font-bold">
-                    <span className="text-white/80">Proposed Contract Value (Gross)</span>
+                    <span className="text-muted-foreground">Proposed Contract Value (Gross)</span>
                     <span className="text-blue-400 font-sans text-base">{formatCurrency(totalValue)}</span>
                   </div>
                 </div>
               </div>
 
               {/* Submit Buttons */}
-              <div className="flex justify-end gap-4 pt-6 border-t border-white/5">
+              <div className="flex justify-end gap-4 pt-6 border-t border-border">
                 <button
                   type="button"
                   onClick={() => router.push('/quotations')}
-                  className="px-6 py-3 bg-white/5 border border-white/10 rounded-xl text-[10px] font-mono uppercase tracking-widest hover:bg-white/10 cursor-pointer border-none text-white"
+                  className="px-6 py-3 bg-muted border border-border rounded-xl text-[10px] font-mono uppercase tracking-widest hover:bg-accent cursor-pointer border-none text-foreground"
                 >
                   Cancel
                 </button>

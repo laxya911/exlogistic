@@ -75,10 +75,10 @@ export default function Dashboard() {
 
   if (loading && !data) {
     return (
-      <div className="min-h-screen bg-[#080808] flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
           <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-          <p className="text-[10px] font-mono uppercase tracking-[0.3em] text-white/70">Aggregating Matrix Data...</p>
+          <p className="text-[10px] font-mono uppercase tracking-[0.3em] text-muted-foreground">Aggregating Matrix Data...</p>
         </div>
       </div>
     );
@@ -98,14 +98,14 @@ export default function Dashboard() {
         {/* Controls Row */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
           {/* Tabs */}
-          <div className="flex p-1 bg-white/5 rounded-2xl border border-white/5">
+          <div className="flex p-1 bg-muted rounded-2xl border border-border">
             {tabs.map(tab => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
                 className={cn(
                   "px-6 py-2.5 rounded-xl text-xs font-medium transition-all",
-                  activeTab === tab ? "bg-white/10 text-white shadow-md" : "text-white/50 hover:text-white/80 hover:bg-white/5"
+                  activeTab === tab ? "bg-accent text-foreground shadow-md" : "text-muted-foreground/50 hover:text-muted-foreground hover:bg-muted"
                 )}
               >
                 {tab}
@@ -115,7 +115,7 @@ export default function Dashboard() {
 
           {/* Timeframe & Actions */}
           <div className="flex items-center gap-3">
-            <div ref={datePickerRef} className="flex items-center bg-white/5 border border-white/10 rounded-xl p-1 relative">
+            <div ref={datePickerRef} className="flex items-center bg-muted border border-border rounded-xl p-1 relative">
               {(['MONTH', 'QUARTER', 'YEAR', 'CUSTOM'] as Timeframe[]).map((tf) => (
                 <button
                   key={tf}
@@ -126,7 +126,7 @@ export default function Dashboard() {
                   }}
                   className={cn(
                     "px-4 py-1.5 rounded-lg text-[10px] font-mono font-bold uppercase tracking-widest transition-colors",
-                    timeframe === tf ? "bg-blue-500 text-white" : "text-white/50 hover:text-white/90 hover:bg-white/5"
+                    timeframe === tf ? "bg-blue-500 text-white" : "text-muted-foreground/50 hover:text-foreground/90 hover:bg-muted"
                   )}
                 >
                   {tf === 'CUSTOM' ? <Filter size={12} className="inline mr-1" /> : null}
@@ -141,25 +141,25 @@ export default function Dashboard() {
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: 10 }}
-                    className="absolute top-full right-0 mt-2 p-4 bg-[#0a0a0a]/95 backdrop-blur-3xl border border-white/10 rounded-2xl shadow-2xl z-50 w-64"
+                    className="absolute top-full right-0 mt-2 p-4 bg-background/95 backdrop-blur-3xl border border-border rounded-2xl shadow-2xl z-50 w-64"
                   >
                     <div className="space-y-4">
                       <div>
-                        <label className="text-[10px] font-mono text-white/50 uppercase tracking-widest block mb-1">Start Date</label>
+                        <label className="text-[10px] font-mono text-muted-foreground/50 uppercase tracking-widest block mb-1">Start Date</label>
                         <input 
                           type="date" 
                           value={customStart}
                           onChange={e => setCustomStart(e.target.value)}
-                          className="w-full bg-white/5 border border-white/10 rounded-lg p-2 text-xs font-mono text-white focus:border-blue-500 focus:outline-none"
+                          className="w-full bg-muted border border-border rounded-lg p-2 text-xs font-mono text-foreground focus:border-blue-500 focus:outline-none"
                         />
                       </div>
                       <div>
-                        <label className="text-[10px] font-mono text-white/50 uppercase tracking-widest block mb-1">End Date</label>
+                        <label className="text-[10px] font-mono text-muted-foreground/50 uppercase tracking-widest block mb-1">End Date</label>
                         <input 
                           type="date" 
                           value={customEnd}
                           onChange={e => setCustomEnd(e.target.value)}
-                          className="w-full bg-white/5 border border-white/10 rounded-lg p-2 text-xs font-mono text-white focus:border-blue-500 focus:outline-none"
+                          className="w-full bg-muted border border-border rounded-lg p-2 text-xs font-mono text-foreground focus:border-blue-500 focus:outline-none"
                         />
                       </div>
                       <button 
@@ -177,7 +177,7 @@ export default function Dashboard() {
             <button 
               onClick={handleRefresh}
               disabled={isRefreshing}
-              className="flex items-center gap-2 px-4 py-2.5 bg-white/5 border border-white/10 rounded-xl text-[10px] font-mono font-bold uppercase tracking-widest hover:bg-white/10 transition-colors cursor-pointer disabled:opacity-50"
+              className="flex items-center gap-2 px-4 py-2.5 bg-muted border border-border rounded-xl text-[10px] font-mono font-bold uppercase tracking-widest hover:bg-accent transition-colors cursor-pointer disabled:opacity-50"
             >
               <RefreshCw size={14} className={cn(isRefreshing && "animate-spin text-blue-500")} />
             </button>
@@ -215,17 +215,17 @@ function OverviewTab({ data, kpis, COLORS }: { data: any, kpis: any[], COLORS: s
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {kpis.map((kpi, i) => (
           <Link href={kpi.link} key={i}>
-            <div className="glass p-8 rounded-4xl border border-white/5 relative overflow-hidden group hover:border-white/20 hover:bg-white/5 transition-all cursor-pointer h-full">
+            <div className="glass p-8 rounded-4xl border border-border relative overflow-hidden group hover:border-border hover:bg-muted transition-all cursor-pointer h-full">
               <div className="flex justify-between items-start mb-6">
                 <div className={`p-3 rounded-xl ${kpi.bg} ${kpi.color}`}>
                   <kpi.icon size={22} />
                 </div>
-                <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                  <ArrowUpRight size={14} className="text-white/90" />
+                <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                  <ArrowUpRight size={14} className="text-foreground/90" />
                 </div>
               </div>
-              <p className="text-3xl font-display font-medium tracking-tight mb-2 text-white">{kpi.value}</p>
-              <p className="text-[10px] font-mono uppercase tracking-[0.2em] text-white/70">{kpi.label}</p>
+              <p className="text-3xl font-display font-medium tracking-tight mb-2 text-foreground">{kpi.value}</p>
+              <p className="text-[10px] font-mono uppercase tracking-[0.2em] text-muted-foreground">{kpi.label}</p>
               <div className="absolute bottom-0 left-0 w-full h-1 bg-linear-to-r from-transparent via-white/10 to-transparent scale-x-0 group-hover:scale-x-100 transition-transform duration-700"></div>
             </div>
           </Link>
@@ -233,11 +233,11 @@ function OverviewTab({ data, kpis, COLORS }: { data: any, kpis: any[], COLORS: s
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        <div className="lg:col-span-8 glass p-8 lg:p-10 rounded-[2.5rem] border border-white/5">
+        <div className="lg:col-span-8 glass p-8 lg:p-10 rounded-[2.5rem] border border-border">
           <div className="flex justify-between items-center mb-10">
             <div>
               <h3 className="text-xl font-display font-medium mb-1">Revenue Trend</h3>
-              <p className="text-[10px] font-mono text-white/70 uppercase tracking-widest">Financial Performance Index</p>
+              <p className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest">Financial Performance Index</p>
             </div>
           </div>
           <div className="h-[350px]">
@@ -259,29 +259,29 @@ function OverviewTab({ data, kpis, COLORS }: { data: any, kpis: any[], COLORS: s
           </div>
         </div>
 
-        <div className="lg:col-span-4 glass p-8 lg:p-10 rounded-[2.5rem] border border-white/5">
+        <div className="lg:col-span-4 glass p-8 lg:p-10 rounded-[2.5rem] border border-border">
           <h3 className="text-xl font-display font-medium mb-1">System Health</h3>
-          <p className="text-[10px] font-mono text-white/70 uppercase tracking-widest mb-8">Matrix Audit Log</p>
+          <p className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest mb-8">Matrix Audit Log</p>
           
           <div className="space-y-6">
             {data.auditLogs?.length > 0 ? data.auditLogs.map((log: any, i: number) => (
               <div key={i} className="flex gap-4 relative group">
-                <div className="absolute left-[15px] top-8 bottom-[-24px] w-px bg-white/5 group-last:hidden"></div>
-                <div className="w-8 h-8 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center shrink-0 text-white/70 z-10">
+                <div className="absolute left-[15px] top-8 bottom-[-24px] w-px bg-muted group-last:hidden"></div>
+                <div className="w-8 h-8 rounded-lg bg-muted border border-border flex items-center justify-center shrink-0 text-muted-foreground z-10">
                   <History size={14} />
                 </div>
                 <div className="pb-2">
-                  <p className="text-[9px] font-mono text-white/80 uppercase tracking-widest mb-1.5 flex items-center gap-2">
+                  <p className="text-[9px] font-mono text-muted-foreground uppercase tracking-widest mb-1.5 flex items-center gap-2">
                     <Clock size={10} /> {new Date(log.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} • {log.userName}
                   </p>
-                  <p className="text-xs text-white/80 leading-relaxed">
+                  <p className="text-xs text-muted-foreground leading-relaxed">
                     <span className="uppercase font-mono text-[9px] mr-2 px-1.5 py-0.5 rounded border text-blue-400 bg-blue-500/10 border-blue-500/20">[{log.action}]</span>
                     {log.details}
                   </p>
                 </div>
               </div>
             )) : (
-              <div className="py-12 text-center text-white/70"><p className="text-[10px] font-mono uppercase tracking-widest">No recent audit logs</p></div>
+              <div className="py-12 text-center text-muted-foreground"><p className="text-[10px] font-mono uppercase tracking-widest">No recent audit logs</p></div>
             )}
           </div>
         </div>
@@ -295,46 +295,46 @@ function SalesPipelineTab({ data }: { data: any }) {
     <div className="space-y-8">
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Sales Pipeline */}
-        <div className="glass p-8 lg:p-10 rounded-[2.5rem] border border-white/5">
+        <div className="glass p-8 lg:p-10 rounded-[2.5rem] border border-border">
           <div className="flex justify-between items-center mb-8">
             <h3 className="text-xl font-display font-medium">Sales Pipeline</h3>
             <Link href="/sales-orders" className="text-[10px] font-mono uppercase text-blue-500 hover:underline">All Sales</Link>
           </div>
           <div className="space-y-4">
             {data.pipeline.sales.length > 0 ? data.pipeline.sales.slice(0, 10).map((so: any) => (
-              <div key={so.id} className="flex justify-between items-center p-4 bg-white/5 rounded-2xl border border-white/5 hover:border-white/10 transition-colors">
+              <div key={so.id} className="flex justify-between items-center p-4 bg-muted rounded-2xl border border-border hover:border-border transition-colors">
                 <div className="flex items-center gap-4">
                   <div className="p-3 bg-blue-500/10 text-blue-400 rounded-xl"><CheckCircle2 size={16} /></div>
                   <div>
-                    <p className="font-bold text-sm text-white">{so.no}</p>
-                    <p className="text-[10px] font-mono uppercase text-white/50">{so.status}</p>
+                    <p className="font-bold text-sm text-foreground">{so.no}</p>
+                    <p className="text-[10px] font-mono uppercase text-muted-foreground/50">{so.status}</p>
                   </div>
                 </div>
                 <p className="font-mono text-sm font-bold text-emerald-400">{formatCurrency(so.value)}</p>
               </div>
-            )) : <div className="p-8 text-center text-white/50 text-sm">No sales data in timeframe.</div>}
+            )) : <div className="p-8 text-center text-muted-foreground/50 text-sm">No sales data in timeframe.</div>}
           </div>
         </div>
 
         {/* Purchase Pipeline */}
-        <div className="glass p-8 lg:p-10 rounded-[2.5rem] border border-white/5">
+        <div className="glass p-8 lg:p-10 rounded-[2.5rem] border border-border">
           <div className="flex justify-between items-center mb-8">
             <h3 className="text-xl font-display font-medium">Purchase Pipeline</h3>
             <Link href="/purchase-orders" className="text-[10px] font-mono uppercase text-blue-500 hover:underline">All Purchases</Link>
           </div>
           <div className="space-y-4">
             {data.pipeline.purchases.length > 0 ? data.pipeline.purchases.slice(0, 10).map((po: any) => (
-              <div key={po.id} className="flex justify-between items-center p-4 bg-white/5 rounded-2xl border border-white/5 hover:border-white/10 transition-colors">
+              <div key={po.id} className="flex justify-between items-center p-4 bg-muted rounded-2xl border border-border hover:border-border transition-colors">
                 <div className="flex items-center gap-4">
                   <div className="p-3 bg-amber-500/10 text-amber-400 rounded-xl"><Package size={16} /></div>
                   <div>
-                    <p className="font-bold text-sm text-white">{po.no}</p>
-                    <p className="text-[10px] font-mono uppercase text-white/50">{po.status}</p>
+                    <p className="font-bold text-sm text-foreground">{po.no}</p>
+                    <p className="text-[10px] font-mono uppercase text-muted-foreground/50">{po.status}</p>
                   </div>
                 </div>
                 <p className="font-mono text-sm font-bold text-rose-400">-{formatCurrency(po.value)}</p>
               </div>
-            )) : <div className="p-8 text-center text-white/50 text-sm">No purchase data in timeframe.</div>}
+            )) : <div className="p-8 text-center text-muted-foreground/50 text-sm">No purchase data in timeframe.</div>}
           </div>
         </div>
       </div>
@@ -347,9 +347,9 @@ function LogisticsTab({ data, COLORS }: { data: any, COLORS: string[] }) {
     <div className="space-y-8">
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
         {/* Shipment Status Distribution */}
-        <div className="lg:col-span-4 glass p-8 lg:p-10 rounded-[2.5rem] border border-white/5">
+        <div className="lg:col-span-4 glass p-8 lg:p-10 rounded-[2.5rem] border border-border">
           <h3 className="text-xl font-display font-medium mb-1">Status Distribution</h3>
-          <p className="text-[10px] font-mono text-white/70 uppercase tracking-widest mb-10">Current Freight Status</p>
+          <p className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest mb-10">Current Freight Status</p>
           <div className="h-[250px]">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
@@ -367,16 +367,16 @@ function LogisticsTab({ data, COLORS }: { data: any, COLORS: string[] }) {
               <div key={i} className="flex justify-between items-center text-[10px] font-mono uppercase tracking-tighter">
                 <div className="flex items-center gap-3">
                   <div className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: COLORS[i % COLORS.length] }}></div>
-                  <span className="text-white/90">{s.name}</span>
+                  <span className="text-foreground/90">{s.name}</span>
                 </div>
-                <span className="text-white font-bold bg-white/5 px-2 py-0.5 rounded">{s.value}</span>
+                <span className="text-foreground font-bold bg-muted px-2 py-0.5 rounded">{s.value}</span>
               </div>
             ))}
           </div>
         </div>
 
         {/* Global Shipment Log */}
-        <div className="lg:col-span-8 glass p-8 lg:p-10 rounded-[2.5rem] border border-white/5">
+        <div className="lg:col-span-8 glass p-8 lg:p-10 rounded-[2.5rem] border border-border">
           <div className="flex justify-between items-center mb-8">
             <h3 className="text-xl font-display font-medium">Global Shipment Log</h3>
             <Link href="/shipments" className="text-[10px] font-mono uppercase text-blue-500 hover:underline">All Freight</Link>
@@ -384,7 +384,7 @@ function LogisticsTab({ data, COLORS }: { data: any, COLORS: string[] }) {
           
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs font-mono whitespace-nowrap">
-              <thead className="text-white/70 uppercase tracking-widest border-b border-white/10">
+              <thead className="text-muted-foreground uppercase tracking-widest border-b border-border">
                 <tr>
                   <th className="pb-4 px-4 font-normal">Tracking ID</th>
                   <th className="pb-4 px-4 font-normal">Transit Route</th>
@@ -397,17 +397,17 @@ function LogisticsTab({ data, COLORS }: { data: any, COLORS: string[] }) {
                   <tr key={i} className="group hover:bg-white/2 transition-colors">
                     <td className="py-4 px-4">
                       <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center text-white/70 group-hover:text-blue-400 group-hover:border-blue-400/30 transition-colors">
+                        <div className="w-8 h-8 rounded-lg bg-muted border border-border flex items-center justify-center text-muted-foreground group-hover:text-blue-400 group-hover:border-blue-400/30 transition-colors">
                           <Box size={14} />
                         </div>
-                        <span className="font-sans font-bold text-sm text-white/90">{shp.shipmentNo}</span>
+                        <span className="font-sans font-bold text-sm text-foreground/90">{shp.shipmentNo}</span>
                       </div>
                     </td>
                     <td className="py-4 px-4">
-                      <div className="flex items-center gap-2 text-white/90">
-                        <span className="px-2 py-0.5 rounded bg-white/5">{shp.originPortId}</span>
-                        <ChevronRight size={10} className="text-white/70" />
-                        <span className="px-2 py-0.5 rounded bg-white/5">{shp.destinationPortId}</span>
+                      <div className="flex items-center gap-2 text-foreground/90">
+                        <span className="px-2 py-0.5 rounded bg-muted">{shp.originPortId}</span>
+                        <ChevronRight size={10} className="text-muted-foreground" />
+                        <span className="px-2 py-0.5 rounded bg-muted">{shp.destinationPortId}</span>
                       </div>
                     </td>
                     <td className="py-4 px-4">
@@ -415,18 +415,18 @@ function LogisticsTab({ data, COLORS }: { data: any, COLORS: string[] }) {
                         "px-2 py-1 rounded text-[9px] font-bold uppercase tracking-widest border",
                         shp.status === 'DELIVERED' ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" :
                         shp.status === 'TRANSIT' ? "bg-blue-500/10 text-blue-400 border-blue-500/20" :
-                        "bg-white/5 text-white/90 border-white/10"
+                        "bg-muted text-foreground/90 border-border"
                       )}>{shp.status}</span>
                     </td>
                     <td className="py-4 px-4 text-right">
                       <Link href={`/shipments/${shp.id}`}>
-                        <button className="p-2.5 rounded-lg bg-white/5 hover:bg-blue-500/10 hover:text-blue-400 text-white/70 transition-colors border-none cursor-pointer">
+                        <button className="p-2.5 rounded-lg bg-muted hover:bg-blue-500/10 hover:text-blue-400 text-muted-foreground transition-colors border-none cursor-pointer">
                           <ArrowUpRight size={14} />
                         </button>
                       </Link>
                     </td>
                   </tr>
-                )) : <tr><td colSpan={4} className="py-8 text-center text-white/50 text-sm">No shipments in this timeframe.</td></tr>}
+                )) : <tr><td colSpan={4} className="py-8 text-center text-muted-foreground/50 text-sm">No shipments in this timeframe.</td></tr>}
               </tbody>
             </table>
           </div>
@@ -438,11 +438,11 @@ function LogisticsTab({ data, COLORS }: { data: any, COLORS: string[] }) {
 
 function FinancialsTab({ data }: { data: any }) {
   return (
-    <div className="glass p-8 lg:p-10 rounded-[2.5rem] border border-white/5">
+    <div className="glass p-8 lg:p-10 rounded-[2.5rem] border border-border">
       <div className="flex justify-between items-center mb-10">
         <div>
           <h3 className="text-xl font-display font-medium mb-1">Detailed Revenue & Profit Margin Analysis</h3>
-          <p className="text-[10px] font-mono text-white/70 uppercase tracking-widest">Financial Performance Index</p>
+          <p className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest">Financial Performance Index</p>
         </div>
       </div>
       <div className="h-[450px]">

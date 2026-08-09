@@ -2,12 +2,12 @@ import { useState, useEffect, useMemo } from 'react';
 import { Forwarder } from '@/types';
 import { toast } from 'sonner';
 
-export type ForwarderSortField = 'name' | 'rating' | 'country' | 'updatedDate';
+export type ForwarderSortField = 'name' | 'performanceRating' | 'averageLeadTime' | 'updatedDate';
 export type SortOrder = 'asc' | 'desc';
 
 export interface ForwarderFilterState {
   countries: string[];
-  ports: string[];
+  certifications: string[];
   statuses: string[];
 }
 
@@ -17,12 +17,12 @@ export function useForwarders() {
 
   // Search
   const [searchQuery, setSearchQuery] = useState('');
-  const [searchField, setSearchField] = useState<'all' | 'name' | 'email' | 'country'>('all');
+  const [searchField, setSearchField] = useState<'all' | 'name' | 'email' | 'country' | 'certification'>('all');
 
   // Filters
   const [filters, setFilters] = useState<ForwarderFilterState>({
     countries: [],
-    ports: [],
+    certifications: [],
     statuses: []
   });
 
@@ -32,6 +32,10 @@ export function useForwarders() {
 
   // Selection
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 15;
 
   // Undo stack
   const [undoStack, setUndoStack] = useState<Forwarder[]>([]);
@@ -62,9 +66,9 @@ export function useForwarders() {
         body: JSON.stringify(payload)
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to onboard agency');
+      if (!res.ok) throw new Error(data.error || 'Failed to onboard forwarder');
 
-      toast.success(`Agency ${data.name} onboarded successfully`);
+      toast.success(`Vendor ${data.name} onboarded successfully`);
       await fetchForwarders();
       return { success: true, data };
     } catch (e: any) {
@@ -81,9 +85,9 @@ export function useForwarders() {
         body: JSON.stringify(payload)
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to update agency');
+      if (!res.ok) throw new Error(data.error || 'Failed to update vendor');
 
-      toast.success(`Agency ${data.name} profile updated`);
+      toast.success(`Vendor ${data.name} profile updated`);
       await fetchForwarders();
       return { success: true, data };
     } catch (e: any) {
@@ -102,7 +106,7 @@ export function useForwarders() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Archive failed');
 
-      toast.success(`Agency ${data.name} account archived`);
+      toast.success(`Vendor ${data.name} account archived`);
       await fetchForwarders();
     } catch (e: any) {
       toast.error(e.message);
@@ -119,7 +123,7 @@ export function useForwarders() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Restore failed');
 
-      toast.success(`Agency ${data.name} account restored`);
+      toast.success(`Vendor ${data.name} account restored`);
       await fetchForwarders();
     } catch (e: any) {
       toast.error(e.message);
@@ -136,7 +140,7 @@ export function useForwarders() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Duplication failed');
 
-      toast.success(`Duplicated agency profile: ${data.name}`);
+      toast.success(`Duplicated vendor profile: ${data.name}`);
       await fetchForwarders();
       return data;
     } catch (e: any) {
@@ -147,7 +151,7 @@ export function useForwarders() {
 
   const softDeleteForwarder = async (id: string) => {
     try {
-      const target = forwarders.find(f => f.id === id);
+      const target = forwarders.find(s => s.id === id);
       if (!target) return;
 
       const res = await fetch(`/api/forwarders/${id}`, { method: 'DELETE' });
@@ -155,7 +159,7 @@ export function useForwarders() {
 
       setUndoStack(prev => [...prev, target]);
 
-      toast.success(`Agency ${target.name} soft-deleted`, {
+      toast.success(`Vendor ${target.name} soft-deleted`, {
         action: {
           label: 'Undo Delete',
           onClick: () => undoDelete(target.id)
@@ -177,8 +181,8 @@ export function useForwarders() {
       });
       if (!res.ok) throw new Error('Failed to restore');
 
-      toast.success('Agency restored successfully');
-      setUndoStack(prev => prev.filter(f => f.id !== targetId));
+      toast.success('Vendor restored successfully');
+      setUndoStack(prev => prev.filter(s => s.id !== targetId));
       await fetchForwarders();
     } catch (e: any) {
       toast.error('Restore failed');
@@ -249,20 +253,22 @@ export function useForwarders() {
   };
 
   const bulkExportCSV = (ids: string[]) => {
-    const targets = forwarders.filter(f => ids.includes(f.id));
+    const targets = forwarders.filter(s => ids.includes(s.id));
     if (targets.length === 0) return;
 
-    const headers = ['ID', 'Name', 'Email', 'Phone', 'Country', 'Rating', 'Preferred Ports', 'Tax ID', 'Website'];
-    const rows = targets.map(f => [
-      f.id,
-      `"${f.name.replace(/"/g, '""')}"`,
-      f.email,
-      f.phone,
-      f.country,
-      f.rating,
-      `"${f.preferredPorts.join(', ')}"`,
-      f.taxId || '',
-      f.website || ''
+    const headers = ['ID', 'Name', 'Email', 'Phone', 'Country', 'Performance Rating', 'Lead Time (Days)', 'Certifications', 'Payment Terms', 'Tax ID', 'Website'];
+    const rows = targets.map(s => [
+      s.id,
+      `"${s.name.replace(/"/g, '""')}"`,
+      s.email,
+      s.phone,
+      s.country,
+      s.performanceRating,
+      s.averageLeadTime,
+      `"${s.certifications.join(', ')}"`,
+      s.paymentTerms,
+      s.taxId || '',
+      s.website || ''
     ]);
 
     const csvContent = [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
@@ -285,36 +291,38 @@ export function useForwarders() {
     // Search query
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase().trim();
-      result = result.filter(f => {
-        if (searchField === 'name') return f.name.toLowerCase().includes(q);
-        if (searchField === 'email') return f.email.toLowerCase().includes(q);
-        if (searchField === 'country') return f.country.toLowerCase().includes(q);
+      result = result.filter(s => {
+        if (searchField === 'name') return s.name.toLowerCase().includes(q);
+        if (searchField === 'email') return s.email.toLowerCase().includes(q);
+        if (searchField === 'country') return s.country.toLowerCase().includes(q);
+        if (searchField === 'certification') return s.certifications.some(c => c.toLowerCase().includes(q));
         // Default All
         return (
-          f.name.toLowerCase().includes(q) ||
-          f.email.toLowerCase().includes(q) ||
-          f.country.toLowerCase().includes(q)
+          s.name.toLowerCase().includes(q) ||
+          s.email.toLowerCase().includes(q) ||
+          s.country.toLowerCase().includes(q) ||
+          s.certifications.some(c => c.toLowerCase().includes(q))
         );
       });
     }
 
     // Filter rules
     if (filters.countries.length > 0) {
-      result = result.filter(f => filters.countries.includes(f.country));
+      result = result.filter(s => filters.countries.includes(s.country));
     }
-    if (filters.ports.length > 0) {
-      result = result.filter(f => f.preferredPorts.some(p => filters.ports.includes(p)));
+    if (filters.certifications.length > 0) {
+      result = result.filter(s => s.certifications.some(c => filters.certifications.includes(c)));
     }
     if (filters.statuses.length > 0) {
-      result = result.filter(f => filters.statuses.includes(f.entityStatus));
+      result = result.filter(s => filters.statuses.includes(s.entityStatus));
     }
 
     // Sorting rule
     result.sort((a, b) => {
       let comparison = 0;
       if (sortBy === 'name') comparison = a.name.localeCompare(b.name);
-      else if (sortBy === 'rating') comparison = b.rating - a.rating; // default high to low
-      else if (sortBy === 'country') comparison = a.country.localeCompare(b.country);
+      else if (sortBy === 'performanceRating') comparison = b.performanceRating - a.performanceRating; // default high to low
+      else if (sortBy === 'averageLeadTime') comparison = a.averageLeadTime - b.averageLeadTime;
       else if (sortBy === 'updatedDate') comparison = new Date(a.updatedAt).getTime() - new Date(b.updatedAt).getTime();
 
       return sortOrder === 'asc' ? comparison : -comparison;
@@ -323,11 +331,23 @@ export function useForwarders() {
     return result;
   }, [forwarders, searchQuery, searchField, filters, sortBy, sortOrder]);
 
-  const filterOptions = useMemo(() => {
-    const countries = Array.from(new Set(forwarders.map(f => f.country)));
-    const ports = Array.from(new Set(forwarders.flatMap(f => f.preferredPorts)));
+  // Reset to page 1 on filter/search change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, searchField, filters, sortBy, sortOrder]);
 
-    return { countries, ports };
+  const paginatedForwarders = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return processedForwarders.slice(start, start + pageSize);
+  }, [processedForwarders, currentPage]);
+
+  const totalPages = Math.ceil(processedForwarders.length / pageSize);
+
+  const filterOptions = useMemo(() => {
+    const countries = Array.from(new Set(forwarders.map(s => s.country)));
+    const certifications = Array.from(new Set(forwarders.flatMap(s => s.certifications)));
+
+    return { countries, certifications };
   }, [forwarders]);
 
   const toggleSelect = (id: string) => {
@@ -343,9 +363,13 @@ export function useForwarders() {
   };
 
   return {
-    forwarders: processedForwarders,
+    forwarders: paginatedForwarders,
+    allProcessedForwarders: processedForwarders,
     rawForwarders: forwarders,
     loading,
+    currentPage,
+    setCurrentPage,
+    totalPages,
     searchQuery,
     setSearchQuery,
     searchField,
@@ -361,6 +385,7 @@ export function useForwarders() {
     setSelectedIds,
     toggleSelect,
     selectAll,
+    fetchForwarders,
 
     // CRUD & operations
     createForwarder,

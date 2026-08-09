@@ -203,7 +203,7 @@ export default function SettingsPage() {
                 "w-full flex items-center gap-4 px-6 py-4 rounded-2xl text-[10px] font-mono uppercase tracking-widest transition-all cursor-pointer border-none",
                 activeTab === tab.id 
                   ? "bg-blue-500 text-black shadow-lg shadow-blue-500/20 font-bold" 
-                  : "bg-transparent text-white/70 hover:text-white hover:bg-white/5"
+                  : "bg-transparent text-muted-foreground hover:text-foreground hover:bg-muted"
               )}
             >
               <tab.icon size={16} />
@@ -237,73 +237,73 @@ export default function SettingsPage() {
               {/* Organization Tab */}
               {activeTab === 'organization' && (
                 <>
-                  <div className="glass p-8 lg:p-10 rounded-[2.5rem] border border-white/5">
+                  <div className="glass p-8 lg:p-10 rounded-[2.5rem] border border-border">
                     <h3 className="text-xl font-display font-medium mb-8">Corporate Identity</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                       <div className="space-y-2">
-                        <label className="text-[9px] font-mono text-white/70 uppercase tracking-widest px-1">Entity Name</label>
+                        <label className="text-[9px] font-mono text-muted-foreground uppercase tracking-widest px-1">Entity Name</label>
                         <input 
                           type="text" 
                           value={orgData.name} 
                           onChange={e => setOrgData({...orgData, name: e.target.value})}
-                          className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-sm focus:outline-none focus:border-blue-500/50 transition-all text-white" 
+                          className="w-full bg-muted border border-border rounded-xl py-3 px-4 text-sm focus:outline-none focus:border-blue-500/50 transition-all text-foreground" 
                         />
                       </div>
                       <div className="space-y-2">
-                        <label className="text-[9px] font-mono text-white/70 uppercase tracking-widest px-1">Tax Identification</label>
+                        <label className="text-[9px] font-mono text-muted-foreground uppercase tracking-widest px-1">Tax Identification</label>
                         <input 
                           type="text" 
                           value={orgData.taxId}
                           onChange={e => setOrgData({...orgData, taxId: e.target.value})}
-                          className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-sm focus:outline-none focus:border-blue-500/50 transition-all text-white" 
+                          className="w-full bg-muted border border-border rounded-xl py-3 px-4 text-sm focus:outline-none focus:border-blue-500/50 transition-all text-foreground" 
                         />
                       </div>
                       <div className="space-y-2 md:col-span-2">
-                        <label className="text-[9px] font-mono text-white/70 uppercase tracking-widest px-1">Registered Address</label>
+                        <label className="text-[9px] font-mono text-muted-foreground uppercase tracking-widest px-1">Registered Address</label>
                         <input 
                           type="text" 
                           value={orgData.address}
                           onChange={e => setOrgData({...orgData, address: e.target.value})}
-                          className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-sm focus:outline-none focus:border-blue-500/50 transition-all text-white" 
+                          className="w-full bg-muted border border-border rounded-xl py-3 px-4 text-sm focus:outline-none focus:border-blue-500/50 transition-all text-foreground" 
                         />
                       </div>
                       <div className="space-y-2">
-                        <label className="text-[9px] font-mono text-white/70 uppercase tracking-widest px-1">Base Currency</label>
+                        <label className="text-[9px] font-mono text-muted-foreground uppercase tracking-widest px-1">Base Currency</label>
                         <select 
                           value={orgData.currency}
                           onChange={e => setOrgData({...orgData, currency: e.target.value})}
-                          className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-sm focus:outline-none focus:border-blue-500/50 transition-all text-white"
+                          className="w-full bg-muted border border-border rounded-xl py-3 px-4 text-sm focus:outline-none focus:border-blue-500/50 transition-all text-foreground"
                         >
-                          <option className="bg-[#0c0c0c]" value="USD">USD - US Dollar</option>
-                          <option className="bg-[#0c0c0c]" value="EUR">EUR - Euro</option>
-                          <option className="bg-[#0c0c0c]" value="SGD">SGD - Singapore Dollar</option>
+                          <option className="bg-background" value="USD">USD - US Dollar</option>
+                          <option className="bg-background" value="EUR">EUR - Euro</option>
+                          <option className="bg-background" value="SGD">SGD - Singapore Dollar</option>
                         </select>
                       </div>
                       <div className="space-y-2">
-                        <label className="text-[9px] font-mono text-white/70 uppercase tracking-widest px-1">System Timezone</label>
+                        <label className="text-[9px] font-mono text-muted-foreground uppercase tracking-widest px-1">System Timezone</label>
                         <select 
                           value={orgData.timezone}
                           onChange={e => setOrgData({...orgData, timezone: e.target.value})}
-                          className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-sm focus:outline-none focus:border-blue-500/50 transition-all text-white"
+                          className="w-full bg-muted border border-border rounded-xl py-3 px-4 text-sm focus:outline-none focus:border-blue-500/50 transition-all text-foreground"
                         >
-                          <option className="bg-[#0c0c0c]" value="Asia/Singapore">Asia/Singapore (UTC+8)</option>
-                          <option className="bg-[#0c0c0c]" value="America/New_York">America/New_York (UTC-5)</option>
-                          <option className="bg-[#0c0c0c]" value="Europe/London">Europe/London (UTC+0)</option>
+                          <option className="bg-background" value="Asia/Singapore">Asia/Singapore (UTC+8)</option>
+                          <option className="bg-background" value="America/New_York">America/New_York (UTC-5)</option>
+                          <option className="bg-background" value="Europe/London">Europe/London (UTC+0)</option>
                         </select>
                       </div>
                     </div>
                   </div>
 
-                  <div className="glass p-8 lg:p-10 rounded-[2.5rem] border border-white/5">
+                  <div className="glass p-8 lg:p-10 rounded-[2.5rem] border border-border">
                     <h3 className="text-xl font-display font-medium mb-8">Regional Hubs</h3>
                     <div className="space-y-4">
                       {['Singapore (Global HQ)', 'Tokyo (Asia Pacific)', 'Los Angeles (Americas)'].map((hub, i) => (
-                        <div key={i} className="flex justify-between items-center p-4 rounded-2xl bg-white/2 border border-white/5">
+                        <div key={i} className="flex justify-between items-center p-4 rounded-2xl bg-white/2 border border-border">
                           <div className="flex items-center gap-4">
                             <Globe size={16} className="text-blue-500/60" />
                             <span className="text-sm font-medium">{hub}</span>
                           </div>
-                          {i === 0 && <span className="text-[9px] font-mono text-white/80 uppercase border border-white/10 px-2 py-0.5 rounded">Primary Node</span>}
+                          {i === 0 && <span className="text-[9px] font-mono text-muted-foreground uppercase border border-border px-2 py-0.5 rounded">Primary Node</span>}
                         </div>
                       ))}
                     </div>
@@ -314,7 +314,7 @@ export default function SettingsPage() {
               {/* Business Rules Tab */}
               {activeTab === 'business-rules' && (
                 <>
-                  <div className="glass p-8 lg:p-10 rounded-[2.5rem] border border-white/5">
+                  <div className="glass p-8 lg:p-10 rounded-[2.5rem] border border-border">
                     <h3 className="text-xl font-display font-medium mb-8">Approval Matrix</h3>
                     <div className="space-y-6">
                       {[
@@ -323,16 +323,16 @@ export default function SettingsPage() {
                         { key: 'marginAlert', label: 'Margin Sensitivity Alert', desc: 'Trigger Neural Alert if trade margin drops below 15%' },
                         { key: 'requireInsurance', label: 'Mandatory Insurance', desc: 'Block CIF/CIP shipments if insurance certificates are missing' },
                       ].map((rule) => (
-                        <div key={rule.key} className="flex justify-between items-center p-6 rounded-2xl bg-white/2 border border-white/5 hover:border-white/10 transition-colors">
+                        <div key={rule.key} className="flex justify-between items-center p-6 rounded-2xl bg-white/2 border border-border hover:border-border transition-colors">
                           <div className="pr-4">
                             <p className="text-sm font-bold mb-1">{rule.label}</p>
-                            <p className="text-xs text-white/70">{rule.desc}</p>
+                            <p className="text-xs text-muted-foreground">{rule.desc}</p>
                           </div>
                           <div 
                             onClick={() => setRules(prev => ({ ...prev, [rule.key]: !(prev as any)[rule.key] }))}
                             className={cn(
                               "w-12 h-6 shrink-0 rounded-full relative transition-all cursor-pointer",
-                              (rules as any)[rule.key] ? "bg-blue-500" : "bg-white/10"
+                              (rules as any)[rule.key] ? "bg-blue-500" : "bg-accent"
                             )}
                           >
                             <div className={cn(
@@ -345,7 +345,7 @@ export default function SettingsPage() {
                     </div>
                   </div>
 
-                  <div className="glass p-8 lg:p-10 rounded-[2.5rem] border border-white/5">
+                  <div className="glass p-8 lg:p-10 rounded-[2.5rem] border border-border">
                     <h3 className="text-xl font-display font-medium mb-8">Document Identification</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       {[
@@ -354,16 +354,16 @@ export default function SettingsPage() {
                         { key: 'po', label: 'Purchase Order Prefix' },
                         { key: 'shp', label: 'Shipment Prefix' },
                       ].map((doc) => (
-                        <div key={doc.key} className="p-4 rounded-2xl bg-white/2 border border-white/5 flex items-center justify-between">
+                        <div key={doc.key} className="p-4 rounded-2xl bg-white/2 border border-border flex items-center justify-between">
                           <div className="flex items-center gap-4">
-                            <Hash size={16} className="text-white/70" />
-                            <span className="text-xs font-mono uppercase text-white/90">{doc.label}</span>
+                            <Hash size={16} className="text-muted-foreground" />
+                            <span className="text-xs font-mono uppercase text-foreground/90">{doc.label}</span>
                           </div>
                           <input 
                             type="text" 
                             value={(prefixes as any)[doc.key]}
                             onChange={e => setPrefixes(prev => ({ ...prev, [doc.key]: e.target.value }))}
-                            className="w-24 bg-white/5 border border-white/10 rounded-lg py-1.5 px-3 text-xs text-right font-mono text-white focus:outline-none focus:border-blue-500/50" 
+                            className="w-24 bg-muted border border-border rounded-lg py-1.5 px-3 text-xs text-right font-mono text-foreground focus:outline-none focus:border-blue-500/50" 
                           />
                         </div>
                       ))}
@@ -440,23 +440,23 @@ export default function SettingsPage() {
 
               {/* System Prefs Tab */}
               {activeTab === 'system' && (
-                <div className="glass p-8 lg:p-10 rounded-[2.5rem] border border-white/5">
+                <div className="glass p-8 lg:p-10 rounded-[2.5rem] border border-border">
                   <h3 className="text-xl font-display font-medium mb-8">Interface & Experience</h3>
                   
                   <div className="space-y-8">
                     <div className="space-y-4">
-                      <label className="text-[9px] font-mono text-white/70 uppercase tracking-widest px-1">Visual Theme</label>
+                      <label className="text-[9px] font-mono text-muted-foreground uppercase tracking-widest px-1">Visual Theme</label>
                       <div className="grid grid-cols-3 gap-4 max-w-lg">
                         <button 
                           onClick={() => setSysPrefs({...sysPrefs, theme: 'dark'})}
-                          className={cn("flex flex-col items-center gap-3 p-4 rounded-xl border transition-all cursor-pointer", sysPrefs.theme === 'dark' ? "bg-white/10 border-white/30" : "bg-transparent border-white/5 hover:bg-white/5 text-white/70")}
+                          className={cn("flex flex-col items-center gap-3 p-4 rounded-xl border transition-all cursor-pointer", sysPrefs.theme === 'dark' ? "bg-accent border-border" : "bg-transparent border-border hover:bg-muted text-muted-foreground")}
                         >
                           <Moon size={20} />
                           <span className="text-[9px] font-mono uppercase tracking-widest">Dark Matrix</span>
                         </button>
                         <button 
                           onClick={() => setSysPrefs({...sysPrefs, theme: 'light'})}
-                          className={cn("flex flex-col items-center gap-3 p-4 rounded-xl border transition-all cursor-pointer opacity-50", sysPrefs.theme === 'light' ? "bg-white/10 border-white/30 text-white" : "bg-transparent border-white/5 hover:bg-white/5 text-white/70")}
+                          className={cn("flex flex-col items-center gap-3 p-4 rounded-xl border transition-all cursor-pointer opacity-50", sysPrefs.theme === 'light' ? "bg-accent border-border text-foreground" : "bg-transparent border-border hover:bg-muted text-muted-foreground")}
                           disabled
                           title="Light mode currently disabled"
                         >
@@ -465,7 +465,7 @@ export default function SettingsPage() {
                         </button>
                         <button 
                           onClick={() => setSysPrefs({...sysPrefs, theme: 'system'})}
-                          className={cn("flex flex-col items-center gap-3 p-4 rounded-xl border transition-all cursor-pointer", sysPrefs.theme === 'system' ? "bg-white/10 border-white/30 text-white" : "bg-transparent border-white/5 hover:bg-white/5 text-white/70")}
+                          className={cn("flex flex-col items-center gap-3 p-4 rounded-xl border transition-all cursor-pointer", sysPrefs.theme === 'system' ? "bg-accent border-border text-foreground" : "bg-transparent border-border hover:bg-muted text-muted-foreground")}
                         >
                           <Monitor size={20} />
                           <span className="text-[9px] font-mono uppercase tracking-widest">System</span>
@@ -473,16 +473,16 @@ export default function SettingsPage() {
                       </div>
                     </div>
 
-                    <div className="flex justify-between items-center p-6 rounded-2xl bg-white/2 border border-white/5">
+                    <div className="flex justify-between items-center p-6 rounded-2xl bg-white/2 border border-border">
                       <div>
                         <p className="text-sm font-bold mb-1">Compact Mode</p>
-                        <p className="text-xs text-white/70">Reduce padding across all data tables and lists</p>
+                        <p className="text-xs text-muted-foreground">Reduce padding across all data tables and lists</p>
                       </div>
                       <div 
                         onClick={() => setSysPrefs(prev => ({ ...prev, compactMode: !prev.compactMode }))}
                         className={cn(
                           "w-12 h-6 shrink-0 rounded-full relative transition-all cursor-pointer",
-                          sysPrefs.compactMode ? "bg-blue-500" : "bg-white/10"
+                          sysPrefs.compactMode ? "bg-blue-500" : "bg-accent"
                         )}
                       >
                         <div className={cn("absolute top-1 w-4 h-4 rounded-full bg-white transition-all", sysPrefs.compactMode ? "right-1" : "left-1")}></div>
@@ -490,15 +490,15 @@ export default function SettingsPage() {
                     </div>
 
                     <div className="space-y-4 max-w-sm">
-                      <label className="text-[9px] font-mono text-white/70 uppercase tracking-widest px-1">Date Format</label>
+                      <label className="text-[9px] font-mono text-muted-foreground uppercase tracking-widest px-1">Date Format</label>
                       <select 
                         value={sysPrefs.dateFormat}
                         onChange={e => setSysPrefs({...sysPrefs, dateFormat: e.target.value})}
-                        className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-sm focus:outline-none focus:border-blue-500/50 transition-all text-white"
+                        className="w-full bg-muted border border-border rounded-xl py-3 px-4 text-sm focus:outline-none focus:border-blue-500/50 transition-all text-foreground"
                       >
-                        <option className="bg-[#0c0c0c]" value="YYYY-MM-DD">YYYY-MM-DD (2025-10-24)</option>
-                        <option className="bg-[#0c0c0c]" value="DD/MM/YYYY">DD/MM/YYYY (24/10/2025)</option>
-                        <option className="bg-[#0c0c0c]" value="MM/DD/YYYY">MM/DD/YYYY (10/24/2025)</option>
+                        <option className="bg-background" value="YYYY-MM-DD">YYYY-MM-DD (2025-10-24)</option>
+                        <option className="bg-background" value="DD/MM/YYYY">DD/MM/YYYY (24/10/2025)</option>
+                        <option className="bg-background" value="MM/DD/YYYY">MM/DD/YYYY (10/24/2025)</option>
                       </select>
                     </div>
                   </div>
@@ -507,7 +507,7 @@ export default function SettingsPage() {
 
               {/* Notifications Tab */}
               {activeTab === 'notifications' && (
-                <div className="glass p-8 lg:p-10 rounded-[2.5rem] border border-white/5">
+                <div className="glass p-8 lg:p-10 rounded-[2.5rem] border border-border">
                   <h3 className="text-xl font-display font-medium mb-8">Alert Routing & Delivery</h3>
                   
                   <div className="space-y-8">
@@ -519,14 +519,14 @@ export default function SettingsPage() {
                           { key: 'emailSO', label: 'Sales Order Confirmation', desc: 'Send acknowledgement to customer' },
                           { key: 'emailDailyReport', label: 'Daily Status Digest', desc: 'Morning summary of all pending shipments' },
                         ].map((rule) => (
-                          <div key={rule.key} className="flex justify-between items-center p-4 rounded-xl bg-white/2 border border-white/5">
+                          <div key={rule.key} className="flex justify-between items-center p-4 rounded-xl bg-white/2 border border-border">
                             <div>
                               <p className="text-sm font-bold">{rule.label}</p>
-                              <p className="text-[10px] text-white/70 mt-1">{rule.desc}</p>
+                              <p className="text-[10px] text-muted-foreground mt-1">{rule.desc}</p>
                             </div>
                             <div 
                               onClick={() => setNotifications(prev => ({ ...prev, [rule.key]: !(prev as any)[rule.key] }))}
-                              className={cn("w-10 h-5 shrink-0 rounded-full relative transition-all cursor-pointer", (notifications as any)[rule.key] ? "bg-blue-500" : "bg-white/10")}
+                              className={cn("w-10 h-5 shrink-0 rounded-full relative transition-all cursor-pointer", (notifications as any)[rule.key] ? "bg-blue-500" : "bg-accent")}
                             >
                               <div className={cn("absolute top-1 w-3 h-3 rounded-full bg-white transition-all", (notifications as any)[rule.key] ? "right-1" : "left-1")}></div>
                             </div>
@@ -538,14 +538,14 @@ export default function SettingsPage() {
                     <div>
                       <h4 className="flex items-center gap-2 text-[10px] font-mono uppercase tracking-widest text-emerald-400 mb-4"><Smartphone size={14}/> Push Directives (System)</h4>
                       <div className="space-y-4">
-                        <div className="flex justify-between items-center p-4 rounded-xl bg-white/2 border border-white/5">
+                        <div className="flex justify-between items-center p-4 rounded-xl bg-white/2 border border-border">
                           <div>
                             <p className="text-sm font-bold">Shipment Status Changes</p>
-                            <p className="text-[10px] text-white/70 mt-1">Receive system alerts when containers cross milestones</p>
+                            <p className="text-[10px] text-muted-foreground mt-1">Receive system alerts when containers cross milestones</p>
                           </div>
                           <div 
                             onClick={() => setNotifications(prev => ({ ...prev, pushShipment: !prev.pushShipment }))}
-                            className={cn("w-10 h-5 shrink-0 rounded-full relative transition-all cursor-pointer", notifications.pushShipment ? "bg-emerald-500" : "bg-white/10")}
+                            className={cn("w-10 h-5 shrink-0 rounded-full relative transition-all cursor-pointer", notifications.pushShipment ? "bg-emerald-500" : "bg-accent")}
                           >
                             <div className={cn("absolute top-1 w-3 h-3 rounded-full bg-white transition-all", notifications.pushShipment ? "right-1" : "left-1")}></div>
                           </div>
@@ -559,11 +559,11 @@ export default function SettingsPage() {
 
               {/* Roles & Security Tab */}
               {activeTab === 'roles' && (
-                <div className="glass p-8 lg:p-10 rounded-[2.5rem] border border-white/5">
+                <div className="glass p-8 lg:p-10 rounded-[2.5rem] border border-border">
                   <div className="flex justify-between items-center mb-8">
                     <div>
                       <h3 className="text-xl font-display font-medium">Roles & Security</h3>
-                      <p className="text-[10px] font-mono text-white/50 uppercase tracking-widest mt-2">Access Control Matrix</p>
+                      <p className="text-[10px] font-mono text-muted-foreground/50 uppercase tracking-widest mt-2">Access Control Matrix</p>
                     </div>
                     <a href="/settings/users" className="bg-blue-600 hover:bg-blue-500 text-white px-5 py-2.5 rounded-xl text-sm font-medium transition-all shadow-[0_0_20px_rgba(37,99,235,0.2)]">
                       Manage Users Matrix
@@ -571,35 +571,35 @@ export default function SettingsPage() {
                   </div>
                   
                   <div className="space-y-6">
-                    <div className="p-6 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-between">
+                    <div className="p-6 rounded-2xl bg-muted border border-border flex items-center justify-between">
                       <div>
                         <div className="flex items-center gap-2">
                           <ShieldCheck size={16} className="text-emerald-400" />
                           <span className="font-bold">Super Admin</span>
                         </div>
-                        <p className="text-xs text-white/60 mt-1">Unrestricted access to all modules and system settings.</p>
+                        <p className="text-xs text-muted-foreground/60 mt-1">Unrestricted access to all modules and system settings.</p>
                       </div>
                       <span className="px-3 py-1 bg-emerald-500/10 text-emerald-400 text-[10px] font-mono uppercase rounded border border-emerald-500/20">System Role</span>
                     </div>
 
-                    <div className="p-6 rounded-2xl bg-white/2 border border-white/5 flex items-center justify-between">
+                    <div className="p-6 rounded-2xl bg-white/2 border border-border flex items-center justify-between">
                       <div>
                         <div className="flex items-center gap-2">
                           <ShieldCheck size={16} className="text-blue-400" />
                           <span className="font-bold">Manager</span>
                         </div>
-                        <p className="text-xs text-white/60 mt-1">Department-level manager with elevated privileges.</p>
+                        <p className="text-xs text-muted-foreground/60 mt-1">Department-level manager with elevated privileges.</p>
                       </div>
                       <button className="text-xs text-blue-400 hover:text-blue-300 font-medium">Edit Permissions</button>
                     </div>
 
-                    <div className="p-6 rounded-2xl bg-white/2 border border-white/5 flex items-center justify-between">
+                    <div className="p-6 rounded-2xl bg-white/2 border border-border flex items-center justify-between">
                       <div>
                         <div className="flex items-center gap-2">
-                          <ShieldCheck size={16} className="text-white/60" />
-                          <span className="font-bold text-white/80">Staff</span>
+                          <ShieldCheck size={16} className="text-muted-foreground/60" />
+                          <span className="font-bold text-muted-foreground">Staff</span>
                         </div>
-                        <p className="text-xs text-white/60 mt-1">General operational staff with standard access.</p>
+                        <p className="text-xs text-muted-foreground/60 mt-1">General operational staff with standard access.</p>
                       </div>
                       <button className="text-xs text-blue-400 hover:text-blue-300 font-medium">Edit Permissions</button>
                     </div>

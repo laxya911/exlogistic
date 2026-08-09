@@ -49,7 +49,7 @@ export default function TasksPage() {
       case 'HIGH': return 'text-rose-400 border-rose-400/20 bg-rose-400/10';
       case 'MEDIUM': return 'text-amber-400 border-amber-400/20 bg-amber-400/10';
       case 'LOW': return 'text-emerald-400 border-emerald-400/20 bg-emerald-400/10';
-      default: return 'text-white/70 border-white/5 bg-white/5';
+      default: return 'text-muted-foreground border-border bg-muted';
     }
   };
 
@@ -88,7 +88,7 @@ export default function TasksPage() {
     }
   };
 
-  const handleCreateTask = async (e: React.FormEvent) => {
+  const handleCreateTask = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!formData.title) return toast.error('Title is required');
     
@@ -128,25 +128,25 @@ export default function TasksPage() {
   return (
     <>
       <PageHeaderUpdater title="Operation Board" subtitle="System Tasks, Reminders & Follow-ups" />
-      <div className="flex gap-6 h-[calc(100vh-20rem)] min-h-[550px]">
+      <div className="flex gap-6 h-[calc(100vh-20rem)] min-h-137.5">
         {/* Main Area */}
         <div className="flex-1 space-y-6 overflow-hidden flex flex-col">
           
           {/* Header KPIs & Actions */}
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4 shrink-0">
             <div className="flex gap-4">
-              <div className="glass px-6 py-4 rounded-2xl border border-white/5 flex flex-col items-start min-w-[140px]">
-                <p className="text-[10px] font-mono text-white/70 uppercase tracking-widest mb-1">Pending</p>
-                <p className="text-3xl font-display font-medium text-white">{pendingCount}</p>
+              <div className="glass px-6 py-4 rounded-2xl border border-border flex flex-col items-start min-w-35">
+                <p className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest mb-1">Pending</p>
+                <p className="text-3xl font-display font-medium text-foreground">{pendingCount}</p>
               </div>
-              <div className="glass px-6 py-4 rounded-2xl border border-white/5 flex flex-col items-start min-w-[140px]">
-                <p className="text-[10px] font-mono text-white/70 uppercase tracking-widest mb-1">Completed</p>
-                <p className="text-3xl font-display font-medium text-white/70">{completedCount}</p>
+              <div className="glass px-6 py-4 rounded-2xl border border-border flex flex-col items-start min-w-35">
+                <p className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest mb-1">Completed</p>
+                <p className="text-3xl font-display font-medium text-muted-foreground">{completedCount}</p>
               </div>
             </div>
             
             <div className="flex gap-4">
-              <div className="flex gap-2 p-1 bg-white/5 rounded-xl border border-white/5">
+              <div className="flex gap-2 p-1 bg-muted rounded-xl border border-border">
                 {['pending', 'completed'].map((tab) => (
                   <button
                     key={tab}
@@ -155,7 +155,7 @@ export default function TasksPage() {
                       "px-8 py-2.5 rounded-lg text-[10px] font-mono uppercase tracking-widest transition-all cursor-pointer border-none",
                       activeTab === tab 
                         ? "bg-blue-500 text-black shadow-lg shadow-blue-500/20 font-bold" 
-                        : "bg-transparent text-white/70 hover:text-white"
+                        : "bg-transparent text-muted-foreground hover:text-foreground"
                     )}
                   >
                     {tab}
@@ -182,8 +182,8 @@ export default function TasksPage() {
                   exit={{ opacity: 0, scale: 0.95 }}
                   key={task.id} 
                   className={cn(
-                    "glass p-5 rounded-2xl border transition-all flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 group hover:border-white/20",
-                    task.isCompleted ? "border-white/5 opacity-60 bg-white/1" : "border-white/10"
+                    "glass p-5 rounded-2xl border transition-all flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 group hover:border-border",
+                    task.isCompleted ? "border-border opacity-60 bg-white/1" : "border-border"
                   )}
                 >
                   <div className="flex items-start gap-4">
@@ -193,7 +193,7 @@ export default function TasksPage() {
                         "w-6 h-6 shrink-0 mt-0.5 rounded border-2 flex items-center justify-center transition-all cursor-pointer",
                         task.isCompleted 
                           ? "bg-emerald-500/20 border-emerald-500 text-emerald-400" 
-                          : "border-white/20 hover:border-blue-400 text-transparent hover:text-white/70"
+                          : "border-border hover:border-blue-400 text-transparent hover:text-muted-foreground"
                       )}
                     >
                       <Check size={14} strokeWidth={3} />
@@ -201,7 +201,7 @@ export default function TasksPage() {
                     
                     <div>
                       <div className="flex flex-wrap items-center gap-3 mb-1.5">
-                        <h4 className={cn("text-base font-medium", task.isCompleted && "line-through text-white/70")}>
+                        <h4 className={cn("text-base font-medium", task.isCompleted && "line-through text-muted-foreground")}>
                           {task.title}
                         </h4>
                         <span className={cn("px-2 py-0.5 rounded text-[9px] font-mono border uppercase tracking-widest", getPriorityColor(task.priority))}>
@@ -215,16 +215,16 @@ export default function TasksPage() {
                       </div>
                       
                       {task.description && (
-                        <p className={cn("text-xs font-mono mb-3 line-clamp-2", task.isCompleted ? "text-white/70" : "text-white/80")}>
+                        <p className={cn("text-xs font-mono mb-3 line-clamp-2", task.isCompleted ? "text-muted-foreground" : "text-muted-foreground")}>
                           {task.description}
                         </p>
                       )}
 
                       <div className="flex flex-wrap items-center gap-4">
-                        <div className="flex items-center gap-1.5 text-[10px] font-mono text-white/80 uppercase tracking-widest">
+                        <div className="flex items-center gap-1.5 text-[10px] font-mono text-muted-foreground uppercase tracking-widest">
                           <Tag size={12} /> {task.category}
                         </div>
-                        <div className="flex items-center gap-1.5 text-[10px] font-mono text-white/80 uppercase tracking-widest">
+                        <div className="flex items-center gap-1.5 text-[10px] font-mono text-muted-foreground uppercase tracking-widest">
                           <CalendarIcon size={12} /> Due: {formatDate(new Date(task.dueDate))}
                         </div>
                       </div>
@@ -234,7 +234,7 @@ export default function TasksPage() {
                   <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                     <button 
                       onClick={() => deleteTask(task.id)}
-                      className="p-2.5 rounded-lg hover:bg-rose-500/10 text-white/80 hover:text-rose-400 transition-colors border-none cursor-pointer"
+                      className="p-2.5 rounded-lg hover:bg-rose-500/10 text-muted-foreground hover:text-rose-400 transition-colors border-none cursor-pointer"
                       title="Delete Task"
                     >
                       <Trash2 size={16} />
@@ -245,9 +245,9 @@ export default function TasksPage() {
             </AnimatePresence>
 
             {filtered.length === 0 && (
-              <div className="py-24 text-center glass rounded-4xl border border-white/5">
+              <div className="py-24 text-center glass rounded-4xl border border-border">
                 <ListTodo size={48} className="mx-auto mb-6 text-white/10" />
-                <p className="text-sm font-mono text-white/80 uppercase tracking-widest">No tasks found in this tab.</p>
+                <p className="text-sm font-mono text-muted-foreground uppercase tracking-widest">No tasks found in this tab.</p>
               </div>
             )}
           </div>
@@ -260,93 +260,93 @@ export default function TasksPage() {
               initial={{ opacity: 0, x: 20, width: 0 }}
               animate={{ opacity: 1, x: 0, width: 450 }}
               exit={{ opacity: 0, x: 20, width: 0 }}
-              className="glass rounded-[2.5rem] border border-white/5 overflow-hidden flex flex-col shrink-0"
+              className="glass rounded-[2.5rem] border border-border overflow-hidden flex flex-col shrink-0"
             >
-              <div className="p-6 border-b border-white/5 flex justify-between items-center bg-white/2">
+              <div className="p-6 border-b border-border flex justify-between items-center bg-white/2">
                 <div>
                   <h4 className="text-lg font-display font-medium">New Task</h4>
-                  <p className="text-[10px] font-mono text-white/70 uppercase tracking-widest">Add an operation item</p>
+                  <p className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest">Add an operation item</p>
                 </div>
                 <button 
                   onClick={() => setIsPanelOpen(false)}
-                  className="p-2 rounded-xl hover:bg-white/10 transition-colors border-none cursor-pointer"
+                  className="p-2 rounded-xl hover:bg-accent transition-colors border-none cursor-pointer"
                 >
-                  <X size={16} className="text-white/80" />
+                  <X size={16} className="text-muted-foreground" />
                 </button>
               </div>
 
               <form onSubmit={handleCreateTask} className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar">
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-[10px] font-mono text-white/70 uppercase tracking-widest mb-2">Task Title *</label>
+                    <label className="block text-[10px] font-mono text-muted-foreground uppercase tracking-widest mb-2">Task Title *</label>
                     <input 
                       type="text" 
                       required
                       value={formData.title}
                       onChange={e => setFormData({...formData, title: e.target.value})}
-                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-blue-500/50 text-white"
+                      className="w-full bg-muted border border-border rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-blue-500/50 text-foreground"
                       placeholder="E.g., Send documents via DHL"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-[10px] font-mono text-white/70 uppercase tracking-widest mb-2">Description</label>
+                    <label className="block text-[10px] font-mono text-muted-foreground uppercase tracking-widest mb-2">Description</label>
                     <textarea 
                       rows={3}
                       value={formData.description}
                       onChange={e => setFormData({...formData, description: e.target.value})}
-                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-blue-500/50 text-white resize-none"
+                      className="w-full bg-muted border border-border rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-blue-500/50 text-foreground resize-none"
                       placeholder="Optional details..."
                     />
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-[10px] font-mono text-white/70 uppercase tracking-widest mb-2">Due Date</label>
+                      <label className="block text-[10px] font-mono text-muted-foreground uppercase tracking-widest mb-2">Due Date</label>
                       <input 
                         type="date"
                         required
                         value={formData.dueDate}
                         onChange={e => setFormData({...formData, dueDate: e.target.value})}
-                        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-blue-500/50 text-white color-scheme-dark"
+                        className="w-full bg-muted border border-border rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-blue-500/50 text-foreground color-scheme-dark"
                       />
                     </div>
                     <div>
-                      <label className="block text-[10px] font-mono text-white/70 uppercase tracking-widest mb-2">Priority</label>
+                      <label className="block text-[10px] font-mono text-muted-foreground uppercase tracking-widest mb-2">Priority</label>
                       <select 
                         value={formData.priority}
                         onChange={e => setFormData({...formData, priority: e.target.value})}
-                        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-blue-500/50 text-white"
+                        className="w-full bg-muted border border-border rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-blue-500/50 text-foreground"
                       >
-                        <option className="bg-[#0c0c0c]" value="LOW">Low</option>
-                        <option className="bg-[#0c0c0c]" value="MEDIUM">Medium</option>
-                        <option className="bg-[#0c0c0c]" value="HIGH">High</option>
+                        <option className="bg-background" value="LOW">Low</option>
+                        <option className="bg-background" value="MEDIUM">Medium</option>
+                        <option className="bg-background" value="HIGH">High</option>
                       </select>
                     </div>
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-[10px] font-mono text-white/70 uppercase tracking-widest mb-2">Category</label>
+                      <label className="block text-[10px] font-mono text-muted-foreground uppercase tracking-widest mb-2">Category</label>
                       <select 
                         value={formData.category}
                         onChange={e => setFormData({...formData, category: e.target.value})}
-                        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-blue-500/50 text-white"
+                        className="w-full bg-muted border border-border rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-blue-500/50 text-foreground"
                       >
-                        <option className="bg-[#0c0c0c]" value="FOLLOW_UP">Follow Up</option>
-                        <option className="bg-[#0c0c0c]" value="DOCUMENT">Document</option>
-                        <option className="bg-[#0c0c0c]" value="PAYMENT">Payment</option>
-                        <option className="bg-[#0c0c0c]" value="SHIPMENT">Shipment</option>
-                        <option className="bg-[#0c0c0c]" value="QUOTATION">Quotation</option>
+                        <option className="bg-background" value="FOLLOW_UP">Follow Up</option>
+                        <option className="bg-background" value="DOCUMENT">Document</option>
+                        <option className="bg-background" value="PAYMENT">Payment</option>
+                        <option className="bg-background" value="SHIPMENT">Shipment</option>
+                        <option className="bg-background" value="QUOTATION">Quotation</option>
                       </select>
                     </div>
                     <div>
-                      <label className="block text-[10px] font-mono text-white/70 uppercase tracking-widest mb-2">Related Entity ID</label>
+                      <label className="block text-[10px] font-mono text-muted-foreground uppercase tracking-widest mb-2">Related Entity ID</label>
                       <input 
                         type="text" 
                         value={formData.relatedId}
                         onChange={e => setFormData({...formData, relatedId: e.target.value})}
-                        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-blue-500/50 text-white"
+                        className="w-full bg-muted border border-border rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-blue-500/50 text-foreground"
                         placeholder="E.g., SO-2025-001"
                       />
                     </div>

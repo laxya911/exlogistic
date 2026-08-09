@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { 
   Plus, 
   Search, 
@@ -39,23 +39,25 @@ import {
   MapPin,
   Star,
   ShieldAlert,
-  MessageSquare,
-  Truck,
-  Anchor
+  MessageSquare
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { PageHeaderUpdater } from '@/components/layout/page-context';
-import { Forwarder, Contact, Port, Shipment } from '@/types';
-import { cn, formatDate } from '@/lib/utils';
+import { Supplier, Contact, Product, PurchaseOrder, Shipment } from '@/types';
+import { formatCurrency, cn, formatDate } from '@/lib/utils';
 import { toast } from 'sonner';
-import { useForwarders } from '@/hooks/useForwarders';
+import { useSuppliers, SupplierSortField, SortOrder } from '@/hooks/useSuppliers';
+import { Pagination } from '@/components/ui/pagination';
 
-export default function ForwarderMasterPage() {
-  const hook = useForwarders();
+export default function SupplierMasterPage() {
+  const hook = useSuppliers();
   const {
-    forwarders,
-    rawForwarders,
+    suppliers,
+    rawSuppliers,
     loading,
+    currentPage,
+    setCurrentPage,
+    totalPages,
     searchQuery,
     setSearchQuery,
     searchField,
@@ -70,22 +72,21 @@ export default function ForwarderMasterPage() {
     selectedIds,
     toggleSelect,
     selectAll,
-    createForwarder,
-    updateForwarder,
-    archiveForwarder,
-    restoreForwarder,
-    duplicateForwarder,
-    softDeleteForwarder,
-    fetchForwarders
+    createSupplier,
+    updateSupplier,
+    archiveSupplier,
+    restoreSupplier,
+    duplicateSupplier,
+    softDeleteSupplier
   } = hook;
 
   // UI States
-  const [selectedForwarder, setSelectedForwarder] = useState<Forwarder | null>(null);
+  const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(null);
   const [showFormDrawer, setShowFormDrawer] = useState(false);
   const [formMode, setFormMode] = useState<'create' | 'edit'>('create');
   const [formErrors, setFormErrors] = useState<string[]>([]);
-  const [formTab, setFormTab] = useState<'general' | 'ports' | 'contacts'>('general');
-  const [detailTab, setDetailTab] = useState<'contacts' | 'ports' | 'history' | 'timeline'>('contacts');
+  const [formTab, setFormTab] = useState<'general' | 'performance' | 'contacts'>('general');
+  const [detailTab, setDetailTab] = useState<'contacts' | 'commodities' | 'history' | 'timeline'>('contacts');
   const [showFilterDrawer, setShowFilterDrawer] = useState(false);
 
   // Communication note state
@@ -93,7 +94,8 @@ export default function ForwarderMasterPage() {
   const [commType, setCommType] = useState<'CALL' | 'EMAIL' | 'MEETING' | 'NOTE'>('NOTE');
 
   // Related data lists
-  const [ports, setPorts] = useState<Port[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>([]);
   const [shipments, setShipments] = useState<Shipment[]>([]);
 
   // Form Fields State
@@ -101,33 +103,31 @@ export default function ForwarderMasterPage() {
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [address, setAddress] = useState('');
-  const [country, setCountry] = useState('Japan');
+  const [country, setCountry] = useState('India');
   const [notes, setNotes] = useState('');
   const [website, setWebsite] = useState('');
   const [taxId, setTaxId] = useState('');
-  const [status, setStatus] = useState('ACTIVE');
-  const [rating, setRating] = useState(4.5);
-  const [preferredPorts, setPreferredPorts] = useState<string[]>([]);
+  const [performanceRating, setPerformanceRating] = useState(4.5);
+  const [averageLeadTime, setAverageLeadTime] = useState(15);
+  const [paymentTerms, setPaymentTerms] = useState('30 Days Net');
+  const [certifications, setCertifications] = useState<string[]>(['ISO 9001', 'FSSAI']);
   
   // Multiple Contacts State
   const [formContacts, setFormContacts] = useState<Contact[]>([
-    { name: '', role: 'Logistics Manager', email: '', phone: '', isPrimary: true }
+    { name: '', role: 'Sales Lead', email: '', phone: '', isPrimary: true }
   ]);
 
   // Load supporting matrices
   useEffect(() => {
     const loadSupportData = async () => {
       try {
-        const [portData, shpData] = await Promise.all([
-          fetch('/api/products').then(() => [ // fallback port list or fetch from db
-            { id: 'TYO', name: 'Tokyo', code: 'JP TYO', country: 'Japan', type: 'SEA', entityStatus: 'ACTIVE', createdAt: '', updatedAt: '' },
-            { id: 'OSA', name: 'Osaka', code: 'JP OSA', country: 'Japan', type: 'SEA', entityStatus: 'ACTIVE', createdAt: '', updatedAt: '' },
-            { id: 'LAX', name: 'Los Angeles', code: 'US LAX', country: 'USA', type: 'SEA', entityStatus: 'ACTIVE', createdAt: '', updatedAt: '' },
-            { id: 'SIN', name: 'Singapore', code: 'SG SIN', country: 'Singapore', type: 'SEA', entityStatus: 'ACTIVE', createdAt: '', updatedAt: '' }
-          ] as Port[]),
+        const [prodData, poData, shpData] = await Promise.all([
+          fetch('/api/products').then(r => r.json()),
+          fetch('/api/purchase-orders').then(r => r.json()),
           fetch('/api/shipments').then(r => r.json())
         ]);
-        setPorts(portData);
+        setProducts(prodData);
+        setPurchaseOrders(poData);
         setShipments(shpData);
       } catch (err) {
         console.error('Failed loading related matrices data');
@@ -145,7 +145,7 @@ export default function ForwarderMasterPage() {
       }
       if (e.key === 'Escape') {
         setShowFormDrawer(false);
-        setSelectedForwarder(null);
+        setSelectedSupplier(null);
       }
     };
     window.addEventListener('keydown', handleKeyDown);
@@ -153,36 +153,49 @@ export default function ForwarderMasterPage() {
   }, []);
 
   // Sync active selection updates
-  const activeForwarder = useMemo(() => {
-    if (!selectedForwarder) return null;
-    return forwarders.find(f => f.id === selectedForwarder.id) || selectedForwarder;
-  }, [forwarders, selectedForwarder]);
+  const activeSupplier = useMemo(() => {
+    if (!selectedSupplier) return null;
+    return suppliers.find(s => s.id === selectedSupplier.id) || selectedSupplier;
+  }, [suppliers, selectedSupplier]);
 
-  // Compute Active Forwarder Relations
-  const forwarderRelations = useMemo(() => {
-    if (!activeForwarder) return null;
-    const fwdId = activeForwarder.id;
+  // Compute Active Vendor Relations
+  const supplierRelations = useMemo(() => {
+    if (!activeSupplier) return null;
+    const suppId = activeSupplier.id;
 
-    // Shipments involving this forwarder
-    const clientShipments = shipments.filter(shp => shp.forwarderId === fwdId);
+    // Commodities supplied
+    const suppliedCommodities = products.filter(p => p.supplierId === suppId);
+
+    // PO history
+    const clientPOs = purchaseOrders.filter(po => po.supplierId === suppId);
+
+    // Shipments involving their cargo (by matching PO and Sales Orders or matching items)
+    const clientShipments = shipments.filter(shp => {
+      // Find PO related to this shipment or general origin cargo
+      return clientPOs.some(po => po.id === shp.orderId); // fallback simple match
+    });
 
     return {
+      suppliedCommodities,
+      clientPOs,
       clientShipments
     };
-  }, [activeForwarder, shipments]);
+  }, [activeSupplier, products, purchaseOrders, shipments]);
 
   // Statistics Dashboard
   const dashboardStats = useMemo(() => {
-    const active = rawForwarders.filter(f => ((f as any).status || f.entityStatus) === 'ACTIVE');
-    const totalAgencies = active.length;
-    const avgRating = totalAgencies > 0 
-      ? Number((active.reduce((acc, curr) => acc + curr.performanceRating, 0) / totalAgencies).toFixed(2))
+    const active = rawSuppliers.filter(s => (!s.entityStatus || s.entityStatus === 'ACTIVE'));
+    const totalVendors = active.length;
+    const avgLeadTime = totalVendors > 0 
+      ? Math.round(active.reduce((acc, curr) => acc + curr.averageLeadTime, 0) / totalVendors)
       : 0;
-    const portsCovered = Array.from(new Set(active.flatMap(f => f.preferredPorts))).length;
-    const countriesActive = Array.from(new Set(active.map(f => f.country))).length;
+    const avgRating = totalVendors > 0 
+      ? Number((active.reduce((acc, curr) => acc + curr.performanceRating, 0) / totalVendors).toFixed(2))
+      : 0;
+    const certifiedCount = active.filter(s => s.certifications?.length > 0).length;
 
-    return { totalAgencies, avgRating, portsCovered, countriesActive };
-  }, [rawForwarders]);
+    return { totalVendors, avgLeadTime, avgRating, certifiedCount };
+  }, [rawSuppliers]);
 
   const openCreateForm = () => {
     setFormMode('create');
@@ -193,38 +206,40 @@ export default function ForwarderMasterPage() {
     setEmail('');
     setPhone('');
     setAddress('');
-    setCountry('Japan');
+    setCountry('India');
     setNotes('');
     setWebsite('');
     setTaxId('');
-    setStatus('ACTIVE');
-    setRating(4.5);
-    setPreferredPorts(['TYO']);
+    setPerformanceRating(4.5);
+    setAverageLeadTime(15);
+    setPaymentTerms('30 Days Net');
+    setCertifications(['ISO 9001', 'FSSAI']);
     setFormContacts([
-      { name: '', role: 'Logistics Manager', email: '', phone: '', isPrimary: true }
+      { name: '', role: 'Sales Lead', email: '', phone: '', isPrimary: true }
     ]);
 
     setShowFormDrawer(true);
   };
 
-  const openEditForm = (f: Forwarder) => {
+  const openEditForm = (s: Supplier) => {
     setFormMode('edit');
     setFormErrors([]);
     setFormTab('general');
 
-    setName(f.name);
-    setEmail(f.email);
-    setPhone(f.phone);
-    setAddress(f.address);
-    setCountry(f.country);
-    setNotes(f.notes || '');
-    setWebsite(f.website || '');
-    setTaxId(f.taxId || '');
-    setStatus((f as any).status || f.entityStatus || 'ACTIVE');
-    setRating(f.performanceRating);
-    setPreferredPorts(f.preferredPorts || []);
-    setFormContacts(f.contacts || [
-      { name: '', role: 'Logistics Manager', email: '', phone: '', isPrimary: true }
+    setName(s.name || '');
+    setEmail(s.email || '');
+    setPhone(s.phone || '');
+    setAddress(s.address || '');
+    setCountry(s.country || 'India');
+    setNotes(s.notes || '');
+    setWebsite(s.website || '');
+    setTaxId(s.taxId || '');
+    setPerformanceRating(s.performanceRating ?? 4.5);
+    setAverageLeadTime(s.averageLeadTime ?? 15);
+    setPaymentTerms(typeof s.paymentTerms === 'string' ? s.paymentTerms : '30 Days Net');
+    setCertifications(Array.isArray(s.certifications) ? s.certifications : []);
+    setFormContacts(Array.isArray(s.contacts) && s.contacts.length > 0 ? s.contacts : [
+      { name: '', role: 'Sales Lead', email: '', phone: '', isPrimary: true }
     ]);
 
     setShowFormDrawer(true);
@@ -240,12 +255,7 @@ export default function ForwarderMasterPage() {
       return;
     }
 
-    if (preferredPorts.length === 0) {
-      setFormErrors(['At least one preferred port coverage is required']);
-      return;
-    }
-
-    const payload = {
+    const payload: Partial<Supplier> = {
       name,
       email,
       phone,
@@ -254,21 +264,22 @@ export default function ForwarderMasterPage() {
       notes,
       website,
       taxId,
-      status,
-      performanceRating: Number(rating),
-      preferredPorts,
+      performanceRating: Number(performanceRating),
+      averageLeadTime: Number(averageLeadTime),
+      paymentTerms,
+      certifications,
       contacts: formContacts.filter(c => c.name.trim() !== '')
-    } as any;
+    };
 
     if (formMode === 'create') {
-      const result = await createForwarder(payload);
+      const result = await createSupplier(payload);
       if (result.success) {
         setShowFormDrawer(false);
       } else if (result.error) {
         setFormErrors(result.error.split(' | '));
       }
-    } else if (formMode === 'edit' && activeForwarder) {
-      const result = await updateForwarder(activeForwarder.id, payload);
+    } else if (formMode === 'edit' && activeSupplier) {
+      const result = await updateSupplier(activeSupplier.id, payload);
       if (result.success) {
         setShowFormDrawer(false);
       } else if (result.error) {
@@ -295,46 +306,45 @@ export default function ForwarderMasterPage() {
     setFormContacts(prev => prev.filter((_, idx) => idx !== index));
   };
 
-  const handleDuplicate = async (f: Forwarder) => {
-    const copy = await duplicateForwarder(f.id);
+  const handleDuplicate = async (s: Supplier) => {
+    const copy = await duplicateSupplier(s.id);
     if (copy) {
-      setSelectedForwarder(copy);
+      setSelectedSupplier(copy);
     }
   };
 
-  const handleTogglePort = (portId: string) => {
-    setPreferredPorts(prev => 
-      prev.includes(portId) ? prev.filter(p => p !== portId) : [...prev, portId]
+  const handleToggleCert = (cert: string) => {
+    setCertifications(prev => 
+      prev.includes(cert) ? prev.filter(c => c !== cert) : [...prev, cert]
     );
   };
 
   const handleSaveNote = async () => {
-    if (!communicationNote.trim() || !activeForwarder) return;
+    if (!communicationNote.trim() || !activeSupplier) return;
 
     const timelineEvent = {
       id: `EV-${Math.random().toString(36).substr(2, 9)}`,
       date: new Date().toISOString(),
       type: 'COMMUNICATION_LOGGED',
-      title: `${commType} Logged`,
+      title: `${commType} Saved`,
       description: communicationNote.trim(),
       userId: 'USR-001'
     };
 
-    const updatedTimeline = [timelineEvent, ...(activeForwarder.timeline || [])];
+    const updatedTimeline = [timelineEvent, ...(activeSupplier.timeline || [])];
 
     try {
-      const res = await fetch(`/api/forwarders/${activeForwarder.id}`, {
+      const res = await fetch(`/api/suppliers/${activeSupplier.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'LOG_NOTE', timeline: updatedTimeline })
+        body: JSON.stringify({ timeline: updatedTimeline })
       });
       if (!res.ok) throw new Error('Note logger failed');
       const updated = await res.json();
       
       toast.success('Communication note logged');
       setCommunicationNote('');
-      setSelectedForwarder(updated);
-      await fetchForwarders();
+      setSelectedSupplier(updated);
     } catch (e) {
       toast.error('Failed to log note');
     }
@@ -342,14 +352,14 @@ export default function ForwarderMasterPage() {
 
   return (
     <>
-      <PageHeaderUpdater title="Forwarder Matrix" subtitle="Logistics Forwarding Agencies & Port Coverage Control" />
+      <PageHeaderUpdater title="Vendor Hub" subtitle="Export Supply Chain Cooperatives & Performance Control" />
       {/* Top Stat Metrics Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         {[
-          { label: 'Active Agencies', value: dashboardStats.totalAgencies, icon: Truck, color: 'text-blue-400' },
-          { label: 'Avg Agency Rating', value: `★ ${dashboardStats.avgRating}`, icon: Star, color: 'text-amber-400' },
-          { label: 'Ports Covered', value: `${dashboardStats.portsCovered} Ports`, icon: Anchor, color: 'text-emerald-400' },
-          { label: 'Operating Countries', value: `${dashboardStats.countriesActive} Regions`, icon: Globe, color: 'text-rose-400' },
+          { label: 'Active Cooperatives', value: dashboardStats.totalVendors, icon: Building2, color: 'text-blue-400' },
+          { label: 'Avg Lead Time', value: `${dashboardStats.avgLeadTime} Days`, icon: Clock, color: 'text-rose-400' },
+          { label: 'Certified Suppliers', value: `${dashboardStats.certifiedCount} Vendors`, icon: ShieldCheck, color: 'text-emerald-400' },
+          { label: 'Avg Vendor Rating', value: `★ ${dashboardStats.avgRating}`, icon: Star, color: 'text-amber-400' },
         ].map((item, i) => (
           <div key={i} className="glass p-6 rounded-3xl border border-border flex items-center gap-4">
             <div className="w-12 h-12 rounded-2xl bg-muted flex items-center justify-center text-muted-foreground">
@@ -364,10 +374,10 @@ export default function ForwarderMasterPage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        {/* Forwarders List Table */}
+        {/* Suppliers List Table */}
         <div className={cn(
           "transition-all duration-500 space-y-6",
-          activeForwarder ? "lg:col-span-6" : "lg:col-span-12"
+          activeSupplier ? "lg:col-span-6" : "lg:col-span-12"
         )}>
           {/* Main Controls Panel */}
           <div className="glass p-6 rounded-3xl border border-border space-y-4">
@@ -380,14 +390,15 @@ export default function ForwarderMasterPage() {
                   className="bg-transparent text-muted-foreground text-[10px] font-mono uppercase pl-4 focus:outline-none border-r border-border pr-2 h-12"
                 >
                   <option value="all" className="bg-background">All Fields</option>
-                  <option value="name" className="bg-background">Agency</option>
+                  <option value="name" className="bg-background">Cooperative</option>
                   <option value="email" className="bg-background">Email</option>
                   <option value="country" className="bg-background">Country</option>
+                  <option value="certification" className="bg-background">Certificate</option>
                 </select>
                 <Search className="absolute left-28 text-muted-foreground" size={16} />
                 <input 
                   type="text" 
-                  placeholder="Identify Logistics Agency..." 
+                  placeholder="Identify Agri Vendor..." 
                   className="w-full bg-transparent py-3 pl-12 pr-4 text-xs focus:outline-none text-foreground font-mono"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
@@ -417,7 +428,7 @@ export default function ForwarderMasterPage() {
                   onClick={openCreateForm}
                   className="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-3 bg-blue-500 text-black rounded-2xl text-[10px] font-mono font-bold uppercase tracking-widest hover:bg-blue-400 transition-all border-none cursor-pointer"
                 >
-                  <Plus size={14} /> Onboard Agency
+                  <Plus size={14} /> Onboard Vendor
                 </button>
               </div>
             </div>
@@ -454,7 +465,27 @@ export default function ForwarderMasterPage() {
                       </div>
                     </div>
 
-
+                    {/* Certifications Filter */}
+                    <div className="space-y-2">
+                      <p className="text-muted-foreground uppercase tracking-wider">Certifications</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {filterOptions.certifications.map(cert => (
+                          <button
+                            key={cert}
+                            onClick={() => setFilters(prev => ({
+                              ...prev,
+                              certifications: prev.certifications.includes(cert) ? prev.certifications.filter(x => x !== cert) : [...prev.certifications, cert]
+                            }))}
+                            className={cn(
+                              "px-2.5 py-1 rounded bg-card border text-[9px]",
+                              filters.certifications.includes(cert) ? "border-blue-500 text-blue-400 bg-blue-500/5" : "border-border text-muted-foreground"
+                            )}
+                          >
+                            {cert}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
 
                     {/* Status Filter */}
                     <div className="space-y-2">
@@ -479,10 +510,11 @@ export default function ForwarderMasterPage() {
                     </div>
                   </div>
                   <div className="flex justify-end gap-3 mt-6 border-t border-border pt-4">
-                    <button onClick={() => { setSearchQuery(''); setFilters({ statuses: [], countries: [], certifications: [] }); }}
+                    <button 
+                      onClick={() => setFilters({ countries: [], certifications: [], statuses: [] })}
                       className="px-4 py-2 rounded bg-muted text-[9px] font-mono text-muted-foreground hover:bg-accent"
                     >
-                      Clear Filters
+                      Clear Vendor Filters
                     </button>
                   </div>
                 </motion.div>
@@ -500,8 +532,8 @@ export default function ForwarderMasterPage() {
                 className="flex flex-wrap items-center justify-between p-4 bg-blue-500 text-black rounded-2xl gap-3 animate-pulse"
               >
                 <div className="flex items-center gap-3 text-xs font-mono font-bold">
-                  <Truck size={16} />
-                  <span>{selectedIds.length} Agencies Checked</span>
+                  <Building2 size={16} />
+                  <span>{selectedIds.length} Vendors Checked</span>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
                   <button 
@@ -533,7 +565,7 @@ export default function ForwarderMasterPage() {
             )}
           </AnimatePresence>
 
-          {/* Forwarders Grid Listing */}
+          {/* Supplier Grid Listing */}
           <div className="glass rounded-3xl border border-border overflow-hidden">
             <div className="overflow-x-auto font-mono">
               <table className="w-full text-left text-xs font-mono">
@@ -542,8 +574,8 @@ export default function ForwarderMasterPage() {
                     <th className="py-5 px-6 w-8 text-center">
                       <input 
                         type="checkbox"
-                        checked={forwarders.length > 0 && selectedIds.length === forwarders.length}
-                        onChange={() => selectAll(forwarders.map(f => f.id))}
+                        checked={suppliers.length > 0 && selectedIds.length === suppliers.length}
+                        onChange={() => selectAll(suppliers.map(s => s.id))}
                         className="rounded accent-blue-500 cursor-pointer"
                       />
                     </th>
@@ -555,85 +587,101 @@ export default function ForwarderMasterPage() {
                         }}
                         className="flex items-center gap-2 hover:text-foreground transition-colors bg-transparent border-none cursor-pointer text-muted-foreground text-xs font-mono uppercase"
                       >
-                        Agency {sortBy === 'name' && (sortOrder === 'asc' ? <ChevronUp size={10} /> : <ChevronDown size={10} />)}
+                        Cooperative {sortBy === 'name' && (sortOrder === 'asc' ? <ChevronUp size={10} /> : <ChevronDown size={10} />)}
                       </button>
                     </th>
                     <th className="py-5 px-6">Country</th>
-                        <th onClick={() => { setSortBy('performanceRating' as any); setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc'); }} className="py-4 px-5 text-right font-bold cursor-pointer group">
-                          <div className="flex items-center justify-end gap-1.5">
-                            <Star size={11} className={cn(sortBy === 'performanceRating' ? 'text-blue-400' : 'text-muted-foreground/40')} />
-                            <span className={cn('group-hover:text-blue-400 transition-colors', sortBy === 'performanceRating' && 'text-blue-400')}>Rating</span>
-                            {sortBy === 'performanceRating' && (sortOrder === 'asc' ? <ChevronUp size={11} className="text-blue-400" /> : <ChevronDown size={11} className="text-blue-400" />)}
-                          </div>
-                        </th>
-                    <th className="py-5 px-6">Ports Coverage</th>
+                    <th className="py-5 px-6">
+                      <button 
+                        onClick={() => {
+                          setSortBy('performanceRating');
+                          setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+                        }}
+                        className="flex items-center gap-2 hover:text-foreground transition-colors bg-transparent border-none cursor-pointer text-muted-foreground text-xs font-mono uppercase"
+                      >
+                        Rating {sortBy === 'performanceRating' && (sortOrder === 'asc' ? <ChevronUp size={10} /> : <ChevronDown size={10} />)}
+                      </button>
+                    </th>
+                    <th className="py-5 px-6">
+                      <button 
+                        onClick={() => {
+                          setSortBy('averageLeadTime');
+                          setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+                        }}
+                        className="flex items-center justify-end gap-2 hover:text-foreground transition-colors w-full bg-transparent border-none cursor-pointer text-muted-foreground text-xs font-mono uppercase"
+                      >
+                        Lead Time {sortBy === 'averageLeadTime' && (sortOrder === 'asc' ? <ChevronUp size={10} /> : <ChevronDown size={10} />)}
+                      </button>
+                    </th>
                     <th className="py-5 px-6 text-right">Status</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/5">
-                  {forwarders.map((f) => (
+                  {suppliers.map((s) => (
                     <tr 
-                      key={f.id} 
+                      key={s.id} 
                       className={cn(
                         "group cursor-pointer transition-all",
-                        activeForwarder?.id === f.id ? "bg-blue-500/10" : "hover:bg-white/2"
+                        activeSupplier?.id === s.id ? "bg-blue-500/10" : "hover:bg-white/2"
                       )}
-                      onClick={() => setSelectedForwarder(activeForwarder?.id === f.id ? null : f)}
+                      onClick={() => setSelectedSupplier(activeSupplier?.id === s.id ? null : s)}
                     >
                       <td className="py-4 px-6 text-center" onClick={(e) => e.stopPropagation()}>
                         <input 
                           type="checkbox" 
-                          checked={selectedIds.includes(f.id)}
-                          onChange={() => toggleSelect(f.id)}
+                          checked={selectedIds.includes(s.id)}
+                          onChange={() => toggleSelect(s.id)}
                           className="rounded accent-blue-500 cursor-pointer"
                         />
                       </td>
                       <td className="py-4 px-6">
                         <div>
-                          <p className="font-sans font-bold text-sm text-foreground/90 truncate max-w-50">{f.name}</p>
-                          <p className="text-[9px] text-white/25 truncate max-w-50">{f.email}</p>
+                          <p className="font-sans font-bold text-sm text-foreground/90 truncate max-w-50">{s.name}</p>
+                          <p className="text-[9px] text-white/25 truncate max-w-50">{s.email}</p>
                         </div>
                       </td>
-                      <td className="py-4 px-6 text-muted-foreground">{f.country}</td>
-                      <td className="py-4 px-6 text-right">
-                        <div className="flex items-center justify-end gap-1 text-amber-400 font-bold">
-                          <Star size={12} fill="currentColor" />
-                          <span>{f.performanceRating.toFixed(1)}</span>
-                        </div>
-                      </td>
+                      <td className="py-4 px-6 text-muted-foreground">{s.country}</td>
                       <td className="py-4 px-6">
-                        <div className="flex flex-wrap gap-1">
-                          {(f.preferredPorts || []).map(port => (
-                            <span key={port} className="px-1.5 py-0.5 rounded bg-muted text-foreground/90 text-[8px] border border-border">{port}</span>
-                          ))}
+                        <div className="flex items-center gap-1 text-amber-400 font-bold">
+                          <Star size={12} fill="currentColor" />
+                          <span>{s.performanceRating.toFixed(1)}</span>
                         </div>
+                      </td>
+                      <td className="py-4 px-6 text-right font-bold text-muted-foreground">
+                        {s.averageLeadTime} Days
                       </td>
                       <td className="py-4 px-6 text-right">
                         <span className={cn(
                           "px-2 py-0.5 rounded text-[8px] font-mono font-bold uppercase",
-                          ((f as any).status || f.entityStatus) === 'ACTIVE' && "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20",
-                          ((f as any).status || f.entityStatus) === 'ARCHIVED' && "bg-amber-500/10 text-amber-400 border border-amber-500/20",
-                          ((f as any).status || f.entityStatus) === 'INACTIVE' && "bg-muted text-muted-foreground border border-border"
-                        )}>{(f as any).status || f.entityStatus}</span>
+                          (!s.entityStatus || s.entityStatus === 'ACTIVE') && "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20",
+                          s.entityStatus === 'ARCHIVED' && "bg-amber-500/10 text-amber-400 border border-amber-500/20",
+                          s.entityStatus === 'INACTIVE' && "bg-muted text-muted-foreground border border-border"
+                        )}>{s.entityStatus}</span>
                       </td>
                     </tr>
                   ))}
-                  {forwarders.length === 0 && (
+                  {suppliers.length === 0 && (
                     <tr>
                       <td colSpan={6} className="py-16 text-center text-muted-foreground font-mono text-xs uppercase tracking-widest">
-                        No Logistics Agencies Matched Filters
+                        No Supplier Nodes Matched Filters
                       </td>
                     </tr>
                   )}
                 </tbody>
               </table>
             </div>
+
+            <Pagination 
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={setCurrentPage}
+            />
           </div>
         </div>
 
-        {/* Selected Forwarder Profile Sidebar */}
+        {/* Selected Vendor Profile Sidebar */}
         <AnimatePresence>
-          {activeForwarder && forwarderRelations && (
+          {activeSupplier && supplierRelations && (
             <motion.div 
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
@@ -645,40 +693,40 @@ export default function ForwarderMasterPage() {
                 {/* Control Panel Actions */}
                 <div className="absolute top-0 right-0 p-6 flex gap-2">
                   <button 
-                    onClick={() => openEditForm(activeForwarder)}
+                    onClick={() => openEditForm(activeSupplier)}
                     className="p-2.5 rounded-full bg-muted hover:bg-accent text-muted-foreground hover:text-foreground transition-colors border-none cursor-pointer"
-                    title="Edit Agency"
+                    title="Edit Vendor"
                   >
                     <Edit3 size={14} />
                   </button>
                   <button 
-                    onClick={() => handleDuplicate(activeForwarder)}
+                    onClick={() => handleDuplicate(activeSupplier)}
                     className="p-2.5 rounded-full bg-muted hover:bg-accent text-muted-foreground hover:text-foreground transition-colors border-none cursor-pointer"
-                    title="Duplicate Agency"
+                    title="Duplicate Vendor"
                   >
                     <Copy size={14} />
                   </button>
-                  {activeForwarder.entityStatus === 'ACTIVE' ? (
+                  {activeSupplier.entityStatus === 'ACTIVE' ? (
                     <button 
-                      onClick={() => archiveForwarder(activeForwarder.id)}
+                      onClick={() => archiveSupplier(activeSupplier.id)}
                       className="p-2.5 rounded-full bg-muted hover:bg-accent text-muted-foreground hover:text-foreground transition-colors border-none cursor-pointer"
-                      title="Archive Agency"
+                      title="Archive Vendor"
                     >
                       <Archive size={14} />
                     </button>
                   ) : (
                     <button 
-                      onClick={() => restoreForwarder(activeForwarder.id)}
+                      onClick={() => restoreSupplier(activeSupplier.id)}
                       className="p-2.5 rounded-full bg-muted hover:bg-accent text-muted-foreground hover:text-foreground transition-colors border-none cursor-pointer"
-                      title="Restore Agency"
+                      title="Restore Vendor"
                     >
                       <RefreshCcw size={14} />
                     </button>
                   )}
                   <button 
                     onClick={() => {
-                      softDeleteForwarder(activeForwarder.id);
-                      setSelectedForwarder(null);
+                      softDeleteSupplier(activeSupplier.id);
+                      setSelectedSupplier(null);
                     }}
                     className="p-2.5 rounded-full bg-muted hover:bg-rose-500/10 text-muted-foreground hover:text-rose-400 transition-colors border-none cursor-pointer"
                     title="Soft Delete"
@@ -686,7 +734,7 @@ export default function ForwarderMasterPage() {
                     <Trash2 size={14} />
                   </button>
                   <button 
-                    onClick={() => setSelectedForwarder(null)}
+                    onClick={() => setSelectedSupplier(null)}
                     className="p-2.5 rounded-full bg-muted hover:bg-accent text-muted-foreground hover:text-foreground transition-colors border-none cursor-pointer"
                   >
                     <X size={14} />
@@ -695,39 +743,40 @@ export default function ForwarderMasterPage() {
 
                 <div className="flex flex-col sm:flex-row gap-6 items-start mb-8">
                   <div className="w-24 h-24 rounded-2xl bg-muted border border-border flex items-center justify-center text-muted-foreground shadow-2xl shrink-0">
-                    <Truck size={32} className="text-blue-400" />
+                    <Building2 size={32} className="text-blue-400" />
                   </div>
                   <div className="flex-1 min-w-0 pr-12">
                     <div className="flex items-center gap-2 mb-3">
                       <div className="flex items-center gap-1 px-2.5 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20 text-[8px] font-mono font-bold uppercase tracking-widest">
-                        <Star size={8} fill="currentColor" /> {activeForwarder.performanceRating.toFixed(1)} Rating
+                        <Star size={8} fill="currentColor" /> {activeSupplier.performanceRating.toFixed(1)} Rating
                       </div>
                       <span className={cn(
                         "px-2.5 py-0.5 rounded border text-[8px] font-mono font-bold uppercase tracking-widest",
-                        activeForwarder.entityStatus === 'ACTIVE' && "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
-                        activeForwarder.entityStatus === 'ARCHIVED' && "bg-amber-500/10 text-amber-400 border-amber-500/20"
+                        activeSupplier.entityStatus === 'ACTIVE' && "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
+                        activeSupplier.entityStatus === 'ARCHIVED' && "bg-amber-500/10 text-amber-400 border-amber-500/20"
                       )}>
-                        {activeForwarder.entityStatus}
+                        {activeSupplier.entityStatus}
                       </span>
                     </div>
-                    <h2 className="text-2xl font-display font-medium tracking-tight text-foreground mb-2 truncate">{activeForwarder.name}</h2>
-                    <p className="text-[10px] font-mono text-muted-foreground tracking-wider mb-2">TAX: {activeForwarder.taxId || 'N/A'} • REGION: {activeForwarder.country}</p>
+                    <h2 className="text-2xl font-display font-medium tracking-tight text-foreground mb-2 truncate">{activeSupplier.name}</h2>
+                    <p className="text-[10px] font-mono text-muted-foreground tracking-wider mb-2">TAX: {activeSupplier.taxId || 'N/A'} • COUNTRY: {activeSupplier.country}</p>
                     <a 
-                      href={activeForwarder.website} 
+                      href={activeSupplier.website} 
                       target="_blank" 
                       rel="noopener noreferrer" 
                       className="text-xs text-blue-400 hover:underline flex items-center gap-1 font-mono"
                     >
-                      <Globe size={10} /> {activeForwarder.website || 'No website registered'}
+                      <Globe size={10} /> {activeSupplier.website || 'No website registered'}
                     </a>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 border-t border-border pt-6">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 border-t border-border pt-6">
                   {[
-                    { label: 'Rating score', value: `★ ${activeForwarder.performanceRating.toFixed(1)}`, icon: Star, color: 'text-amber-400' },
-                    { label: 'Ports Covered', value: `${(activeForwarder.preferredPorts || []).length} Ports`, icon: Anchor, color: 'text-emerald-400' },
-                    { label: 'Linked Shipments', value: `${forwarderRelations.clientShipments.length} cargo`, icon: ContainerIcon, color: 'text-blue-400' },
+                    { label: 'Rating score', value: `★ ${activeSupplier.performanceRating.toFixed(1)}`, icon: Star, color: 'text-amber-400' },
+                    { label: 'Avg Lead Time', value: `${activeSupplier.averageLeadTime} Days`, icon: Clock, color: 'text-rose-400' },
+                    { label: 'Payment Terms', value: activeSupplier.paymentTerms, icon: DollarSign, color: 'text-emerald-400' },
+                    { label: 'Commodities Mapped', value: `${supplierRelations.suppliedCommodities.length} items`, icon: Package, color: 'text-blue-400' },
                   ].map((stat, i) => (
                     <div key={i} className="p-4 rounded-xl bg-white/2 border border-border">
                       <stat.icon size={12} className={cn("mb-2 opacity-40", stat.color)} />
@@ -742,9 +791,9 @@ export default function ForwarderMasterPage() {
               <div className="glass p-8 rounded-4xl border border-border">
                 <div className="flex gap-6 border-b border-border mb-6 overflow-x-auto whitespace-nowrap pb-2">
                   {[
-                    { id: 'contacts', label: 'Agent Directory' },
-                    { id: 'ports', label: 'Port Coverages' },
-                    { id: 'history', label: 'Shipment Logs' },
+                    { id: 'contacts', label: 'Contact Directory' },
+                    { id: 'commodities', label: 'Supplied Goods' },
+                    { id: 'history', label: 'Invoices & POs' },
                     { id: 'timeline', label: 'Activity Logs' }
                   ].map(tab => (
                     <button
@@ -765,7 +814,7 @@ export default function ForwarderMasterPage() {
                 {/* Contacts Directory */}
                 {detailTab === 'contacts' && (
                   <div className="space-y-4">
-                    {(activeForwarder.contacts || []).map((c: any, idx: number) => (
+                    {activeSupplier.contacts.map((c, idx) => (
                       <div key={idx} className="p-5 rounded-2xl bg-white/2 border border-border flex justify-between items-start">
                         <div className="space-y-1">
                           <div className="flex items-center gap-2">
@@ -784,50 +833,76 @@ export default function ForwarderMasterPage() {
                         </div>
                       </div>
                     ))}
-                    {(activeForwarder.contacts || []).length === 0 && (
-                      <p className="text-center py-4 text-white/10 text-[9px] uppercase">No agents registered</p>
+                    {activeSupplier.contacts.length === 0 && (
+                      <p className="text-center py-4 text-white/10 text-[9px] uppercase">No contacts registered</p>
                     )}
                   </div>
                 )}
 
-                {/* Port Coverages Tab */}
-                {detailTab === 'ports' && (
-                  <div className="space-y-3">
-                    <p className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider mb-2">Preferred Ports of Operations</p>
-                    <div className="flex flex-wrap gap-2">
-                      {(activeForwarder.preferredPorts || []).map(portId => {
-                        const portObj = ports.find(p => p.id === portId);
-                        return (
-                          <div key={portId} className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white/2 border border-border font-mono text-xs text-muted-foreground">
-                            <Anchor size={12} className="text-emerald-400" />
-                            <span>{portObj ? `${portObj.name} (${portObj.code})` : portId}</span>
-                          </div>
-                        );
-                      })}
-                    </div>
+                {/* Supplied Commodities Tab */}
+                {detailTab === 'commodities' && (
+                  <div className="space-y-3 max-h-75 overflow-y-auto custom-scrollbar pr-2">
+                    {supplierRelations.suppliedCommodities.map(p => (
+                      <div key={p.id} className="p-4 rounded-xl bg-white/2 border border-border flex justify-between items-center text-[11px] font-mono">
+                        <div>
+                          <p className="font-sans font-bold text-foreground/90">{p.name}</p>
+                          <p className="text-[9px] text-white/25 mt-0.5">{p.sku} • HSN: {p.hsnCode}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-sans font-bold text-blue-400">{formatCurrency(p.sellingPrice)}</p>
+                          <p className="text-[9px] text-white/25 mt-0.5">MOQ: {p.moq} {p.uom}</p>
+                        </div>
+                      </div>
+                    ))}
+                    {supplierRelations.suppliedCommodities.length === 0 && (
+                      <p className="text-center py-8 text-white/10 text-[9px] uppercase">No commodities mapped to this supplier</p>
+                    )}
                   </div>
                 )}
 
-                {/* Shipment History */}
+                {/* Purchase Order History */}
                 {detailTab === 'history' && (
-                  <div className="space-y-3 max-h-75 overflow-y-auto custom-scrollbar pr-2">
-                    <p className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider mb-3 font-bold">Managed Shipments</p>
-                    <div className="space-y-2">
-                      {forwarderRelations.clientShipments.map(shp => (
-                        <div key={shp.id} className="flex justify-between items-center p-3 bg-white/2 border border-border rounded-xl text-[10px] font-mono">
-                          <div>
-                            <p className="font-bold text-muted-foreground">{shp.shipmentNo}</p>
-                            <p className="text-[8px] text-muted-foreground">ETD: {formatDate(shp.etd)}</p>
+                  <div className="space-y-6 max-h-75 overflow-y-auto custom-scrollbar pr-2">
+                    <div>
+                      <p className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider mb-3 font-bold">Linked Purchase Orders</p>
+                      <div className="space-y-2">
+                        {supplierRelations.clientPOs.map(po => (
+                          <div key={po.id} className="flex justify-between items-center p-3 bg-white/2 border border-border rounded-xl text-[10px] font-mono">
+                            <div>
+                              <p className="font-bold text-muted-foreground">{po.poNo}</p>
+                              <p className="text-[8px] text-muted-foreground">{formatDate(po.date)}</p>
+                            </div>
+                            <div className="text-right">
+                              <span className="px-2 py-0.5 rounded bg-blue-500/10 text-blue-400 text-[8px]">{po.status}</span>
+                              <p className="text-[10px] font-sans font-bold text-muted-foreground mt-1">{formatCurrency(po.totalValue)}</p>
+                            </div>
                           </div>
-                          <div className="text-right">
-                            <span className="px-2 py-0.5 rounded bg-blue-500/10 text-blue-400 text-[8px]">{shp.status}</span>
-                            <p className="text-[9px] text-white/25 mt-1">{shp.originPortId} → {shp.destinationPortId}</p>
+                        ))}
+                        {supplierRelations.clientPOs.length === 0 && (
+                          <p className="text-center py-4 text-white/10 text-[9px] uppercase">No Purchase Order history</p>
+                        )}
+                      </div>
+                    </div>
+
+                    <div>
+                      <p className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider mb-3 font-bold">Associated Shipments Carrying Cargo</p>
+                      <div className="space-y-2">
+                        {supplierRelations.clientShipments.map(shp => (
+                          <div key={shp.id} className="flex justify-between items-center p-3 bg-white/2 border border-border rounded-xl text-[10px] font-mono">
+                            <div>
+                              <p className="font-bold text-muted-foreground">{shp.shipmentNo}</p>
+                              <p className="text-[8px] text-muted-foreground">ETD: {formatDate(shp.etd)}</p>
+                            </div>
+                            <div className="text-right">
+                              <span className="px-2 py-0.5 rounded bg-indigo-500/10 text-indigo-400 text-[8px]">{shp.status}</span>
+                              <p className="text-[9px] text-white/25 mt-1">{shp.originPortId} → {shp.destinationPortId}</p>
+                            </div>
                           </div>
-                        </div>
-                      ))}
-                      {forwarderRelations.clientShipments.length === 0 && (
-                        <p className="text-center py-4 text-white/10 text-[9px] uppercase">No managed shipments</p>
-                      )}
+                        ))}
+                        {supplierRelations.clientShipments.length === 0 && (
+                          <p className="text-center py-4 text-white/10 text-[9px] uppercase">No related shipment records</p>
+                        )}
+                      </div>
                     </div>
                   </div>
                 )}
@@ -838,7 +913,7 @@ export default function ForwarderMasterPage() {
                     {/* Live Communication Logger Input */}
                     <div className="p-4 rounded-2xl bg-white/2 border border-border space-y-3">
                       <div className="flex justify-between items-center">
-                        <p className="text-[8px] font-mono text-muted-foreground uppercase tracking-wider">Log Communication</p>
+                        <p className="text-[8px] font-mono text-muted-foreground uppercase tracking-wider">Log Vendor Communication</p>
                         <select
                           value={commType}
                           onChange={(e) => setCommType(e.target.value as any)}
@@ -853,7 +928,7 @@ export default function ForwarderMasterPage() {
                       <textarea
                         value={communicationNote}
                         onChange={(e) => setCommunicationNote(e.target.value)}
-                        placeholder="Log cargo schedules, custom delays, vessel allocations, or ocean freight revisions..."
+                        placeholder="Log bulk pricing discounts, quality audit checks, or lead time revisions..."
                         className="w-full bg-background border border-border rounded-xl p-3 text-[11px] font-mono text-foreground focus:outline-none focus:border-blue-500/50 min-h-15"
                       />
                       <div className="flex justify-end">
@@ -869,15 +944,15 @@ export default function ForwarderMasterPage() {
 
                     {/* Timeline List */}
                     <div className="max-h-62.5 overflow-y-auto custom-scrollbar pr-2 space-y-6 relative before:absolute before:left-2.75 before:top-2 before:bottom-2 before:w-px before:bg-muted">
-                      {(activeForwarder.timeline || []).map((item, idx) => (
+                      {(activeSupplier.timeline || []).map((item, idx) => (
                         <div key={item.id || idx} className="relative pl-8">
                           <div className="absolute left-0 top-1 w-6 h-6 rounded-full bg-background border border-border flex items-center justify-center z-10 text-blue-400">
-                            {item.type === 'CREATED' && <Truck size={10} />}
+                            {item.type === 'CREATED' && <Building2 size={10} />}
                             {item.type === 'UPDATED' && <Edit3 size={10} />}
                             {item.type === 'ARCHIVED' && <Archive size={10} />}
                             {item.type === 'RESTORED' && <RefreshCcw size={10} />}
                             {item.type === 'RATING_CHANGED' && <Star size={10} />}
-                            {item.type === 'PORT_ADDED' && <Anchor size={10} />}
+                            {item.type === 'LEAD_TIME_CHANGED' && <Clock size={10} />}
                             {item.type === 'STATUS_CHANGED' && <Activity size={10} />}
                             {item.type === 'COMMUNICATION_LOGGED' && <MessageSquare size={10} />}
                           </div>
@@ -895,7 +970,7 @@ export default function ForwarderMasterPage() {
         </AnimatePresence>
       </div>
 
-      {/* Onboard Agency Drawer overlay */}
+      {/* Onboard Vendor Drawer overlay */}
       <AnimatePresence>
         {showFormDrawer && (
           <div className="fixed inset-0 z-100 flex items-center justify-center bg-black/70 backdrop-blur-md">
@@ -907,7 +982,7 @@ export default function ForwarderMasterPage() {
             >
               <div className="flex justify-between items-center border-b border-border pb-4 mb-6">
                 <h3 className="text-2xl font-display font-medium flex items-center gap-3">
-                  <Truck className="text-blue-500" /> {formMode === 'create' ? 'Onboard New Logistics Agency' : 'Modify Agency Profile'}
+                  <Building2 className="text-blue-500" /> {formMode === 'create' ? 'Onboard New Supplier Cooperative' : 'Modify Supplier Profile'}
                 </h3>
                 <button onClick={() => setShowFormDrawer(false)} className="p-2 rounded bg-muted hover:bg-accent text-muted-foreground hover:text-foreground border-none cursor-pointer">
                   <X size={16} />
@@ -918,7 +993,7 @@ export default function ForwarderMasterPage() {
               {formErrors.length > 0 && (
                 <div className="p-4 bg-rose-500/10 border border-rose-500/20 rounded-2xl mb-6 space-y-1">
                   <p className="text-xs font-mono font-bold text-rose-400 flex items-center gap-2">
-                    <AlertCircle size={14} /> Agency onboarding constraints violated:
+                    <AlertCircle size={14} /> Vendor onboarding constraints violated:
                   </p>
                   <ul className="list-disc list-inside text-[10px] font-mono text-rose-300">
                     {formErrors.map((err, idx) => (
@@ -932,7 +1007,7 @@ export default function ForwarderMasterPage() {
               <div className="flex gap-4 border-b border-border mb-6 overflow-x-auto whitespace-nowrap pb-2 text-[9px] font-mono font-bold uppercase">
                 {[
                   { id: 'general', label: '1. General Info' },
-                  { id: 'ports', label: '2. Port Coverage' },
+                  { id: 'performance', label: '2. Performance Metrics' },
                   { id: 'contacts', label: '3. Contacts Matrix' },
                 ].map(tab => (
                   <button
@@ -957,7 +1032,7 @@ export default function ForwarderMasterPage() {
                   <div className="space-y-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div className="space-y-2">
-                        <label className="text-[9px] font-mono text-muted-foreground uppercase block">Logistics Agency Name</label>
+                        <label className="text-[9px] font-mono text-muted-foreground uppercase block">Cooperative / Vendor Name</label>
                         <input 
                           type="text" 
                           required
@@ -967,7 +1042,7 @@ export default function ForwarderMasterPage() {
                         />
                       </div>
                       <div className="space-y-2">
-                        <label className="text-[9px] font-mono text-muted-foreground uppercase block">Booking Email</label>
+                        <label className="text-[9px] font-mono text-muted-foreground uppercase block">Contact Email</label>
                         <input 
                           type="email" 
                           required
@@ -978,8 +1053,8 @@ export default function ForwarderMasterPage() {
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                      <div className="md:col-span-1 space-y-2">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                      <div className="space-y-2">
                         <label className="text-[9px] font-mono text-muted-foreground uppercase block">Telephone Number</label>
                         <input 
                           type="text" 
@@ -988,7 +1063,7 @@ export default function ForwarderMasterPage() {
                           className="w-full bg-background border border-border rounded-xl py-3 px-4 text-xs font-mono text-foreground focus:outline-none"
                         />
                       </div>
-                      <div className="md:col-span-1 space-y-2">
+                      <div className="space-y-2">
                         <label className="text-[9px] font-mono text-muted-foreground uppercase block">Country</label>
                         <input 
                           type="text" 
@@ -998,55 +1073,45 @@ export default function ForwarderMasterPage() {
                           className="w-full bg-background border border-border rounded-xl py-3 px-4 text-xs font-mono text-foreground focus:outline-none"
                         />
                       </div>
-                      <div className="md:col-span-1 space-y-2">
-                        <label className="text-[9px] font-mono text-muted-foreground uppercase block">Tax ID / Reg</label>
+                      <div className="space-y-2">
+                        <label className="text-[9px] font-mono text-muted-foreground uppercase block">Tax Registration / VAT ID</label>
                         <input 
                           type="text" 
                           value={taxId}
                           onChange={(e) => setTaxId(e.target.value)}
                           className="w-full bg-background border border-border rounded-xl py-3 px-4 text-xs font-mono text-foreground focus:outline-none"
-                          placeholder="e.g. TAX-123"
+                          placeholder="e.g. TAX-VEND-123"
                         />
-                      </div>
-                      <div className="md:col-span-1 space-y-2">
-                        <label className="text-[9px] font-mono text-muted-foreground uppercase block">Status</label>
-                        <select 
-                          value={status}
-                          onChange={(e) => setStatus(e.target.value)}
-                          className="w-full bg-background border border-border rounded-xl py-3 px-4 text-xs font-mono text-foreground focus:outline-none appearance-none"
-                        >
-                          <option value="ACTIVE">Active</option>
-                          <option value="INACTIVE">Inactive</option>
-                          <option value="ARCHIVED">Archived</option>
-                        </select>
                       </div>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div className="space-y-2">
-                        <label className="text-[9px] font-mono text-muted-foreground uppercase block">Agency Website URL</label>
+                        <label className="text-[9px] font-mono text-muted-foreground uppercase block">Corporate Website URL</label>
                         <input 
                           type="text" 
                           value={website}
                           onChange={(e) => setWebsite(e.target.value)}
                           className="w-full bg-background border border-border rounded-xl py-3 px-4 text-xs font-mono text-foreground focus:outline-none"
-                          placeholder="e.g. https://www.agency.com"
+                          placeholder="e.g. https://www.vendor.com"
                         />
                       </div>
                       <div className="space-y-2">
-                        <label className="text-[9px] font-mono text-muted-foreground uppercase block">Performance Rating Score (1.0 to 5.0)</label>
-                        <input 
-                          type="number" 
-                          step="0.1"
-                          value={rating}
-                          onChange={(e) => setRating(Number(e.target.value))}
+                        <label className="text-[9px] font-mono text-muted-foreground uppercase block">Payment Invoicing Terms</label>
+                        <select 
+                          value={paymentTerms}
+                          onChange={(e) => setPaymentTerms(e.target.value)}
                           className="w-full bg-background border border-border rounded-xl py-3 px-4 text-xs font-mono text-foreground focus:outline-none"
-                        />
+                        >
+                          <option value="30 Days Net">30 Days Net</option>
+                          <option value="15 Days Advance">15 Days Advance</option>
+                          <option value="LC at Sight">LC at Sight</option>
+                        </select>
                       </div>
                     </div>
 
                     <div className="space-y-2">
-                      <label className="text-[9px] font-mono text-muted-foreground uppercase block">Office Address Details</label>
+                      <label className="text-[9px] font-mono text-muted-foreground uppercase block">Business Address Details</label>
                       <textarea 
                         value={address}
                         onChange={(e) => setAddress(e.target.value)}
@@ -1065,30 +1130,52 @@ export default function ForwarderMasterPage() {
                   </div>
                 )}
 
-                {/* 2. Ports Tab */}
-                {formTab === 'ports' && (
-                  <div className="space-y-4">
-                    <span className="text-[9px] font-mono text-muted-foreground uppercase block mb-2">Preferred Ports Covered</span>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                      {ports.map(port => (
-                        <button
-                          key={port.id}
-                          type="button"
-                          onClick={() => handleTogglePort(port.id)}
-                          className={cn(
-                            "flex items-center gap-2 p-3.5 rounded-xl border text-[11px] font-mono text-left transition-all",
-                            preferredPorts.includes(port.id) 
-                              ? "bg-blue-500/10 border-blue-500 text-blue-400" 
-                              : "bg-muted border-border text-muted-foreground hover:bg-accent"
-                          )}
-                        >
-                          <Anchor size={12} className={preferredPorts.includes(port.id) ? "text-blue-400" : "opacity-30"} />
-                          <div>
-                            <p className="font-bold">{port.name}</p>
-                            <p className="text-[9px] opacity-60">{port.code}</p>
-                          </div>
-                        </button>
-                      ))}
+                {/* 2. Performance Tab */}
+                {formTab === 'performance' && (
+                  <div className="space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="space-y-2">
+                        <label className="text-[9px] font-mono text-muted-foreground uppercase block">Average Lead Time (Days)</label>
+                        <input 
+                          type="number" 
+                          min="1"
+                          value={averageLeadTime}
+                          onChange={(e) => setAverageLeadTime(Number(e.target.value))}
+                          className="w-full bg-background border border-border rounded-xl py-3 px-4 text-xs font-mono text-foreground focus:outline-none"
+                        />
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <label className="text-[9px] font-mono text-muted-foreground uppercase block">Performance Rating Score (1.0 to 5.0)</label>
+                        <input 
+                          type="number" 
+                          step="0.1"
+                          min="1"
+                          max="5"
+                          value={performanceRating}
+                          onChange={(e) => setPerformanceRating(Number(e.target.value))}
+                          className="w-full bg-background border border-border rounded-xl py-3 px-4 text-xs font-mono text-foreground focus:outline-none"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <span className="text-[9px] font-mono text-muted-foreground uppercase block mb-2">Supplier Certifications</span>
+                      <div className="flex flex-wrap gap-2">
+                        {['ISO 9001', 'FSSAI', 'HACCP', 'ISO 22000', 'Organic Certified', 'CE', 'Halal Certified'].map(cert => (
+                          <button
+                            key={cert}
+                            type="button"
+                            onClick={() => handleToggleCert(cert)}
+                            className={cn(
+                              "px-3 py-1.5 rounded-lg border text-[10px] font-mono",
+                              certifications.includes(cert) ? "bg-blue-500/10 border-blue-500 text-blue-400" : "bg-muted border-border text-muted-foreground"
+                            )}
+                          >
+                            {cert}
+                          </button>
+                        ))}
+                      </div>
                     </div>
                   </div>
                 )}
@@ -1097,7 +1184,7 @@ export default function ForwarderMasterPage() {
                 {formTab === 'contacts' && (
                   <div className="space-y-6">
                     <div className="flex justify-between items-center">
-                      <span className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider">Associated Agents / Port Managers</span>
+                      <span className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider">Associated Vendor Managers</span>
                       <button 
                         type="button"
                         onClick={handleAddContact}
@@ -1176,7 +1263,7 @@ export default function ForwarderMasterPage() {
                               className="rounded accent-blue-500 cursor-pointer"
                               id={`contact-primary-${idx}`}
                             />
-                            <label htmlFor={`contact-primary-${idx}`} className="text-[9px] font-mono text-muted-foreground cursor-pointer">Mark as Primary Agency Contact</label>
+                            <label htmlFor={`contact-primary-${idx}`} className="text-[9px] font-mono text-muted-foreground cursor-pointer">Mark as Primary Vendor Contact</label>
                           </div>
                         </div>
                       ))}
@@ -1196,7 +1283,7 @@ export default function ForwarderMasterPage() {
                     type="submit" 
                     className="px-8 py-3 bg-blue-500 text-black font-bold rounded-xl text-[10px] font-mono uppercase tracking-widest hover:bg-blue-400 border-none cursor-pointer"
                   >
-                    {formMode === 'create' ? 'Onboard Agency' : 'Save Profile'}
+                    {formMode === 'create' ? 'Onboard Vendor' : 'Save Profile'}
                   </button>
                 </div>
               </form>
@@ -1205,28 +1292,5 @@ export default function ForwarderMasterPage() {
         )}
       </AnimatePresence>
     </>
-  );
-}
-
-// Simple Container icon fallback
-function ContainerIcon({ size = 16, className = '' }) {
-  return (
-    <svg 
-      xmlns="http://www.w3.org/2000/svg" 
-      viewBox="0 0 24 24" 
-      fill="none" 
-      stroke="currentColor" 
-      strokeWidth="2" 
-      strokeLinecap="round" 
-      strokeLinejoin="round" 
-      className={cn("lucide lucide-container", className)}
-      style={{ width: size, height: size }}
-    >
-      <rect width="18" height="18" x="3" y="3" rx="2" />
-      <path d="M3 9h18" />
-      <path d="M3 15h18" />
-      <path d="M9 3v18" />
-      <path d="M15 3v18" />
-    </svg>
   );
 }

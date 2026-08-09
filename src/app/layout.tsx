@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Toaster } from "sonner";
 import { NextAuthProvider } from "@/components/providers";
+import { ThemeProvider } from "@/components/ThemeProvider";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -14,12 +15,14 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body className="antialiased">
-        <NextAuthProvider>
-          {children}
-          <Toaster theme="dark" position="bottom-right" />
-        </NextAuthProvider>
+        <ThemeProvider>
+          <NextAuthProvider>
+            {children}
+            <Toaster position="bottom-right" />
+          </NextAuthProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

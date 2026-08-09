@@ -100,8 +100,8 @@ export default function QuotationsPage() {
       case 'SENT': return 'text-blue-400 bg-blue-500/10 border-blue-500/20';
       case 'DRAFT': return 'text-amber-400 bg-amber-500/10 border-amber-500/20';
       case 'REVISED': return 'text-purple-400 bg-purple-500/10 border-purple-500/20';
-      case 'EXPIRED': return 'text-white/80 bg-white/5 border-white/10';
-      default: return 'text-white/70 bg-white/5';
+      case 'EXPIRED': return 'text-muted-foreground bg-muted border-border';
+      default: return 'text-muted-foreground bg-muted';
     }
   };
 
@@ -128,13 +128,13 @@ export default function QuotationsPage() {
           { label: 'Pending Negotiation', value: formatCurrency(dashboardStats.pendingSentVal), icon: Clock, color: 'text-amber-400' },
           { label: 'Avg Configured Margin', value: `${dashboardStats.avgMargin}%`, icon: Percent, color: 'text-rose-400' },
         ].map((item, i) => (
-          <div key={i} className="glass p-6 rounded-3xl border border-white/5 flex items-center gap-4">
-            <div className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center text-white/70">
+          <div key={i} className="glass p-6 rounded-3xl border border-border flex items-center gap-4">
+            <div className="w-12 h-12 rounded-2xl bg-muted flex items-center justify-center text-muted-foreground">
               <item.icon size={20} className={item.color} />
             </div>
             <div>
-              <p className="text-[10px] font-mono text-white/70 uppercase tracking-widest mb-0.5">{item.label}</p>
-              <p className="font-sans font-bold text-lg text-white">{item.value}</p>
+              <p className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest mb-0.5">{item.label}</p>
+              <p className="font-sans font-bold text-lg text-foreground">{item.value}</p>
             </div>
           </div>
         ))}
@@ -142,20 +142,20 @@ export default function QuotationsPage() {
 
       <div className="space-y-6">
         {/* Main Controls Panel */}
-        <div className="glass p-6 rounded-3xl border border-white/5 space-y-4">
+        <div className="glass p-6 rounded-3xl border border-border space-y-4">
           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
             {/* Search Input */}
-            <div className="relative w-full max-w-lg flex items-center bg-white/5 border border-white/10 rounded-2xl overflow-hidden focus-within:border-blue-500/50 transition-all font-mono">
-              <Search className="absolute left-4 text-white/70" size={16} />
+            <div className="relative w-full max-w-lg flex items-center bg-muted border border-border rounded-2xl overflow-hidden focus-within:border-blue-500/50 transition-all font-mono">
+              <Search className="absolute left-4 text-muted-foreground" size={16} />
               <input 
                 type="text" 
                 placeholder="Identify Proposal Ref No..." 
-                className="w-full bg-transparent py-3 pl-12 pr-4 text-xs focus:outline-none text-white font-mono h-12"
+                className="w-full bg-transparent py-3 pl-12 pr-4 text-xs focus:outline-none text-foreground font-mono h-12"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
               {searchQuery && (
-                <button onClick={() => setSearchQuery('')} className="p-2 text-white/70 hover:text-white/90 bg-transparent border-none cursor-pointer">
+                <button onClick={() => setSearchQuery('')} className="p-2 text-muted-foreground hover:text-foreground/90 bg-transparent border-none cursor-pointer">
                   <X size={14} />
                 </button>
               )}
@@ -169,7 +169,7 @@ export default function QuotationsPage() {
                   "flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-3 border rounded-2xl text-[10px] font-mono uppercase tracking-widest transition-all cursor-pointer",
                   Object.values(filters).some(arr => arr.length > 0)
                     ? "bg-blue-500/10 border-blue-500 text-blue-400"
-                    : "bg-white/5 border-white/10 text-white/90 hover:bg-white/10"
+                    : "bg-muted border-border text-foreground/90 hover:bg-accent"
                 )}
               >
                 <Filter size={14} /> Filters
@@ -192,12 +192,12 @@ export default function QuotationsPage() {
                 initial={{ height: 0, opacity: 0 }}
                 animate={{ height: 'auto', opacity: 1 }}
                 exit={{ height: 0, opacity: 0 }}
-                className="overflow-hidden border-t border-white/5 pt-4"
+                className="overflow-hidden border-t border-border pt-4"
               >
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-6 text-[10px] font-mono">
                   {/* Customer Filter */}
                   <div className="space-y-2">
-                    <p className="text-white/70 uppercase tracking-wider">Customer</p>
+                    <p className="text-muted-foreground uppercase tracking-wider">Customer</p>
                     <div className="flex flex-wrap gap-1.5 max-h-[100px] overflow-y-auto custom-scrollbar">
                       {filterOptions.customerIds.map(id => (
                         <button
@@ -207,8 +207,8 @@ export default function QuotationsPage() {
                             customerIds: prev.customerIds.includes(id) ? prev.customerIds.filter(x => x !== id) : [...prev.customerIds, id]
                           }))}
                           className={cn(
-                            "px-2.5 py-1 rounded bg-[#101010] border text-[9px]",
-                            filters.customerIds.includes(id) ? "border-blue-500 text-blue-400 bg-blue-500/5" : "border-white/5 text-white/70"
+                            "px-2.5 py-1 rounded bg-card border text-[9px]",
+                            filters.customerIds.includes(id) ? "border-blue-500 text-blue-400 bg-blue-500/5" : "border-border text-muted-foreground"
                           )}
                         >
                           {getCustomerName(id)}
@@ -219,7 +219,7 @@ export default function QuotationsPage() {
 
                   {/* Status Filter */}
                   <div className="space-y-2">
-                    <p className="text-white/70 uppercase tracking-wider">Proposal Status</p>
+                    <p className="text-muted-foreground uppercase tracking-wider">Proposal Status</p>
                     <div className="flex flex-wrap gap-1.5">
                       {filterOptions.statuses.map(s => (
                         <button
@@ -229,8 +229,8 @@ export default function QuotationsPage() {
                             statuses: prev.statuses.includes(s) ? prev.statuses.filter(x => x !== s) : [...prev.statuses, s]
                           }))}
                           className={cn(
-                            "px-2.5 py-1 rounded bg-[#101010] border text-[9px]",
-                            filters.statuses.includes(s) ? "border-blue-500 text-blue-400 bg-blue-500/5" : "border-white/5 text-white/70"
+                            "px-2.5 py-1 rounded bg-card border text-[9px]",
+                            filters.statuses.includes(s) ? "border-blue-500 text-blue-400 bg-blue-500/5" : "border-border text-muted-foreground"
                           )}
                         >
                           {s}
@@ -241,7 +241,7 @@ export default function QuotationsPage() {
 
                   {/* Incoterms Filter */}
                   <div className="space-y-2">
-                    <p className="text-white/70 uppercase tracking-wider">Incoterm Rule</p>
+                    <p className="text-muted-foreground uppercase tracking-wider">Incoterm Rule</p>
                     <div className="flex flex-wrap gap-1.5">
                       {filterOptions.incoterms.map(inc => (
                         <button
@@ -251,8 +251,8 @@ export default function QuotationsPage() {
                             incoterms: prev.incoterms.includes(inc) ? prev.incoterms.filter(x => x !== inc) : [...prev.incoterms, inc]
                           }))}
                           className={cn(
-                            "px-2.5 py-1 rounded bg-[#101010] border text-[9px]",
-                            filters.incoterms.includes(inc) ? "border-blue-500 text-blue-400 bg-blue-500/5" : "border-white/5 text-white/70"
+                            "px-2.5 py-1 rounded bg-card border text-[9px]",
+                            filters.incoterms.includes(inc) ? "border-blue-500 text-blue-400 bg-blue-500/5" : "border-border text-muted-foreground"
                           )}
                         >
                           {inc}
@@ -261,10 +261,10 @@ export default function QuotationsPage() {
                     </div>
                   </div>
                 </div>
-                <div className="flex justify-end gap-3 mt-6 border-t border-white/5 pt-4">
+                <div className="flex justify-end gap-3 mt-6 border-t border-border pt-4">
                   <button 
                     onClick={() => setFilters({ customerIds: [], statuses: [], incoterms: [] })}
-                    className="px-4 py-2 rounded bg-white/5 text-[9px] font-mono text-white/70 hover:bg-white/10 cursor-pointer border-none"
+                    className="px-4 py-2 rounded bg-muted text-[9px] font-mono text-muted-foreground hover:bg-accent cursor-pointer border-none"
                   >
                     Clear Proposal Filters
                   </button>
@@ -308,7 +308,7 @@ export default function QuotationsPage() {
                 </button>
                 <button 
                   onClick={() => hook.bulkExportCSV(selectedIds)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-black text-white hover:bg-black/90 rounded-lg text-[9px] font-mono font-bold uppercase border-none cursor-pointer"
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-black text-foreground hover:bg-black/90 rounded-lg text-[9px] font-mono font-bold uppercase border-none cursor-pointer"
                 >
                   <FileDown size={12} /> Export CSV
                 </button>
@@ -318,10 +318,10 @@ export default function QuotationsPage() {
         </AnimatePresence>
 
         {/* Quotations Grid Listing */}
-        <div className="glass rounded-3xl border border-white/5 overflow-hidden">
+        <div className="glass rounded-3xl border border-border overflow-hidden">
           <div className="overflow-x-auto font-mono">
             <table className="w-full text-left text-xs font-mono">
-              <thead className="bg-white/2 text-white/70 uppercase tracking-[0.2em] border-b border-white/5">
+              <thead className="bg-white/2 text-muted-foreground uppercase tracking-[0.2em] border-b border-border">
                 <tr>
                   <th className="py-5 px-6 w-8 text-center">
                     <input 
@@ -337,7 +337,7 @@ export default function QuotationsPage() {
                         setSortBy('quotationNo');
                         setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
                       }}
-                      className="flex items-center gap-2 hover:text-white transition-colors bg-transparent border-none cursor-pointer text-white/70 text-xs font-mono uppercase"
+                      className="flex items-center gap-2 hover:text-foreground transition-colors bg-transparent border-none cursor-pointer text-muted-foreground text-xs font-mono uppercase"
                     >
                       Proposal Ref {sortBy === 'quotationNo' && (sortOrder === 'asc' ? <ChevronUp size={10} /> : <ChevronDown size={10} />)}
                     </button>
@@ -349,7 +349,7 @@ export default function QuotationsPage() {
                         setSortBy('date');
                         setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
                       }}
-                      className="flex items-center gap-2 hover:text-white transition-colors bg-transparent border-none cursor-pointer text-white/70 text-xs font-mono uppercase"
+                      className="flex items-center gap-2 hover:text-foreground transition-colors bg-transparent border-none cursor-pointer text-muted-foreground text-xs font-mono uppercase"
                     >
                       Issue Date {sortBy === 'date' && (sortOrder === 'asc' ? <ChevronUp size={10} /> : <ChevronDown size={10} />)}
                     </button>
@@ -360,7 +360,7 @@ export default function QuotationsPage() {
                         setSortBy('totalValue');
                         setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
                       }}
-                      className="flex items-center justify-end gap-2 hover:text-white transition-colors w-full bg-transparent border-none cursor-pointer text-white/70 text-xs font-mono uppercase"
+                      className="flex items-center justify-end gap-2 hover:text-foreground transition-colors w-full bg-transparent border-none cursor-pointer text-muted-foreground text-xs font-mono uppercase"
                     >
                       Value {sortBy === 'totalValue' && (sortOrder === 'asc' ? <ChevronUp size={10} /> : <ChevronDown size={10} />)}
                     </button>
@@ -387,18 +387,18 @@ export default function QuotationsPage() {
                     <td className="py-4 px-6">
                       <Link href={`/quotations/${q.id}`} className="block">
                         <div className="flex items-center gap-2">
-                          <p className="font-sans font-bold text-sm text-white/90 group-hover:text-blue-400 transition-colors">{q.quotationNo}</p>
-                          <span className="px-1.5 py-0.5 rounded bg-white/5 border border-white/10 text-[8px] text-white/70">V{q.version || 1}.0</span>
+                          <p className="font-sans font-bold text-sm text-foreground/90 group-hover:text-blue-400 transition-colors">{q.quotationNo}</p>
+                          <span className="px-1.5 py-0.5 rounded bg-muted border border-border text-[8px] text-muted-foreground">V{q.version || 1}.0</span>
                         </div>
                       </Link>
                     </td>
-                    <td className="py-4 px-6 text-white/70 truncate max-w-[200px]">{getCustomerName(q.customerId)}</td>
-                    <td className="py-4 px-6 text-white/70">{formatDate(q.date)}</td>
-                    <td className="py-4 px-6 text-right font-bold text-white/80">
+                    <td className="py-4 px-6 text-muted-foreground truncate max-w-[200px]">{getCustomerName(q.customerId)}</td>
+                    <td className="py-4 px-6 text-muted-foreground">{formatDate(q.date)}</td>
+                    <td className="py-4 px-6 text-right font-bold text-muted-foreground">
                       {formatCurrency(q.totalValue)}
                     </td>
                     <td className="py-4 px-6">
-                      <span className="px-2 py-0.5 rounded border border-white/5 text-[9px] font-mono text-white/70">{q.incoterm}</span>
+                      <span className="px-2 py-0.5 rounded border border-border text-[9px] font-mono text-muted-foreground">{q.incoterm}</span>
                     </td>
                     <td className="py-4 px-6 text-right">
                       <span className={cn(
@@ -409,13 +409,13 @@ export default function QuotationsPage() {
                     <td className="py-4 px-6 text-right" onClick={(e) => e.stopPropagation()}>
                       <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                         <Link href={`/quotations/${q.id}`}>
-                          <button className="p-2 rounded hover:bg-white/10 text-white/70 hover:text-white bg-transparent border-none cursor-pointer" title="View details">
+                          <button className="p-2 rounded hover:bg-accent text-muted-foreground hover:text-foreground bg-transparent border-none cursor-pointer" title="View details">
                             <Eye size={14} />
                           </button>
                         </Link>
                         <button 
                           onClick={(e) => handleDuplicate(q.id, e)}
-                          className="p-2 rounded hover:bg-white/10 text-white/70 hover:text-white bg-transparent border-none cursor-pointer" 
+                          className="p-2 rounded hover:bg-accent text-muted-foreground hover:text-foreground bg-transparent border-none cursor-pointer" 
                           title="Duplicate Proposal"
                         >
                           <Copy size={14} />
@@ -423,7 +423,7 @@ export default function QuotationsPage() {
                         {q.status !== 'APPROVED' && q.status !== 'REVISED' && (
                           <button 
                             onClick={(e) => handleRevise(q.id, e)}
-                            className="p-2 rounded hover:bg-white/10 text-white/70 hover:text-purple-400 bg-transparent border-none cursor-pointer" 
+                            className="p-2 rounded hover:bg-accent text-muted-foreground hover:text-purple-400 bg-transparent border-none cursor-pointer" 
                             title="Revise version"
                           >
                             <RefreshCcw size={14} />
@@ -431,7 +431,7 @@ export default function QuotationsPage() {
                         )}
                         <button 
                           onClick={() => softDeleteQuotation(q.id)}
-                          className="p-2 rounded hover:bg-white/10 text-white/70 hover:text-rose-400 bg-transparent border-none cursor-pointer" 
+                          className="p-2 rounded hover:bg-accent text-muted-foreground hover:text-rose-400 bg-transparent border-none cursor-pointer" 
                           title="Soft Delete"
                         >
                           <Trash2 size={14} />
@@ -442,7 +442,7 @@ export default function QuotationsPage() {
                 ))}
                 {quotations.length === 0 && (
                   <tr>
-                    <td colSpan={8} className="py-16 text-center text-white/70 font-mono text-xs uppercase tracking-widest">
+                    <td colSpan={8} className="py-16 text-center text-muted-foreground font-mono text-xs uppercase tracking-widest">
                       No Proposal Records Matched Filters
                     </td>
                   </tr>

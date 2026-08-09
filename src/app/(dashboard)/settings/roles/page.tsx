@@ -53,7 +53,7 @@ export default function RolesPage() {
     setEditingRole(null);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     try {
       const url = '/api/roles';
@@ -84,7 +84,7 @@ export default function RolesPage() {
       <PageHeaderUpdater title="Roles & Security" subtitle="Access Control Matrix" />
       
       <div className="space-y-8 pb-20">
-        <div className="glass p-8 lg:p-10 rounded-[2.5rem] border border-white/5 min-h-[60vh]">
+        <div className="glass p-8 lg:p-10 rounded-[2.5rem] border border-border min-h-[60vh]">
           
           <div className="flex justify-between items-center mb-8">
             <h3 className="text-xl font-display font-medium flex items-center gap-3">
@@ -106,10 +106,10 @@ export default function RolesPage() {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
               {roles.map((role) => (
-                <div key={role.id} className="p-6 rounded-2xl bg-white/2 hover:bg-white/5 border border-white/5 transition-all group flex flex-col justify-between h-40">
+                <div key={role.id} className="p-6 rounded-2xl bg-white/2 hover:bg-muted border border-border transition-all group flex flex-col justify-between h-40">
                   <div>
                     <div className="flex items-center justify-between mb-2">
-                      <h4 className="font-bold text-white text-lg flex items-center gap-2">
+                      <h4 className="font-bold text-foreground text-lg flex items-center gap-2">
                         <ShieldCheck size={16} className="text-emerald-400" />
                         {role.name}
                       </h4>
@@ -119,15 +119,15 @@ export default function RolesPage() {
                         </button>
                       </div>
                     </div>
-                    <p className="text-xs text-white/60 line-clamp-2">{role.description || 'No description provided.'}</p>
+                    <p className="text-xs text-muted-foreground/60 line-clamp-2">{role.description || 'No description provided.'}</p>
                   </div>
-                  <div className="text-[10px] font-mono uppercase tracking-widest text-white/40 pt-4 border-t border-white/5">
+                  <div className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground/40 pt-4 border-t border-border">
                     {role.permissions?.length || 0} Permissions Attached
                   </div>
                 </div>
               ))}
               {roles.length === 0 && (
-                <div className="col-span-full text-center py-12 text-white/40 italic border-2 border-dashed border-white/5 rounded-2xl">
+                <div className="col-span-full text-center py-12 text-muted-foreground/40 italic border-2 border-dashed border-border rounded-2xl">
                   No roles defined
                 </div>
               )}
@@ -138,36 +138,36 @@ export default function RolesPage() {
       </div>
 
       {isModalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="bg-[#0a0a0a] border border-white/10 rounded-2xl p-6 w-full max-w-md shadow-2xl">
+        <div className="fixed inset-0 z-100 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-background border border-border rounded-2xl p-6 w-full max-w-md shadow-2xl">
             <div className="flex justify-between items-center mb-6">
               <h3 className="text-lg font-bold">{editingRole ? 'Edit Role' : 'New Role'}</h3>
-              <button onClick={closeModal} className="text-white/50 hover:text-white cursor-pointer border-none bg-transparent"><X size={20}/></button>
+              <button onClick={closeModal} className="text-muted-foreground/50 hover:text-foreground cursor-pointer border-none bg-transparent"><X size={20}/></button>
             </div>
             
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label className="text-[10px] font-mono text-white/70 uppercase tracking-widest px-1">Role Name</label>
+                <label className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest px-1">Role Name</label>
                 <input 
                   type="text" 
                   required
                   value={formData.name} 
                   onChange={e => setFormData({...formData, name: e.target.value})}
-                  className="w-full mt-1 bg-white/5 border border-white/10 rounded-xl py-2.5 px-4 text-sm focus:outline-none focus:border-emerald-500/50 text-white" 
+                  className="w-full mt-1 bg-muted border border-border rounded-xl py-2.5 px-4 text-sm focus:outline-none focus:border-emerald-500/50 text-foreground" 
                 />
               </div>
               
               <div>
-                <label className="text-[10px] font-mono text-white/70 uppercase tracking-widest px-1">Description</label>
+                <label className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest px-1">Description</label>
                 <textarea 
                   value={formData.description} 
                   onChange={e => setFormData({...formData, description: e.target.value})}
-                  className="w-full mt-1 bg-white/5 border border-white/10 rounded-xl py-2.5 px-4 text-sm focus:outline-none focus:border-emerald-500/50 text-white h-24 resize-none" 
+                  className="w-full mt-1 bg-muted border border-border rounded-xl py-2.5 px-4 text-sm focus:outline-none focus:border-emerald-500/50 text-foreground h-24 resize-none" 
                 />
               </div>
 
               <div className="pt-4 flex justify-end gap-3">
-                <button type="button" onClick={closeModal} className="px-4 py-2 text-sm text-white/60 hover:text-white cursor-pointer border-none bg-transparent">Cancel</button>
+                <button type="button" onClick={closeModal} className="px-4 py-2 text-sm text-muted-foreground/60 hover:text-foreground cursor-pointer border-none bg-transparent">Cancel</button>
                 <button type="submit" className="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-sm font-medium transition-all cursor-pointer border-none">
                   {editingRole ? 'Update Role' : 'Create Role'}
                 </button>

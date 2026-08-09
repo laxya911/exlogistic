@@ -1,5 +1,6 @@
 import { Forwarder, ForwarderTimelineEvent } from '@/types';
-import { forwarderRepository } from '@/repositories/repository';
+import { ForwarderRepository } from '@/repositories/forwarder.repository';
+import { prisma } from '@/repositories/prisma.client';
 
 export class ForwarderService {
   /**
@@ -34,29 +35,33 @@ export class ForwarderService {
 
     // Unique Email and Tax ID check
     if (forwarder.email?.trim()) {
-      const existing = await forwarderRepository.find(f => 
-        f.email.toLowerCase() === forwarder.email!.trim().toLowerCase() && 
-        f.entityStatus !== 'DELETED' &&
-        (!isUpdate || f.id !== forwarder.id)
-      );
+      const existing = await prisma.forwarder.findMany({
+        where: {
+          email: { equals: forwarder.email.trim(), mode: 'insensitive' },
+          status: { not: 'DELETED' },
+          ...(isUpdate ? { id: { not: forwarder.id } } : {})
+        }
+      });
       if (existing.length > 0) {
         errors.push(`Email '${forwarder.email}' is already registered to another agency`);
       }
     }
 
     if (forwarder.taxId?.trim()) {
-      const existing = await forwarderRepository.find(f => 
-        f.taxId!.toLowerCase() === forwarder.taxId!.trim().toLowerCase() && 
-        f.entityStatus !== 'DELETED' &&
-        (!isUpdate || f.id !== forwarder.id)
-      );
+      const existing = await prisma.forwarder.findMany({
+        where: {
+          taxId: { equals: forwarder.taxId.trim(), mode: 'insensitive' },
+          status: { not: 'DELETED' },
+          ...(isUpdate ? { id: { not: forwarder.id } } : {})
+        }
+      });
       if (existing.length > 0) {
         errors.push(`Tax ID '${forwarder.taxId}' is already registered to another agency`);
       }
     }
 
     // Rating check
-    if (forwarder.rating !== undefined && (forwarder.rating < 1.0 || forwarder.rating > 5.0)) {
+    if (forwarder.performanceRating !== undefined && (forwarder.performanceRating < 1.0 || forwarder.performanceRating > 5.0)) {
       errors.push('Performance Rating must be between 1.0 and 5.0');
     }
 
@@ -94,8 +99,8 @@ export class ForwarderService {
   /**
    * Clones a forwarder node.
    */
-  async duplicate(id: string): Promise<Forwarder> {
-    const original = await forwarderRepository.getById(id);
+  async duplicate(id: string): Promise<any> {
+    const original = await ForwarderRepository.findById(id);
     if (!original) throw new Error('Forwarder matrix node not found');
 
     const duplicatedForwarder: Partial<Forwarder> = {
@@ -114,10 +119,10 @@ export class ForwarderService {
           userId: 'USR-001'
         }
       ],
-      entityStatus: 'ACTIVE'
-    };
+      status: 'ACTIVE'
+    } as any;
 
-    return forwarderRepository.create(duplicatedForwarder);
+    return ForwarderRepository.create(duplicatedForwarder as any);
   }
 }
 

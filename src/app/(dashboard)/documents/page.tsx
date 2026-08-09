@@ -10,7 +10,7 @@ import {
   Filter, AlertCircle, FileSearch, ArrowRight
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { cn, formatCurrency } from '@/lib/utils';
+import { cn, formatCurrency, formatDate } from '@/lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
 import { ERPDocument } from '@/types';
 
@@ -29,7 +29,7 @@ const getDocIcon = (type: string) => {
     case 'Insurance Certificate': return <AlertCircle size={18} className="text-violet-400" />;
     case 'Shipping Instruction': return <Anchor size={18} className="text-orange-400" />;
     case 'Purchase Order': return <Box size={18} className="text-fuchsia-400" />;
-    default: return <FileText size={18} className="text-white/80" />;
+    default: return <FileText size={18} className="text-muted-foreground" />;
   }
 };
 
@@ -37,8 +37,8 @@ const getStatusColor = (status: string) => {
   switch (status) {
     case 'SIGNED': return 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20';
     case 'DRAFT': return 'text-amber-400 bg-amber-500/10 border-amber-500/20';
-    case 'ARCHIVED': return 'text-white/70 bg-white/5 border-white/10';
-    default: return 'text-white/90 bg-white/10 border-white/20';
+    case 'ARCHIVED': return 'text-muted-foreground bg-muted border-border';
+    default: return 'text-foreground/90 bg-accent border-border';
   }
 };
 
@@ -216,7 +216,8 @@ function DocumentCenterContent() {
           filename:     `${selectedDoc.name.replace(/\s+/g, '_')}.pdf`,
           image:        { type: 'jpeg' as 'jpeg', quality: 0.98 },
           html2canvas:  { scale: 2, useCORS: true },
-          jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' as const }
+          jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' as const },
+          pagebreak:    { mode: 'css', avoid: '.break-inside-avoid' }
         };
         await html2pdf().set(opt).from(element).save();
       } else {
@@ -255,12 +256,12 @@ function DocumentCenterContent() {
         
         {/* Top KPIs */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="glass p-5 rounded-3xl border border-white/5">
+          <div className="glass p-5 rounded-3xl border border-border">
             <div className="flex justify-between items-start mb-2">
-              <p className="text-[10px] font-mono text-white/70 uppercase tracking-widest">Total Assets</p>
+              <p className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest">Total Assets</p>
               <FileSearch size={14} className="text-blue-400" />
             </div>
-            <p className="font-sans font-bold text-2xl text-white">{docs.length}</p>
+            <p className="font-sans font-bold text-2xl text-foreground">{docs.length}</p>
           </div>
           <div className="glass p-5 rounded-3xl border border-emerald-500/20 bg-emerald-500/5">
             <div className="flex justify-between items-start mb-2">
@@ -276,49 +277,49 @@ function DocumentCenterContent() {
             </div>
             <p className="font-sans font-bold text-2xl text-amber-400">{draftCount}</p>
           </div>
-          <div className="glass p-5 rounded-3xl border border-white/5 flex flex-col justify-center">
+          <div className="glass p-5 rounded-3xl border border-border flex flex-col justify-center">
             <button className="flex items-center justify-center gap-2 w-full py-3 bg-blue-500 text-black text-[10px] font-mono font-bold uppercase tracking-widest rounded-xl hover:bg-blue-400 transition-colors border-none cursor-pointer">
               <FileText size={14} /> Upload Document
             </button>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-[calc(100vh-20rem)] min-h-[550px]">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-[calc(100vh-20rem)] min-h-137.5">
           
           {/* LEFT: Document List */}
-          <div className={cn("glass rounded-4xl border border-white/5 flex flex-col overflow-hidden transition-all duration-300", selectedDocId ? "lg:col-span-5" : "lg:col-span-12")}>
+          <div className={cn("glass rounded-4xl border border-border flex flex-col overflow-hidden transition-all duration-300", selectedDocId ? "lg:col-span-5" : "lg:col-span-12")}>
             {/* Filters */}
-            <div className="p-6 border-b border-white/5 bg-white/2 space-y-4">
+            <div className="p-6 border-b border-border bg-white/2 space-y-4">
               <div className="flex gap-4">
                 <div className="relative flex-1">
-                  <Search size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-white/80" />
+                  <Search size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" />
                   <input 
                     type="text" 
                     placeholder="Search documents, references..." 
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
-                    className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-10 pr-4 text-xs font-mono focus:outline-none focus:border-blue-500/50 text-white"
+                    className="w-full bg-muted border border-border rounded-xl py-3 pl-10 pr-4 text-xs font-mono focus:outline-none focus:border-blue-500/50 text-foreground"
                   />
                 </div>
                 <select 
                   value={typeFilter} 
                   onChange={(e) => setTypeFilter(e.target.value)}
-                  className="bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-xs font-mono text-white focus:outline-none focus:border-blue-500/50 cursor-pointer w-48"
+                  className="bg-muted border border-border rounded-xl px-4 py-3 text-xs font-mono text-foreground focus:outline-none focus:border-blue-500/50 cursor-pointer w-48"
                 >
-                  <option value="ALL" className="bg-[#0c0c0c]">All Types</option>
+                  <option value="ALL" className="bg-background">All Types</option>
                   {docTypes.map(([type, count]) => (
-                    <option key={type} value={type} className="bg-[#0c0c0c]">{type} ({count})</option>
+                    <option key={type} value={type} className="bg-background">{type} ({count})</option>
                   ))}
                 </select>
                 <select 
                   value={statusFilter} 
                   onChange={(e) => setStatusFilter(e.target.value)}
-                  className="bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-xs font-mono text-white focus:outline-none focus:border-blue-500/50 cursor-pointer w-32"
+                  className="bg-muted border border-border rounded-xl px-4 py-3 text-xs font-mono text-foreground focus:outline-none focus:border-blue-500/50 cursor-pointer w-32"
                 >
-                  <option value="ALL" className="bg-[#0c0c0c]">All Status</option>
-                  <option value="SIGNED" className="bg-[#0c0c0c]">Signed</option>
-                  <option value="DRAFT" className="bg-[#0c0c0c]">Draft</option>
-                  <option value="ARCHIVED" className="bg-[#0c0c0c]">Archived</option>
+                  <option value="ALL" className="bg-background">All Status</option>
+                  <option value="SIGNED" className="bg-background">Signed</option>
+                  <option value="DRAFT" className="bg-background">Draft</option>
+                  <option value="ARCHIVED" className="bg-background">Archived</option>
                 </select>
               </div>
               
@@ -334,7 +335,7 @@ function DocumentCenterContent() {
                     <span className="text-xs font-mono text-blue-400">{selectedIds.size} selected</span>
                     <div className="flex gap-2">
                       <button className="px-3 py-1.5 bg-blue-500 text-black text-[10px] font-mono font-bold uppercase rounded hover:bg-blue-400 cursor-pointer border-none flex items-center gap-1"><Download size={12}/> Download</button>
-                      <button className="px-3 py-1.5 bg-white/10 text-white text-[10px] font-mono font-bold uppercase rounded hover:bg-white/20 cursor-pointer border-none flex items-center gap-1"><Archive size={12}/> Archive</button>
+                      <button className="px-3 py-1.5 bg-accent text-foreground text-[10px] font-mono font-bold uppercase rounded hover:bg-white/20 cursor-pointer border-none flex items-center gap-1"><Archive size={12}/> Archive</button>
                     </div>
                   </motion.div>
                 )}
@@ -343,7 +344,7 @@ function DocumentCenterContent() {
 
             {/* List */}
             <div className="flex-1 overflow-y-auto p-4 space-y-2 custom-scrollbar">
-              <div className="flex items-center px-4 py-2 text-[9px] font-mono text-white/80 uppercase tracking-widest">
+              <div className="flex items-center px-4 py-2 text-[9px] font-mono text-muted-foreground uppercase tracking-widest">
                 <input 
                   type="checkbox" 
                   checked={selectedIds.size === filteredDocs.length && filteredDocs.length > 0}
@@ -364,8 +365,8 @@ function DocumentCenterContent() {
                     }
                   }}
                   className={cn(
-                    "flex items-center px-4 py-3 rounded-xl hover:bg-white/5 transition-colors cursor-pointer group border",
-                    selectedDocId === doc.id ? "bg-white/5 border-white/20" : "border-transparent"
+                    "flex items-center px-4 py-3 rounded-xl hover:bg-muted transition-colors cursor-pointer group border",
+                    selectedDocId === doc.id ? "bg-muted border-border" : "border-transparent"
                   )}
                 >
                   <input 
@@ -375,14 +376,14 @@ function DocumentCenterContent() {
                     className="mr-4 accent-blue-500 cursor-pointer"
                     onClick={(e) => e.stopPropagation()}
                   />
-                  <div className="w-10 h-10 rounded-lg bg-white/5 flex items-center justify-center mr-4 shrink-0">
+                  <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center mr-4 shrink-0">
                     {getDocIcon(doc.type)}
                   </div>
                   <div className="flex-1 min-w-0 pr-4">
-                    <p className="text-sm font-bold text-white/90 truncate">{doc.name}</p>
+                    <p className="text-sm font-bold text-foreground/90 truncate">{doc.name}</p>
                     <div className="flex items-center gap-2 mt-1">
-                      <span className="text-[10px] font-mono text-white/70 uppercase truncate">{doc.type}</span>
-                      <span className="text-white/70 text-[10px]">•</span>
+                      <span className="text-[10px] font-mono text-muted-foreground uppercase truncate">{doc.type}</span>
+                      <span className="text-muted-foreground text-[10px]">•</span>
                       <span className="text-[10px] font-mono text-blue-400/70 hover:text-blue-400 truncate">
                         {doc.relatedId}
                       </span>
@@ -390,7 +391,7 @@ function DocumentCenterContent() {
                   </div>
                   
                   {!selectedDocId && (
-                    <span className="w-24 text-right text-xs font-mono text-white/70 shrink-0">
+                    <span className="w-24 text-right text-xs font-mono text-muted-foreground shrink-0">
                       {doc.size}
                     </span>
                   )}
@@ -406,7 +407,7 @@ function DocumentCenterContent() {
               {filteredDocs.length === 0 && (
                 <div className="py-20 text-center">
                   <FileSearch size={32} className="mx-auto text-white/10 mb-4" />
-                  <p className="text-xs font-mono text-white/80 uppercase tracking-widest">No documents found</p>
+                  <p className="text-xs font-mono text-muted-foreground uppercase tracking-widest">No documents found</p>
                 </div>
               )}
             </div>
@@ -419,17 +420,17 @@ function DocumentCenterContent() {
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: 20 }}
-                className="lg:col-span-7 h-full flex flex-col glass rounded-4xl border border-white/10 overflow-hidden relative"
+                className="lg:col-span-7 h-full flex flex-col glass rounded-4xl border border-border overflow-hidden relative"
               >
                 {/* Header Actions */}
-                <div className="p-6 border-b border-white/5 bg-white/2 flex justify-between items-start shrink-0">
+                <div className="p-6 border-b border-border bg-white/2 flex justify-between items-start shrink-0">
                   <div>
                     <h3 className="font-display font-medium text-lg mb-1">{selectedDoc.name}</h3>
                     <div className="flex items-center gap-3 text-[10px] font-mono uppercase tracking-widest">
-                      <span className="text-white/70">{selectedDoc.type}</span>
-                      <span className="text-white/70">•</span>
-                      <span className="text-white/70">{new Date(selectedDoc.createdAt).toLocaleDateString()}</span>
-                      <span className="text-white/70">•</span>
+                      <span className="text-muted-foreground">{selectedDoc.type}</span>
+                      <span className="text-muted-foreground">•</span>
+                      <span className="text-muted-foreground">{formatDate(selectedDoc.createdAt)}</span>
+                      <span className="text-muted-foreground">•</span>
                       <span className="text-blue-400">{selectedDoc.relatedId}</span>
                     </div>
                   </div>
@@ -444,25 +445,25 @@ function DocumentCenterContent() {
                         <ArrowRight size={16} />
                       </button>
                     ) : (
-                      <button onClick={() => handleAction(selectedDoc.id, 'archive')} disabled={isProcessing} className="p-2.5 rounded-xl bg-white/5 text-white/70 hover:text-white hover:bg-white/10 cursor-pointer border-none" title="Archive">
+                      <button onClick={() => handleAction(selectedDoc.id, 'archive')} disabled={isProcessing} className="p-2.5 rounded-xl bg-muted text-muted-foreground hover:text-foreground hover:bg-accent cursor-pointer border-none" title="Archive">
                         <Archive size={16} />
                       </button>
                     )}
-                    <button onClick={handlePrint} className="p-2.5 rounded-xl bg-white/5 text-white/70 hover:text-white hover:bg-white/10 cursor-pointer border-none" title="Print">
+                    <button onClick={handlePrint} className="p-2.5 rounded-xl bg-muted text-muted-foreground hover:text-foreground hover:bg-accent cursor-pointer border-none" title="Print">
                       <Printer size={16} />
                     </button>
                     <button onClick={() => handleDelete(selectedDoc.id)} disabled={isProcessing} className="p-2.5 rounded-xl bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 cursor-pointer border-none" title="Delete">
                       <Trash2 size={16} />
                     </button>
-                    <button onClick={() => setSelectedDocId(null)} className="p-2.5 rounded-xl bg-white/5 text-white/70 hover:text-white hover:bg-white/10 cursor-pointer border-none ml-2">
+                    <button onClick={() => setSelectedDocId(null)} className="p-2.5 rounded-xl bg-muted text-muted-foreground hover:text-foreground hover:bg-accent cursor-pointer border-none ml-2">
                       <XCircle size={16} />
                     </button>
                   </div>
                 </div>
 
                 {/* PDF Viewer Mockup */}
-                <div className="flex-1 overflow-y-auto p-4 md:p-8 bg-[#f5f5f5] custom-scrollbar">
-                  <div id="document-canvas" className="bg-white min-h-full shadow-2xl p-8 md:p-12 font-serif text-black max-w-[800px] mx-auto relative">
+                <div className="flex-1 overflow-y-auto p-4 md:p-8 bg-muted custom-scrollbar">
+                  <div id="document-canvas" className="bg-white min-h-full shadow-2xl p-8 md:p-12 font-serif text-black max-w-200 mx-auto relative">
                     
                     {/* Watermarks based on status */}
                     {selectedDoc.status === 'DRAFT' && (
@@ -487,7 +488,7 @@ function DocumentCenterContent() {
                           <h2 className="text-2xl font-bold uppercase mb-2 font-sans">{selectedDoc.type}</h2>
                           <div className="text-xs space-y-1 font-sans">
                             <p><span className="text-gray-500 mr-2 w-16 inline-block">Doc Ref:</span> <span className="font-bold">{selectedDoc.name}</span></p>
-                            <p><span className="text-gray-500 mr-2 w-16 inline-block">Date:</span> <span className="font-bold">{new Date(selectedDoc.createdAt).toLocaleDateString()}</span></p>
+                            <p><span className="text-gray-500 mr-2 w-16 inline-block">Date:</span> <span className="font-bold">{formatDate(selectedDoc.createdAt)}</span></p>
                             <p><span className="text-gray-500 mr-2 w-16 inline-block">Order Ref:</span> <span className="font-bold">{selectedDoc.relatedId}</span></p>
                           </div>
                         </div>
@@ -509,7 +510,7 @@ function DocumentCenterContent() {
 
                       {/* Terms (if applicable) */}
                       {(selectedDoc.incoterm || selectedDoc.paymentTerms) && (
-                        <div className="grid grid-cols-3 gap-6 py-4 border-y border-gray-200 text-sm font-sans bg-gray-50 px-4">
+                        <div className="grid grid-cols-3 gap-6 py-4 border-y border-gray-200 text-sm font-sans px-4" style={{ backgroundColor: '#f9fafb', color: '#000' }}>
                           {selectedDoc.incoterm && (
                             <div>
                               <p className="text-[9px] font-bold text-gray-500 uppercase">Incoterms</p>
@@ -539,8 +540,8 @@ function DocumentCenterContent() {
                               <tr className="border-b-2 border-black">
                                 <th className="py-3 font-bold">No. & Description of Goods</th>
                                 <th className="py-3 font-bold text-right">Qty</th>
-                                <th className="py-3 font-bold text-right">Unit Price</th>
-                                <th className="py-3 font-bold text-right">Total Amount</th>
+                                <th className="py-3 font-bold text-right">Unit Price (Tax Excl.)</th>
+                                <th className="py-3 font-bold text-right">Total Amount (Tax Excl.)</th>
                               </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-200">
@@ -551,21 +552,21 @@ function DocumentCenterContent() {
                                     <p className="text-xs text-gray-500 mt-1">HSN: {it.hsn} | Origin: {it.origin}</p>
                                   </td>
                                   <td className="py-4 text-right whitespace-nowrap">{it.qty} {it.unit}</td>
-                                  <td className="py-4 text-right whitespace-nowrap">{formatCurrency(it.unitPrice, selectedDoc.currency)}</td>
-                                  <td className="py-4 text-right font-bold whitespace-nowrap">{formatCurrency(it.totalPrice, selectedDoc.currency)}</td>
+                                  <td className="py-4 text-right whitespace-nowrap">{formatCurrency(Number(it.unitPrice) || 0, selectedDoc.currency)}</td>
+                                  <td className="py-4 text-right font-bold whitespace-nowrap">{formatCurrency(Number(it.totalPrice) || (Number(it.qty) * Number(it.unitPrice)) || 0, selectedDoc.currency)}</td>
                                 </tr>
                               ))}
                             </tbody>
                             <tfoot>
                               <tr className="border-t-2 border-black text-lg font-bold">
                                 <td colSpan={3} className="py-4 text-right">TOTAL VALUE ({selectedDoc.currency})</td>
-                                <td className="py-4 text-right">{formatCurrency(selectedDoc.totalValue || 0, selectedDoc.currency)}</td>
+                                <td className="py-4 text-right">{formatCurrency(selectedDoc.items?.reduce((sum: number, it: any) => sum + (Number(it.totalPrice) || (Number(it.qty) * Number(it.unitPrice)) || 0), 0) || selectedDoc.totalValue || 0, selectedDoc.currency)}</td>
                               </tr>
                             </tfoot>
                           </table>
                         </div>
                       ) : (
-                        <div className="min-h-[300px] border border-gray-200 bg-gray-50 p-8 flex items-center justify-center text-gray-400 text-sm font-sans uppercase tracking-widest text-center leading-relaxed">
+                        <div className="min-h-75 border border-gray-200 p-8 flex items-center justify-center text-gray-400 text-sm font-sans uppercase tracking-widest text-center leading-relaxed" style={{ backgroundColor: '#f9fafb' }}>
                           [ STANDARD FORMAT FOR {selectedDoc.type.toUpperCase()} ]<br/><br/>
                           REFER TO ATTACHED SPECIFICATIONS<br/>
                           AND RELATED TRANSACTION {selectedDoc.relatedId}
@@ -581,7 +582,7 @@ function DocumentCenterContent() {
                       )}
 
                       {/* Signatures */}
-                      <div className="pt-20 grid grid-cols-2 gap-12 font-sans">
+                      <div className="pt-20 grid grid-cols-2 gap-12 font-sans break-inside-avoid">
                         <div className="text-center">
                           <div className="border-b border-black w-48 mx-auto mb-2 relative h-12">
                             {selectedDoc.status === 'SIGNED' && (
@@ -601,8 +602,8 @@ function DocumentCenterContent() {
                 </div>
 
                 {/* Footer Action */}
-                <div className="p-4 border-t border-white/5 bg-white/5 shrink-0 flex justify-end gap-3">
-                  <button className="px-6 py-2.5 bg-white/10 text-white rounded-xl text-xs font-mono font-bold uppercase hover:bg-white/20 transition-colors border-none cursor-pointer">
+                <div className="p-4 border-t border-border bg-muted shrink-0 flex justify-end gap-3">
+                  <button className="px-6 py-2.5 bg-accent text-foreground rounded-xl text-xs font-mono font-bold uppercase hover:bg-white/20 transition-colors border-none cursor-pointer">
                     Share Link
                   </button>
                   <button onClick={handleDownloadPdf} className="px-6 py-2.5 bg-blue-500 text-black rounded-xl text-xs font-mono font-bold uppercase hover:bg-blue-400 transition-colors border-none cursor-pointer flex items-center gap-2">
@@ -620,7 +621,7 @@ function DocumentCenterContent() {
 
 export default function DocumentCenterPage() {
   return (
-    <Suspense fallback={<div className="p-8 text-center font-mono text-xs text-white/50">Loading Document Vault...</div>}>
+    <Suspense fallback={<div className="p-8 text-center font-mono text-xs text-muted-foreground/50">Loading Document Vault...</div>}>
       <DocumentCenterContent />
     </Suspense>
   );

@@ -285,7 +285,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
     }
   };
 
-  if (loading) return <div className="p-8 text-white">Loading product details...</div>;
+  if (loading) return <div className="p-8 text-foreground">Loading product details...</div>;
 
   return (
     <>
@@ -301,7 +301,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
       <div className="space-y-6">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <button onClick={() => router.push('/products')}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-[10px] font-mono uppercase text-white/90 hover:bg-white/10 cursor-pointer">
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-muted border border-border text-[10px] font-mono uppercase text-foreground/90 hover:bg-accent cursor-pointer">
             <ArrowLeft size={12} /> Back to Products
           </button>
 
@@ -313,10 +313,10 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
               >
                 <Layers size={14} /> Variants ({existingVariantsCount})
               </button>
-              <button className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-white/70 font-mono text-[10px] uppercase">
+              <button className="flex items-center gap-2 px-4 py-2 rounded-xl bg-muted border border-border text-muted-foreground font-mono text-[10px] uppercase">
                 <Package size={14} /> On Hand ({totalOnHand})
               </button>
-              <button className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-white/70 font-mono text-[10px] uppercase">
+              <button className="flex items-center gap-2 px-4 py-2 rounded-xl bg-muted border border-border text-muted-foreground font-mono text-[10px] uppercase">
                 <ShoppingCart size={14} /> Sold ({totalAllocated})
               </button>
             </div>
@@ -329,35 +329,35 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
           </div>
         )}
 
-        <div className="glass p-8 rounded-3xl border border-white/5">
-          <div className="flex items-center gap-2 mb-6 border-b border-white/10 pb-4 overflow-x-auto">
+        <div className="glass p-8 rounded-3xl border border-border">
+          <div className="flex items-center gap-2 mb-6 border-b border-border pb-4 overflow-x-auto">
             <button 
-              className={`text-[11px] font-mono font-bold px-4 py-2 rounded-lg transition-colors whitespace-nowrap ${activeTab === 'general' ? 'bg-white/10 text-white' : 'text-white/50 hover:text-white/80'}`}
+              className={`text-[11px] font-mono font-bold px-4 py-2 rounded-lg transition-colors whitespace-nowrap ${activeTab === 'general' ? 'bg-accent text-foreground' : 'text-muted-foreground/50 hover:text-muted-foreground'}`}
               onClick={() => setActiveTab('general')}
             >
               General Information
             </button>
             <button 
-              className={`text-[11px] font-mono font-bold px-4 py-2 rounded-lg transition-colors whitespace-nowrap ${activeTab === 'variants' ? 'bg-white/10 text-white' : 'text-white/50 hover:text-white/80'}`}
+              className={`text-[11px] font-mono font-bold px-4 py-2 rounded-lg transition-colors whitespace-nowrap ${activeTab === 'variants' ? 'bg-accent text-foreground' : 'text-muted-foreground/50 hover:text-muted-foreground'}`}
               onClick={() => setActiveTab('variants')}
             >
               Attributes & Variants
             </button>
             <button 
-              className={`text-[11px] font-mono font-bold px-4 py-2 rounded-lg transition-colors whitespace-nowrap ${activeTab === 'packaging' ? 'bg-white/10 text-white' : 'text-white/50 hover:text-white/80'}`}
+              className={`text-[11px] font-mono font-bold px-4 py-2 rounded-lg transition-colors whitespace-nowrap ${activeTab === 'packaging' ? 'bg-accent text-foreground' : 'text-muted-foreground/50 hover:text-muted-foreground'}`}
               onClick={() => setActiveTab('packaging')}
             >
               Logistics & Packaging
             </button>
             <button 
-              className={`text-[11px] font-mono font-bold px-4 py-2 rounded-lg transition-colors whitespace-nowrap ${activeTab === 'compliance' ? 'bg-white/10 text-white' : 'text-white/50 hover:text-white/80'}`}
+              className={`text-[11px] font-mono font-bold px-4 py-2 rounded-lg transition-colors whitespace-nowrap ${activeTab === 'compliance' ? 'bg-accent text-foreground' : 'text-muted-foreground/50 hover:text-muted-foreground'}`}
               onClick={() => setActiveTab('compliance')}
             >
               Compliance
             </button>
             {!isNew && (
               <button 
-                className={`text-[11px] font-mono font-bold px-4 py-2 rounded-lg transition-colors whitespace-nowrap ${activeTab === 'inventory' ? 'bg-emerald-500/20 text-emerald-400' : 'text-white/50 hover:text-emerald-400/80'}`}
+                className={`text-[11px] font-mono font-bold px-4 py-2 rounded-lg transition-colors whitespace-nowrap ${activeTab === 'inventory' ? 'bg-emerald-500/20 text-emerald-400' : 'text-muted-foreground/50 hover:text-emerald-400/80'}`}
                 onClick={() => setActiveTab('inventory')}
               >
                 Stock Ledger
@@ -369,35 +369,35 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-4">
                 <div>
-                  <label className="text-[11px] font-mono text-white/80 uppercase tracking-wider block mb-1">Product Name *</label>
-                  <input className="w-full bg-[#0b0b0b] border border-white/10 rounded-xl py-3 px-4 text-sm font-mono text-white focus:border-blue-500 focus:outline-none transition-colors" value={name} onChange={(e) => setName(e.target.value)} />
+                  <label className="text-[11px] font-mono text-muted-foreground uppercase tracking-wider block mb-1">Product Name *</label>
+                  <input className="w-full bg-background border border-border rounded-xl py-3 px-4 text-sm font-mono text-foreground focus:border-blue-500 focus:outline-none transition-colors" value={name} onChange={(e) => setName(e.target.value)} />
                 </div>
                 <div>
-                  <label className="text-[11px] font-mono text-white/80 uppercase tracking-wider block mb-1">Base SKU *</label>
-                  <input className="w-full bg-[#0b0b0b] border border-white/10 rounded-xl py-3 px-4 text-sm font-mono text-white focus:border-blue-500 focus:outline-none transition-colors" value={sku} onChange={(e) => setSku(e.target.value)} />
+                  <label className="text-[11px] font-mono text-muted-foreground uppercase tracking-wider block mb-1">Base SKU *</label>
+                  <input className="w-full bg-background border border-border rounded-xl py-3 px-4 text-sm font-mono text-foreground focus:border-blue-500 focus:outline-none transition-colors" value={sku} onChange={(e) => setSku(e.target.value)} />
                 </div>
                 <div>
-                  <label className="text-[11px] font-mono text-white/80 uppercase tracking-wider block mb-1">Description</label>
-                  <textarea rows={4} className="w-full bg-[#0b0b0b] border border-white/10 rounded-xl py-3 px-4 text-sm font-mono text-white focus:border-blue-500 focus:outline-none transition-colors" value={description} onChange={(e) => setDescription(e.target.value)} />
+                  <label className="text-[11px] font-mono text-muted-foreground uppercase tracking-wider block mb-1">Description</label>
+                  <textarea rows={4} className="w-full bg-background border border-border rounded-xl py-3 px-4 text-sm font-mono text-foreground focus:border-blue-500 focus:outline-none transition-colors" value={description} onChange={(e) => setDescription(e.target.value)} />
                 </div>
                 
-                <div className="space-y-4 pt-6 border-t border-white/5">
+                <div className="space-y-4 pt-6 border-t border-border">
                   <h3 className="text-xs font-mono font-bold uppercase tracking-widest text-blue-400">Base Pricing</h3>
                   
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1.5">
-                      <label className="text-[10px] font-mono uppercase tracking-widest text-white/50">Base Purchase Price (USD)</label>
+                      <label className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground/50">Base Purchase Price (USD)</label>
                       <input 
                         type="number" step="0.01" min="0" value={basePurchasePrice} onChange={e => setBasePurchasePrice(parseFloat(e.target.value) || 0)}
-                        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white outline-none focus:border-blue-500/50 transition-all font-mono"
+                        className="w-full bg-muted border border-border rounded-xl px-4 py-3 text-sm text-foreground outline-none focus:border-blue-500/50 transition-all font-mono"
                         placeholder="e.g. 100.00"
                       />
                     </div>
                     <div className="space-y-1.5">
-                      <label className="text-[10px] font-mono uppercase tracking-widest text-white/50">Base Selling Price (USD)</label>
+                      <label className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground/50">Base Selling Price (USD)</label>
                       <input 
                         type="number" step="0.01" min="0" value={baseSellingPrice} onChange={e => setBaseSellingPrice(parseFloat(e.target.value) || 0)}
-                        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white outline-none focus:border-blue-500/50 transition-all font-mono"
+                        className="w-full bg-muted border border-border rounded-xl px-4 py-3 text-sm text-foreground outline-none focus:border-blue-500/50 transition-all font-mono"
                         placeholder="e.g. 150.00"
                       />
                     </div>
@@ -406,7 +406,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
               </div>
               <div className="space-y-4">
                 <div>
-                  <label className="text-[11px] font-mono text-white/80 uppercase tracking-wider block mb-1">Category *</label>
+                  <label className="text-[11px] font-mono text-muted-foreground uppercase tracking-wider block mb-1">Category *</label>
                   <SearchableSelect 
                     options={dbCategories.map(c => ({ id: c.id, label: c.name, value: c.id }))}
                     value={categoryIds}
@@ -417,7 +417,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
                   />
                 </div>
                 <div>
-                  <label className="text-[11px] font-mono text-white/80 uppercase tracking-wider block mb-1">Brand *</label>
+                  <label className="text-[11px] font-mono text-muted-foreground uppercase tracking-wider block mb-1">Brand *</label>
                   <SearchableSelect 
                     options={dbBrands.map(b => ({ id: b.id, label: b.name, value: b.id }))}
                     value={brandId}
@@ -428,12 +428,12 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="text-[11px] font-mono text-white/80 uppercase tracking-wider block mb-1">HSN Code</label>
-                    <input className="w-full bg-[#0b0b0b] border border-white/10 rounded-xl py-3 px-4 text-sm font-mono text-white focus:border-blue-500 focus:outline-none transition-colors" value={hsnCode} onChange={(e) => setHsnCode(e.target.value)} />
+                    <label className="text-[11px] font-mono text-muted-foreground uppercase tracking-wider block mb-1">HSN Code</label>
+                    <input className="w-full bg-background border border-border rounded-xl py-3 px-4 text-sm font-mono text-foreground focus:border-blue-500 focus:outline-none transition-colors" value={hsnCode} onChange={(e) => setHsnCode(e.target.value)} />
                   </div>
                   <div>
-                    <label className="text-[11px] font-mono text-white/80 uppercase tracking-wider block mb-1">UOM</label>
-                    <select className="w-full bg-[#0b0b0b] border border-white/10 rounded-xl py-3 px-4 text-sm font-mono text-white focus:border-blue-500 focus:outline-none" value={uom} onChange={(e) => setUom(e.target.value)}>
+                    <label className="text-[11px] font-mono text-muted-foreground uppercase tracking-wider block mb-1">UOM</label>
+                    <select className="w-full bg-background border border-border rounded-xl py-3 px-4 text-sm font-mono text-foreground focus:border-blue-500 focus:outline-none" value={uom} onChange={(e) => setUom(e.target.value)}>
                       <option value="BAG">BAG</option>
                       <option value="KG">KG</option>
                       <option value="MT">MT</option>
@@ -442,7 +442,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
                   </div>
                 </div>
                 <div>
-                  <label className="text-[11px] font-mono text-white/80 uppercase tracking-wider block mb-1">Default Supplier</label>
+                  <label className="text-[11px] font-mono text-muted-foreground uppercase tracking-wider block mb-1">Default Supplier</label>
                   <SearchableSelect 
                     options={dbSuppliers.map(s => ({ id: s.id, label: s.name, value: s.id }))}
                     value={supplierId}
@@ -452,8 +452,8 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
                   />
                 </div>
                 <div>
-                  <label className="text-[11px] font-mono text-white/80 uppercase tracking-wider block mb-1">Country of Origin</label>
-                  <input className="w-full bg-[#0b0b0b] border border-white/10 rounded-xl py-3 px-4 text-sm font-mono text-white focus:border-blue-500 focus:outline-none transition-colors" value={countryOfOrigin} onChange={(e) => setCountryOfOrigin(e.target.value)} />
+                  <label className="text-[11px] font-mono text-muted-foreground uppercase tracking-wider block mb-1">Country of Origin</label>
+                  <input className="w-full bg-background border border-border rounded-xl py-3 px-4 text-sm font-mono text-foreground focus:border-blue-500 focus:outline-none transition-colors" value={countryOfOrigin} onChange={(e) => setCountryOfOrigin(e.target.value)} />
                 </div>
               </div>
             </div>
@@ -462,10 +462,10 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
           {activeTab === 'variants' && (
             <div className="space-y-6">
               <div className="flex justify-between items-center">
-                <h3 className="text-sm font-bold text-white">Variant Attributes</h3>
+                <h3 className="text-sm font-bold text-foreground">Variant Attributes</h3>
                 <button 
                   onClick={() => setAttributes([...attributes, { name: '', values: [] }])}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-white/5 hover:bg-white/10 rounded-lg text-xs font-mono font-bold uppercase cursor-pointer"
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-muted hover:bg-accent rounded-lg text-xs font-mono font-bold uppercase cursor-pointer"
                 >
                   <Plus size={14} /> Add Attribute
                 </button>
@@ -473,9 +473,9 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
 
               <div className="space-y-3">
                 {attributes.map((attr, idx) => (
-                  <div key={idx} className="flex gap-4 items-start bg-black/20 p-4 rounded-xl border border-white/5">
+                  <div key={idx} className="flex gap-4 items-start bg-black/20 p-4 rounded-xl border border-border">
                     <div className="w-1/3">
-                      <label className="text-[10px] font-mono text-white/50 uppercase mb-1 block">Attribute Name</label>
+                      <label className="text-[10px] font-mono text-muted-foreground/50 uppercase mb-1 block">Attribute Name</label>
                       <SearchableSelect 
                         options={dbAttributes.map(a => ({ id: a.name, label: a.name, value: a.name }))}
                         value={attr.name}
@@ -495,7 +495,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
                       />
                     </div>
                     <div className="flex-1">
-                      <label className="text-[10px] font-mono text-white/50 uppercase mb-1 block">Values (Select multiple)</label>
+                      <label className="text-[10px] font-mono text-muted-foreground/50 uppercase mb-1 block">Values (Select multiple)</label>
                       <SearchableSelect 
                         multiple
                         options={
@@ -540,9 +540,9 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
               )}
 
               {variants.length > 0 && (
-                <div className="mt-8 border border-white/10 rounded-xl overflow-x-auto">
+                <div className="mt-8 border border-border rounded-xl overflow-x-auto">
                   <table className="w-full text-left text-sm font-mono min-w-max">
-                    <thead className="bg-white/5 text-white/50 text-[10px] uppercase">
+                    <thead className="bg-muted text-muted-foreground/50 text-[10px] uppercase">
                       <tr>
                         <th className="py-3 px-4">Variant Name</th>
                         <th className="py-3 px-4">SKU</th>
@@ -559,39 +559,39 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
                         <tr key={i} className="hover:bg-white/2">
                           <td className="py-2 px-4">{v.title}</td>
                           <td className="py-2 px-4">
-                            <input className="w-full bg-transparent border-none text-white focus:outline-none text-[11px]" value={v.sku} onChange={(e) => {
+                            <input className="w-full bg-transparent border-none text-foreground focus:outline-none text-[11px]" value={v.sku} onChange={(e) => {
                               const newV = [...variants]; newV[i].sku = e.target.value; setVariants(newV);
                             }} />
                           </td>
                           <td className="py-2 px-4">
-                            <input type="number" step="0.01" className="w-full bg-transparent border-none text-white focus:outline-none text-[11px]" value={v.extraPurchasePrice || ''} placeholder="0.00" onChange={(e) => {
+                            <input type="number" step="0.01" className="w-full bg-transparent border-none text-foreground focus:outline-none text-[11px]" value={v.extraPurchasePrice || ''} placeholder="0.00" onChange={(e) => {
                               const newV = [...variants]; newV[i].extraPurchasePrice = Number(e.target.value); setVariants(newV);
                             }} />
                           </td>
                           <td className="py-2 px-4">
-                            <input type="number" step="0.01" className="w-full bg-transparent border-none text-white focus:outline-none text-[11px]" value={v.extraSellingPrice || ''} placeholder="0.00" onChange={(e) => {
+                            <input type="number" step="0.01" className="w-full bg-transparent border-none text-foreground focus:outline-none text-[11px]" value={v.extraSellingPrice || ''} placeholder="0.00" onChange={(e) => {
                               const newV = [...variants]; newV[i].extraSellingPrice = Number(e.target.value); setVariants(newV);
                             }} />
                           </td>
                           <td className="py-2 px-4">
-                            <input className="w-full bg-transparent border-none text-white focus:outline-none text-[11px]" value={v.images?.[0] || ''} placeholder="Image URL" onChange={(e) => {
+                            <input className="w-full bg-transparent border-none text-foreground focus:outline-none text-[11px]" value={v.images?.[0] || ''} placeholder="Image URL" onChange={(e) => {
                               const newV = [...variants]; newV[i].images = [e.target.value]; setVariants(newV);
                             }} />
                           </td>
                           <td className="py-2 px-4">
-                            <select className="w-full bg-transparent border-none text-white focus:outline-none text-[11px] cursor-pointer" value={v.salesTaxId || ''} onChange={(e) => {
+                            <select className="w-full bg-transparent border-none text-foreground focus:outline-none text-[11px] cursor-pointer" value={v.salesTaxId || ''} onChange={(e) => {
                               const newV = [...variants]; newV[i].salesTaxId = e.target.value; setVariants(newV);
                             }}>
-                              <option value="" className="bg-[#111]">No Tax</option>
-                              {dbTaxes.map(t => <option key={t.id} value={t.id} className="bg-[#111]">{t.name} ({t.ratePercentage}%)</option>)}
+                              <option value="" className="bg-background">No Tax</option>
+                              {dbTaxes.map(t => <option key={t.id} value={t.id} className="bg-background">{t.name} ({t.ratePercentage}%)</option>)}
                             </select>
                           </td>
                           <td className="py-2 px-4">
-                            <select className="w-full bg-transparent border-none text-white focus:outline-none text-[11px] cursor-pointer" value={v.purchaseTaxId || ''} onChange={(e) => {
+                            <select className="w-full bg-transparent border-none text-foreground focus:outline-none text-[11px] cursor-pointer" value={v.purchaseTaxId || ''} onChange={(e) => {
                               const newV = [...variants]; newV[i].purchaseTaxId = e.target.value; setVariants(newV);
                             }}>
-                              <option value="" className="bg-[#111]">No Tax</option>
-                              {dbTaxes.map(t => <option key={t.id} value={t.id} className="bg-[#111]">{t.name} ({t.ratePercentage}%)</option>)}
+                              <option value="" className="bg-background">No Tax</option>
+                              {dbTaxes.map(t => <option key={t.id} value={t.id} className="bg-background">{t.name} ({t.ratePercentage}%)</option>)}
                             </select>
                           </td>
                           <td className="py-2 px-4 text-center">
@@ -616,7 +616,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
               <div className="mt-4">
                 <button 
                   onClick={addManualVariant}
-                  className="px-4 py-2 bg-white/5 text-white/70 rounded-lg text-xs font-mono uppercase cursor-pointer hover:bg-white/10"
+                  className="px-4 py-2 bg-muted text-muted-foreground rounded-lg text-xs font-mono uppercase cursor-pointer hover:bg-accent"
                 >
                   + Add Manual Variant
                 </button>
@@ -628,30 +628,30 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                <div className="space-y-4">
                 <div>
-                  <label className="text-[11px] font-mono text-white/80 uppercase tracking-wider block mb-1">Package Type</label>
-                  <input className="w-full bg-[#0b0b0b] border border-white/10 rounded-xl py-3 px-4 text-sm font-mono text-white focus:border-blue-500 focus:outline-none transition-colors" value={packageType} onChange={(e) => setPackageType(e.target.value)} />
+                  <label className="text-[11px] font-mono text-muted-foreground uppercase tracking-wider block mb-1">Package Type</label>
+                  <input className="w-full bg-background border border-border rounded-xl py-3 px-4 text-sm font-mono text-foreground focus:border-blue-500 focus:outline-none transition-colors" value={packageType} onChange={(e) => setPackageType(e.target.value)} />
                 </div>
                 <div>
-                  <label className="text-[11px] font-mono text-white/80 uppercase tracking-wider block mb-1">Gross Weight (KG)</label>
-                  <input type="number" className="w-full bg-[#0b0b0b] border border-white/10 rounded-xl py-3 px-4 text-sm font-mono text-white focus:border-blue-500 focus:outline-none transition-colors" value={grossWeight} onChange={(e) => setGrossWeight(Number(e.target.value))} />
+                  <label className="text-[11px] font-mono text-muted-foreground uppercase tracking-wider block mb-1">Gross Weight (KG)</label>
+                  <input type="number" className="w-full bg-background border border-border rounded-xl py-3 px-4 text-sm font-mono text-foreground focus:border-blue-500 focus:outline-none transition-colors" value={grossWeight} onChange={(e) => setGrossWeight(Number(e.target.value))} />
                 </div>
                 <div>
-                  <label className="text-[11px] font-mono text-white/80 uppercase tracking-wider block mb-1">Net Weight (KG)</label>
-                  <input type="number" className="w-full bg-[#0b0b0b] border border-white/10 rounded-xl py-3 px-4 text-sm font-mono text-white focus:border-blue-500 focus:outline-none transition-colors" value={netWeight} onChange={(e) => setNetWeight(Number(e.target.value))} />
+                  <label className="text-[11px] font-mono text-muted-foreground uppercase tracking-wider block mb-1">Net Weight (KG)</label>
+                  <input type="number" className="w-full bg-background border border-border rounded-xl py-3 px-4 text-sm font-mono text-foreground focus:border-blue-500 focus:outline-none transition-colors" value={netWeight} onChange={(e) => setNetWeight(Number(e.target.value))} />
                 </div>
               </div>
               <div className="space-y-4">
                 <div>
-                  <label className="text-[11px] font-mono text-white/80 uppercase tracking-wider block mb-1">Units per Carton</label>
-                  <input type="number" className="w-full bg-[#0b0b0b] border border-white/10 rounded-xl py-3 px-4 text-sm font-mono text-white focus:border-blue-500 focus:outline-none transition-colors" value={unitsPerCarton} onChange={(e) => setUnitsPerCarton(Number(e.target.value))} />
+                  <label className="text-[11px] font-mono text-muted-foreground uppercase tracking-wider block mb-1">Units per Carton</label>
+                  <input type="number" className="w-full bg-background border border-border rounded-xl py-3 px-4 text-sm font-mono text-foreground focus:border-blue-500 focus:outline-none transition-colors" value={unitsPerCarton} onChange={(e) => setUnitsPerCarton(Number(e.target.value))} />
                 </div>
                 <div>
-                  <label className="text-[11px] font-mono text-white/80 uppercase tracking-wider block mb-1">CBM</label>
-                  <input type="number" step="0.01" className="w-full bg-[#0b0b0b] border border-white/10 rounded-xl py-3 px-4 text-sm font-mono text-white focus:border-blue-500 focus:outline-none transition-colors" value={cbm} onChange={(e) => setCbm(Number(e.target.value))} />
+                  <label className="text-[11px] font-mono text-muted-foreground uppercase tracking-wider block mb-1">CBM</label>
+                  <input type="number" step="0.01" className="w-full bg-background border border-border rounded-xl py-3 px-4 text-sm font-mono text-foreground focus:border-blue-500 focus:outline-none transition-colors" value={cbm} onChange={(e) => setCbm(Number(e.target.value))} />
                 </div>
                 <div>
-                  <label className="text-[11px] font-mono text-white/80 uppercase tracking-wider block mb-1">Container Loading Capacity</label>
-                  <input type="number" className="w-full bg-[#0b0b0b] border border-white/10 rounded-xl py-3 px-4 text-sm font-mono text-white focus:border-blue-500 focus:outline-none transition-colors" value={containerLoadingCapacity} onChange={(e) => setContainerLoadingCapacity(Number(e.target.value))} />
+                  <label className="text-[11px] font-mono text-muted-foreground uppercase tracking-wider block mb-1">Container Loading Capacity</label>
+                  <input type="number" className="w-full bg-background border border-border rounded-xl py-3 px-4 text-sm font-mono text-foreground focus:border-blue-500 focus:outline-none transition-colors" value={containerLoadingCapacity} onChange={(e) => setContainerLoadingCapacity(Number(e.target.value))} />
                 </div>
               </div>
             </div>
@@ -661,17 +661,17 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
             <div className="grid grid-cols-1 gap-6">
               <div className="grid grid-cols-2 gap-6">
                 <div>
-                  <label className="text-[11px] font-mono text-white/80 uppercase tracking-wider block mb-1">Shelf Life</label>
-                  <input className="w-full bg-[#0b0b0b] border border-white/10 rounded-xl py-3 px-4 text-sm font-mono text-white focus:border-blue-500 focus:outline-none transition-colors" value={shelfLife} onChange={(e) => setShelfLife(e.target.value)} />
+                  <label className="text-[11px] font-mono text-muted-foreground uppercase tracking-wider block mb-1">Shelf Life</label>
+                  <input className="w-full bg-background border border-border rounded-xl py-3 px-4 text-sm font-mono text-foreground focus:border-blue-500 focus:outline-none transition-colors" value={shelfLife} onChange={(e) => setShelfLife(e.target.value)} />
                 </div>
                 <div>
-                  <label className="text-[11px] font-mono text-white/80 uppercase tracking-wider block mb-1">Storage Conditions</label>
-                  <input className="w-full bg-[#0b0b0b] border border-white/10 rounded-xl py-3 px-4 text-sm font-mono text-white focus:border-blue-500 focus:outline-none transition-colors" value={storageConditions} onChange={(e) => setStorageConditions(e.target.value)} />
+                  <label className="text-[11px] font-mono text-muted-foreground uppercase tracking-wider block mb-1">Storage Conditions</label>
+                  <input className="w-full bg-background border border-border rounded-xl py-3 px-4 text-sm font-mono text-foreground focus:border-blue-500 focus:outline-none transition-colors" value={storageConditions} onChange={(e) => setStorageConditions(e.target.value)} />
                 </div>
               </div>
               
               <div>
-                <label className="text-[11px] font-mono text-white/80 uppercase tracking-wider block mb-1">Certifications</label>
+                <label className="text-[11px] font-mono text-muted-foreground uppercase tracking-wider block mb-1">Certifications</label>
                 <SearchableSelect 
                   options={['FSSAI', 'HACCP', 'ISO 22000', 'FDA Approved', 'Halal Certified', 'Phytosanitary Certificate', 'Kosher', 'Organic', 'CE Marking', 'Fair Trade', 'GMP', 'BRCGS'].map(c => ({ label: c, value: c }))}
                   value={certifications}
@@ -681,8 +681,8 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
                 />
               </div>
               <div>
-                <label className="text-[11px] font-mono text-white/80 uppercase tracking-wider block mb-1">Japan Import Notes</label>
-                <textarea rows={4} className="w-full bg-[#0b0b0b] border border-white/10 rounded-xl py-3 px-4 text-sm font-mono text-white focus:border-blue-500 focus:outline-none transition-colors" value={japanImportNotes} onChange={(e) => setJapanImportNotes(e.target.value)} />
+                <label className="text-[11px] font-mono text-muted-foreground uppercase tracking-wider block mb-1">Japan Import Notes</label>
+                <textarea rows={4} className="w-full bg-background border border-border rounded-xl py-3 px-4 text-sm font-mono text-foreground focus:border-blue-500 focus:outline-none transition-colors" value={japanImportNotes} onChange={(e) => setJapanImportNotes(e.target.value)} />
               </div>
             </div>
           )}
@@ -752,14 +752,14 @@ function InventoryLedgerTab({ variants, onStockUpdated }: { variants: any[], onS
     }
   };
 
-  if (!variants || variants.length === 0) return <div className="p-4 text-white/50 text-xs font-mono uppercase">No variants found. Save product first.</div>;
+  if (!variants || variants.length === 0) return <div className="p-4 text-muted-foreground/50 text-xs font-mono uppercase">No variants found. Save product first.</div>;
 
   return (
     <div className="space-y-6 pt-4">
       <div className="flex gap-4 items-center">
-        <label className="text-[11px] font-mono text-white/50 uppercase">Select Variant to View Ledger:</label>
+        <label className="text-[11px] font-mono text-muted-foreground/50 uppercase">Select Variant to View Ledger:</label>
         <select 
-          className="bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-sm text-white outline-none"
+          className="bg-muted border border-border rounded-lg px-4 py-2 text-sm text-foreground outline-none"
           value={selectedVariantId}
           onChange={e => setSelectedVariantId(e.target.value)}
         >
@@ -774,20 +774,20 @@ function InventoryLedgerTab({ variants, onStockUpdated }: { variants: any[], onS
       {!loading && ledger && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="space-y-4">
-            <div className="bg-white/5 border border-white/10 rounded-2xl p-6 space-y-4">
+            <div className="bg-muted border border-border rounded-2xl p-6 space-y-4">
               <h3 className="text-xs font-mono font-bold uppercase tracking-widest text-emerald-400">Current Stock</h3>
               
-              <div className="flex justify-between items-center pb-2 border-b border-white/5">
-                <span className="text-xs text-white/50 font-mono">On Hand:</span>
-                <span className="text-xl font-mono text-white">{ledger.inventory?.quantityOnHand || 0}</span>
+              <div className="flex justify-between items-center pb-2 border-b border-border">
+                <span className="text-xs text-muted-foreground/50 font-mono">On Hand:</span>
+                <span className="text-xl font-mono text-foreground">{ledger.inventory?.quantityOnHand || 0}</span>
               </div>
-              <div className="flex justify-between items-center pb-2 border-b border-white/5">
-                <span className="text-xs text-white/50 font-mono">Allocated (SO):</span>
-                <span className="text-sm font-mono text-white/70">{ledger.inventory?.quantityAllocated || 0}</span>
+              <div className="flex justify-between items-center pb-2 border-b border-border">
+                <span className="text-xs text-muted-foreground/50 font-mono">Allocated (SO):</span>
+                <span className="text-sm font-mono text-muted-foreground">{ledger.inventory?.quantityAllocated || 0}</span>
               </div>
-              <div className="flex justify-between items-center pb-2 border-b border-white/5">
-                <span className="text-xs text-white/50 font-mono">On Order (PO):</span>
-                <span className="text-sm font-mono text-white/70">{ledger.inventory?.quantityOnOrder || 0}</span>
+              <div className="flex justify-between items-center pb-2 border-b border-border">
+                <span className="text-xs text-muted-foreground/50 font-mono">On Order (PO):</span>
+                <span className="text-sm font-mono text-muted-foreground">{ledger.inventory?.quantityOnOrder || 0}</span>
               </div>
               <div className="flex justify-between items-center pt-2">
                 <span className="text-xs text-emerald-400/50 font-mono uppercase font-bold">Available to Sell:</span>
@@ -800,22 +800,22 @@ function InventoryLedgerTab({ variants, onStockUpdated }: { variants: any[], onS
             <div className="bg-blue-500/10 border border-blue-500/20 rounded-2xl p-6 space-y-4">
               <h3 className="text-xs font-mono font-bold uppercase tracking-widest text-blue-400">Manual Adjustment</h3>
               <div className="space-y-2">
-                <label className="text-[10px] font-mono text-white/50 uppercase">Quantity (Use - for deductions)</label>
+                <label className="text-[10px] font-mono text-muted-foreground/50 uppercase">Quantity (Use - for deductions)</label>
                 <input 
                   type="number" 
                   value={adjQty} 
                   onChange={e => setAdjQty(parseFloat(e.target.value) || 0)}
-                  className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm font-mono text-white outline-none focus:border-blue-500/50" 
+                  className="w-full bg-black/40 border border-border rounded-lg px-3 py-2 text-sm font-mono text-foreground outline-none focus:border-blue-500/50" 
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-[10px] font-mono text-white/50 uppercase">Reason / Remarks</label>
+                <label className="text-[10px] font-mono text-muted-foreground/50 uppercase">Reason / Remarks</label>
                 <input 
                   type="text" 
                   value={adjRemarks} 
                   onChange={e => setAdjRemarks(e.target.value)}
                   placeholder="e.g. Stock Count Discrepancy"
-                  className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-blue-500/50" 
+                  className="w-full bg-black/40 border border-border rounded-lg px-3 py-2 text-sm text-foreground outline-none focus:border-blue-500/50" 
                 />
               </div>
               <button 
@@ -828,12 +828,12 @@ function InventoryLedgerTab({ variants, onStockUpdated }: { variants: any[], onS
           </div>
 
           <div className="lg:col-span-2">
-            <div className="bg-white/5 border border-white/10 rounded-2xl p-6 overflow-hidden">
-              <h3 className="text-xs font-mono font-bold uppercase tracking-widest text-white/70 mb-4">Transaction History</h3>
+            <div className="bg-muted border border-border rounded-2xl p-6 overflow-hidden">
+              <h3 className="text-xs font-mono font-bold uppercase tracking-widest text-muted-foreground mb-4">Transaction History</h3>
               <div className="overflow-x-auto">
                 <table className="w-full text-left">
                   <thead>
-                    <tr className="border-b border-white/5 text-[10px] font-mono uppercase text-white/30">
+                    <tr className="border-b border-border text-[10px] font-mono uppercase text-white/30">
                       <th className="pb-3 pr-4">Date</th>
                       <th className="pb-3 pr-4">Type</th>
                       <th className="pb-3 pr-4">Qty</th>
@@ -844,7 +844,7 @@ function InventoryLedgerTab({ variants, onStockUpdated }: { variants: any[], onS
                   </thead>
                   <tbody className="divide-y divide-white/5">
                     {ledger.transactions?.map((tx: any) => (
-                      <tr key={tx.id} className="text-xs font-mono text-white/70">
+                      <tr key={tx.id} className="text-xs font-mono text-muted-foreground">
                         <td className="py-3 pr-4 whitespace-nowrap">{new Date(tx.timestamp).toLocaleString()}</td>
                         <td className="py-3 pr-4">
                           <span className={`px-2 py-1 rounded-full text-[9px] font-bold ${
@@ -859,9 +859,9 @@ function InventoryLedgerTab({ variants, onStockUpdated }: { variants: any[], onS
                         <td className={`py-3 pr-4 font-bold ${tx.quantity > 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
                           {tx.quantity > 0 ? '+' : ''}{tx.quantity}
                         </td>
-                        <td className="py-3 pr-4 text-white/40">{tx.referenceType || '-'}</td>
-                        <td className="py-3 pr-4 text-white/40 truncate max-w-25" title={tx.referenceId}>{tx.referenceId ? tx.referenceId.substring(0,8)+'...' : '-'}</td>
-                        <td className="py-3 text-white/50">{tx.remarks || '-'}</td>
+                        <td className="py-3 pr-4 text-muted-foreground/40">{tx.referenceType || '-'}</td>
+                        <td className="py-3 pr-4 text-muted-foreground/40 truncate max-w-25" title={tx.referenceId}>{tx.referenceId ? tx.referenceId.substring(0,8)+'...' : '-'}</td>
+                        <td className="py-3 text-muted-foreground/50">{tx.remarks || '-'}</td>
                       </tr>
                     ))}
                     {(!ledger.transactions || ledger.transactions.length === 0) && (

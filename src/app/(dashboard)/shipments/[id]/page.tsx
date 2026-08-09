@@ -107,7 +107,7 @@ export default function ShipmentDetailPage() {
       case 'DELIVERED': return 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20';
       case 'COMPLETED': return 'text-emerald-300 bg-emerald-500/15 border-emerald-400/30';
       case 'CANCELLED': return 'text-rose-400 bg-rose-500/10 border-rose-500/20';
-      default: return 'text-white/80 bg-white/5 border-white/10';
+      default: return 'text-muted-foreground bg-muted border-border';
     }
   };
 
@@ -142,11 +142,11 @@ export default function ShipmentDetailPage() {
         {/* Top bar */}
         <div className="flex flex-wrap items-center justify-between gap-4">
           <button onClick={() => router.push('/shipments')}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-[10px] font-mono uppercase text-white/90 hover:bg-white/10 cursor-pointer">
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-muted border border-border text-[10px] font-mono uppercase text-foreground/90 hover:bg-accent cursor-pointer">
             <ArrowLeft size={12} /> Back to Hub
           </button>
           <div className="flex flex-wrap items-center gap-2.5">
-            <button onClick={handleDelete} className="p-3.5 rounded-2xl bg-white/5 border border-white/10 text-white/70 hover:text-rose-400 hover:bg-rose-500/10 cursor-pointer" title="Soft delete">
+            <button onClick={handleDelete} className="p-3.5 rounded-2xl bg-muted border border-border text-muted-foreground hover:text-rose-400 hover:bg-rose-500/10 cursor-pointer" title="Soft delete">
               <Trash2 size={14} />
             </button>
             {!isCancelled && shipment.status !== 'COMPLETED' && (
@@ -168,19 +168,19 @@ export default function ShipmentDetailPage() {
         </div>
 
         {/* Route Hero */}
-        <div className="glass p-8 rounded-4xl border border-white/5 relative overflow-hidden">
+        <div className="glass p-8 rounded-4xl border border-border relative overflow-hidden">
           <div className="absolute top-0 right-0 p-10 opacity-[0.02] pointer-events-none"><Ship size={120} /></div>
           <div className="grid grid-cols-1 md:grid-cols-3 items-center gap-8 relative z-10">
             <div>
-              <p className="text-[9px] font-mono text-white/70 uppercase tracking-widest mb-1">Port of Loading (POL)</p>
-              <h2 className="text-3xl font-bold tracking-tight text-white font-mono">{shipment.originPortId}</h2>
-              <p className="text-xs text-white/70 font-mono mt-1">ETD: {formatDate(shipment.etd)}</p>
+              <p className="text-[9px] font-mono text-muted-foreground uppercase tracking-widest mb-1">Port of Loading (POL)</p>
+              <h2 className="text-3xl font-bold tracking-tight text-foreground font-mono">{shipment.originPortId}</h2>
+              <p className="text-xs text-muted-foreground font-mono mt-1">ETD: {formatDate(shipment.etd)}</p>
               {shipment.atd && <p className="text-[10px] text-emerald-400 font-mono mt-0.5">ATD: {formatDate(shipment.atd)}</p>}
             </div>
 
             <div className="flex flex-col items-center gap-3">
               <div className="w-full relative">
-                <div className="w-full h-1 bg-white/5 rounded-full overflow-hidden">
+                <div className="w-full h-1 bg-muted rounded-full overflow-hidden">
                   <motion.div
                     initial={{ width: 0 }}
                     animate={{ width: `${progress}%` }}
@@ -192,7 +192,7 @@ export default function ShipmentDetailPage() {
                   animate={!isCancelled && !['COMPLETED', 'DELIVERED'].includes(shipment.status) ? { x: [-4, 4, -4] } : {}}
                   transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
                   style={{ left: `${progress}%` }}
-                  className="absolute -top-3.5 -translate-x-1/2 p-1.5 rounded-full bg-[#0a0a0a] border border-blue-500/60 text-blue-400 shadow-[0_0_15px_rgba(59,130,246,0.4)]"
+                  className="absolute -top-3.5 -translate-x-1/2 p-1.5 rounded-full bg-background border border-blue-500/60 text-blue-400 shadow-[0_0_15px_rgba(59,130,246,0.4)]"
                 >
                   <Ship size={14} />
                 </motion.div>
@@ -201,14 +201,14 @@ export default function ShipmentDetailPage() {
                 {shipment.status.replace('_', ' ')}
               </span>
               {shipment.vesselName && (
-                <p className="text-[8px] font-mono text-white/70 uppercase tracking-widest">{shipment.vesselName} / V.{shipment.voyageNo}</p>
+                <p className="text-[8px] font-mono text-muted-foreground uppercase tracking-widest">{shipment.vesselName} / V.{shipment.voyageNo}</p>
               )}
             </div>
 
             <div className="text-right">
-              <p className="text-[9px] font-mono text-white/70 uppercase tracking-widest mb-1">Port of Discharge (POD)</p>
-              <h2 className="text-3xl font-bold tracking-tight text-white font-mono">{shipment.destinationPortId}</h2>
-              <p className="text-xs text-white/70 font-mono mt-1">ETA: {formatDate(shipment.eta)}</p>
+              <p className="text-[9px] font-mono text-muted-foreground uppercase tracking-widest mb-1">Port of Discharge (POD)</p>
+              <h2 className="text-3xl font-bold tracking-tight text-foreground font-mono">{shipment.destinationPortId}</h2>
+              <p className="text-xs text-muted-foreground font-mono mt-1">ETA: {formatDate(shipment.eta)}</p>
               {shipment.ata && <p className="text-[10px] text-emerald-400 font-mono mt-0.5">ATA: {formatDate(shipment.ata)}</p>}
             </div>
           </div>
@@ -216,13 +216,13 @@ export default function ShipmentDetailPage() {
 
         {/* Pipeline Stepper */}
         {!isCancelled && (
-          <div className="glass p-5 rounded-3xl border border-white/5 overflow-x-auto">
+          <div className="glass p-5 rounded-3xl border border-border overflow-x-auto">
             <div className="flex items-center gap-1.5 min-w-max">
               {STATUS_FLOW.map((step, i) => (
                 <React.Fragment key={step}>
                   <div className={cn(
                     'flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[8px] font-mono uppercase tracking-wider whitespace-nowrap transition-all',
-                    i < statusIdx ? 'text-white/80 bg-white/3' :
+                    i < statusIdx ? 'text-muted-foreground bg-white/3' :
                     i === statusIdx ? 'text-black bg-blue-400 font-bold' :
                     'text-white/15 bg-white/2'
                   )}>
@@ -230,7 +230,7 @@ export default function ShipmentDetailPage() {
                     {step.replace('_', ' ')}
                   </div>
                   {i < STATUS_FLOW.length - 1 && (
-                    <div className={cn('h-px w-4 shrink-0', i < statusIdx ? 'bg-blue-400/30' : 'bg-white/5')} />
+                    <div className={cn('h-px w-4 shrink-0', i < statusIdx ? 'bg-blue-400/30' : 'bg-muted')} />
                   )}
                 </React.Fragment>
               ))}
@@ -239,7 +239,7 @@ export default function ShipmentDetailPage() {
         )}
 
         {/* Tabs */}
-        <div className="flex gap-6 border-b border-white/5">
+        <div className="flex gap-6 border-b border-border">
           {([
             { id: 'overview', label: 'Overview', icon: Ship },
             { id: 'cargo', label: 'Cargo Details', icon: Box },
@@ -248,7 +248,7 @@ export default function ShipmentDetailPage() {
           ] as const).map(tab => (
             <button key={tab.id} onClick={() => setActiveTab(tab.id)}
               className={cn('flex items-center gap-2 pb-4 text-[10px] font-mono font-bold uppercase tracking-widest transition-all relative cursor-pointer border-none bg-transparent',
-                activeTab === tab.id ? 'text-blue-400' : 'text-white/70 hover:text-white/70')}>
+                activeTab === tab.id ? 'text-blue-400' : 'text-muted-foreground hover:text-muted-foreground')}>
               <tab.icon size={13} /> {tab.label}
               {activeTab === tab.id && (
                 <motion.div layoutId="shpTab" className="absolute bottom-0 left-0 right-0 h-px bg-blue-400 shadow-[0_0_8px_rgba(59,130,246,0.6)]" />
@@ -263,16 +263,16 @@ export default function ShipmentDetailPage() {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
               <div className="lg:col-span-2">
                 {/* Timeline */}
-                <div className="glass p-8 rounded-4xl border border-white/5 space-y-6">
-                  <h3 className="text-sm font-mono text-white/70 uppercase tracking-widest flex items-center gap-2 pb-4 border-b border-white/5">
+                <div className="glass p-8 rounded-4xl border border-border space-y-6">
+                  <h3 className="text-sm font-mono text-muted-foreground uppercase tracking-widest flex items-center gap-2 pb-4 border-b border-border">
                     <Activity size={14} className="text-blue-400" /> Shipment Timeline
                   </h3>
 
-                  <div className="p-4 rounded-2xl bg-white/2 border border-white/5 space-y-3">
-                    <p className="text-[8px] font-mono text-white/70 uppercase tracking-wider">Log Logistics Note</p>
+                  <div className="p-4 rounded-2xl bg-white/2 border border-border space-y-3">
+                    <p className="text-[8px] font-mono text-muted-foreground uppercase tracking-wider">Log Logistics Note</p>
                     <textarea value={noteText} onChange={e => setNoteText(e.target.value)}
                       placeholder="Port congestion alerts, custom holds, buyer notifications..."
-                      className="w-full bg-[#070707] border border-white/10 rounded-xl p-3 text-[11px] font-mono text-white focus:outline-none focus:border-blue-500/50 min-h-[50px]" />
+                      className="w-full bg-background border border-border rounded-xl p-3 text-[11px] font-mono text-foreground focus:outline-none focus:border-blue-500/50 min-h-[50px]" />
                     <div className="flex justify-end">
                       <button onClick={handleSaveNote} disabled={!noteText.trim()}
                         className="px-4 py-2 bg-blue-500 text-black text-[9px] font-mono font-bold uppercase rounded-lg hover:bg-blue-400 disabled:opacity-40 border-none cursor-pointer">
@@ -281,15 +281,15 @@ export default function ShipmentDetailPage() {
                     </div>
                   </div>
 
-                  <div className="max-h-[350px] overflow-y-auto custom-scrollbar pr-2 space-y-6 relative before:absolute before:left-[11px] before:top-2 before:bottom-2 before:w-px before:bg-white/5">
+                  <div className="max-h-[350px] overflow-y-auto custom-scrollbar pr-2 space-y-6 relative before:absolute before:left-[11px] before:top-2 before:bottom-2 before:w-px before:bg-muted">
                     {(shipment.timeline || []).map((ev, idx) => (
                       <div key={ev.id || idx} className="relative pl-8">
-                        <div className="absolute left-0 top-1 w-6 h-6 rounded-full bg-[#0a0a0a] border border-white/15 flex items-center justify-center z-10 text-blue-400">
+                        <div className="absolute left-0 top-1 w-6 h-6 rounded-full bg-background border border-border flex items-center justify-center z-10 text-blue-400">
                           {getTimelineIcon(ev.type)}
                         </div>
-                        <p className="text-[8px] font-mono text-white/70 uppercase mb-0.5">{formatDate(ev.date)}</p>
-                        <p className="text-xs font-bold text-white/90 mb-0.5">{ev.title}</p>
-                        <p className="text-[10px] text-white/70 leading-relaxed">{ev.description}</p>
+                        <p className="text-[8px] font-mono text-muted-foreground uppercase mb-0.5">{formatDate(ev.date)}</p>
+                        <p className="text-xs font-bold text-foreground/90 mb-0.5">{ev.title}</p>
+                        <p className="text-[10px] text-muted-foreground leading-relaxed">{ev.description}</p>
                       </div>
                     ))}
                   </div>
@@ -298,8 +298,8 @@ export default function ShipmentDetailPage() {
 
               <div className="space-y-6">
                 {/* Booking Details */}
-                <div className="glass p-8 rounded-4xl border border-white/5 space-y-4">
-                  <h4 className="text-[10px] font-mono text-white/70 uppercase tracking-widest pb-3 border-b border-white/5">
+                <div className="glass p-8 rounded-4xl border border-border space-y-4">
+                  <h4 className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest pb-3 border-b border-border">
                     Booking Details
                   </h4>
                   {[
@@ -313,34 +313,34 @@ export default function ShipmentDetailPage() {
                     ['Seal No', shipment.sealNo || '—'],
                   ].map(([label, val]) => (
                     <div key={label} className="flex justify-between items-center text-xs font-mono">
-                      <span className="text-white/70 uppercase text-[9px]">{label}</span>
-                      <span className="text-white/70 font-bold text-right max-w-[140px] truncate">{val}</span>
+                      <span className="text-muted-foreground uppercase text-[9px]">{label}</span>
+                      <span className="text-muted-foreground font-bold text-right max-w-[140px] truncate">{val}</span>
                     </div>
                   ))}
                 </div>
 
                 {/* Linked SO */}
                 {order && (
-                  <div className="glass p-8 rounded-4xl border border-white/5 space-y-3">
-                    <h4 className="text-[10px] font-mono text-white/70 uppercase tracking-widest pb-2 border-b border-white/5">Linked Sales Order</h4>
+                  <div className="glass p-8 rounded-4xl border border-border space-y-3">
+                    <h4 className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest pb-2 border-b border-border">Linked Sales Order</h4>
                     <div className="flex justify-between items-center text-xs font-mono">
-                      <span className="text-white/70 text-[9px] uppercase">Order Ref</span>
+                      <span className="text-muted-foreground text-[9px] uppercase">Order Ref</span>
                       <Link href={`/sales-orders/${order.id}`} className="text-blue-400 hover:underline flex items-center gap-1 text-[10px]">
                         {order.orderNo} <ExternalLink size={10} />
                       </Link>
                     </div>
                     <div className="flex justify-between items-center text-xs font-mono">
-                      <span className="text-white/70 text-[9px] uppercase">Contract Value</span>
-                      <span className="text-white/70 font-bold">{formatCurrency(order.totalValue)}</span>
+                      <span className="text-muted-foreground text-[9px] uppercase">Contract Value</span>
+                      <span className="text-muted-foreground font-bold">{formatCurrency(order.totalValue)}</span>
                     </div>
                   </div>
                 )}
 
                 {/* Remarks */}
                 {shipment.remarks && (
-                  <div className="glass p-6 rounded-4xl border border-white/5 space-y-2">
-                    <h4 className="text-[9px] font-mono text-white/70 uppercase tracking-widest">Special Instructions</h4>
-                    <p className="text-[11px] font-mono text-white/90 leading-relaxed">{shipment.remarks}</p>
+                  <div className="glass p-6 rounded-4xl border border-border space-y-2">
+                    <h4 className="text-[9px] font-mono text-muted-foreground uppercase tracking-widest">Special Instructions</h4>
+                    <p className="text-[11px] font-mono text-foreground/90 leading-relaxed">{shipment.remarks}</p>
                   </div>
                 )}
               </div>
@@ -359,28 +359,28 @@ export default function ShipmentDetailPage() {
                 { label: 'Seal Number', value: shipment.sealNo || '—' },
                 { label: 'Container No', value: shipment.containerNo || '—' },
               ].map((item, i) => (
-                <div key={i} className="glass p-6 rounded-3xl border border-white/5">
-                  <p className="text-[9px] font-mono text-white/70 uppercase tracking-widest mb-2">{item.label}</p>
-                  <p className="font-sans font-bold text-white/90 text-lg">{item.value}</p>
+                <div key={i} className="glass p-6 rounded-3xl border border-border">
+                  <p className="text-[9px] font-mono text-muted-foreground uppercase tracking-widest mb-2">{item.label}</p>
+                  <p className="font-sans font-bold text-foreground/90 text-lg">{item.value}</p>
                 </div>
               ))}
             </div>
           )}
 
           {activeTab === 'documents' && (
-            <div className="glass p-8 rounded-4xl border border-white/5 space-y-4">
-              <h3 className="text-sm font-mono text-white/70 uppercase tracking-widest pb-4 border-b border-white/5">Shipping Documents Vault</h3>
+            <div className="glass p-8 rounded-4xl border border-border space-y-4">
+              <h3 className="text-sm font-mono text-muted-foreground uppercase tracking-widest pb-4 border-b border-border">Shipping Documents Vault</h3>
               {(shipment.documents || []).length > 0 ? (
                 (shipment.documents || []).map(doc => (
-                  <div key={doc.id} className="flex justify-between items-center p-4 bg-white/2 border border-white/5 rounded-2xl">
+                  <div key={doc.id} className="flex justify-between items-center p-4 bg-white/2 border border-border rounded-2xl">
                     <div className="flex items-center gap-3">
                       <FileText size={14} className="text-blue-400 shrink-0" />
                       <div>
-                        <p className="text-sm font-bold text-white/90">{doc.name}</p>
-                        <p className="text-[9px] font-mono text-white/70 uppercase">{doc.type} · {formatDate(doc.uploadedAt)}</p>
+                        <p className="text-sm font-bold text-foreground/90">{doc.name}</p>
+                        <p className="text-[9px] font-mono text-muted-foreground uppercase">{doc.type} · {formatDate(doc.uploadedAt)}</p>
                       </div>
                     </div>
-                    <a href={doc.url} className="p-2 rounded-xl hover:bg-white/10 text-white/80 hover:text-white transition-all">
+                    <a href={doc.url} className="p-2 rounded-xl hover:bg-accent text-muted-foreground hover:text-foreground transition-all">
                       <ExternalLink size={14} />
                     </a>
                   </div>
@@ -400,15 +400,15 @@ export default function ShipmentDetailPage() {
                   { label: 'Destination Charges', value: fc?.destinationCharges || 0, color: 'text-purple-400' },
                   { label: 'Insurance', value: fc?.insurance || 0, color: 'text-rose-400' },
                 ].map((item, i) => (
-                  <div key={i} className="glass p-6 rounded-3xl border border-white/5">
-                    <p className="text-[9px] font-mono text-white/70 uppercase tracking-widest mb-2">{item.label}</p>
+                  <div key={i} className="glass p-6 rounded-3xl border border-border">
+                    <p className="text-[9px] font-mono text-muted-foreground uppercase tracking-widest mb-2">{item.label}</p>
                     <p className={cn('text-xl font-bold font-sans', item.color)}>{formatCurrency(item.value)}</p>
                   </div>
                 ))}
               </div>
 
-              <div className="glass p-8 rounded-4xl border border-white/5 space-y-4">
-                <h3 className="text-sm font-mono text-white/70 uppercase tracking-widest pb-4 border-b border-white/5">Freight Cost Breakdown</h3>
+              <div className="glass p-8 rounded-4xl border border-border space-y-4">
+                <h3 className="text-sm font-mono text-muted-foreground uppercase tracking-widest pb-4 border-b border-border">Freight Cost Breakdown</h3>
                 <div className="space-y-3 text-xs font-mono">
                   {[
                     ['Ocean Freight (POL → POD)', fc?.oceanFreight || 0],
@@ -418,19 +418,19 @@ export default function ShipmentDetailPage() {
                     ...(fc?.customsBrokerage ? [['Customs Brokerage', fc.customsBrokerage] as [string, number]] : []),
                     ...(fc?.miscCharges ? [['Miscellaneous Charges', fc.miscCharges] as [string, number]] : []),
                   ].map(([label, val]) => (
-                    <div key={label as string} className="flex justify-between items-center text-white/70 py-1 border-b border-white/3">
+                    <div key={label as string} className="flex justify-between items-center text-muted-foreground py-1 border-b border-white/3">
                       <span className="uppercase text-[9px] tracking-widest">{label as string}</span>
                       <span className="font-sans font-bold">{formatCurrency(val as number)}</span>
                     </div>
                   ))}
-                  <div className="flex justify-between items-center pt-2 text-white font-bold text-base">
+                  <div className="flex justify-between items-center pt-2 text-foreground font-bold text-base">
                     <span className="text-[10px] font-mono uppercase tracking-wider">Total Freight Cost</span>
                     <span className="font-sans text-blue-400 text-lg">{formatCurrency(shipment.totalFreightCost || 0)}</span>
                   </div>
                 </div>
                 {order && (
-                  <div className="pt-4 border-t border-white/5 flex justify-between items-center text-xs font-mono">
-                    <span className="text-white/70 uppercase text-[9px]">Contract Revenue (SO)</span>
+                  <div className="pt-4 border-t border-border flex justify-between items-center text-xs font-mono">
+                    <span className="text-muted-foreground uppercase text-[9px]">Contract Revenue (SO)</span>
                     <span className="font-sans font-bold text-emerald-400">{formatCurrency(order.totalValue)}</span>
                   </div>
                 )}

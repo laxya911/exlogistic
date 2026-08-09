@@ -139,7 +139,7 @@ export default function AttributesPage() {
       <PageHeaderUpdater title="Attributes" subtitle="Product Variations and Attributes" />
       
       <div className="space-y-8 pb-20">
-        <div className="glass p-8 lg:p-10 rounded-[2.5rem] border border-white/5 flex flex-col h-full min-h-[60vh]">
+        <div className="glass p-8 lg:p-10 rounded-[2.5rem] border border-border flex flex-col h-full min-h-[60vh]">
           <div className="flex justify-between items-center mb-8">
             <h3 className="text-xl font-display font-medium flex items-center gap-3">
               <Settings2 className="text-blue-500/80" size={24} />
@@ -155,21 +155,21 @@ export default function AttributesPage() {
 
           <div className="flex-1">
             {loading ? (
-              <div className="text-sm text-white/40 animate-pulse">Loading attributes...</div>
+              <div className="text-sm text-muted-foreground/40 animate-pulse">Loading attributes...</div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
                 
                 {isAddingAttr && (
                   <div className="p-5 rounded-2xl bg-black/40 border border-emerald-500/30 space-y-4 shadow-lg shadow-emerald-500/5">
                     <div>
-                      <label className="text-[10px] font-mono text-white/50 uppercase mb-2 block">Attribute Name</label>
+                      <label className="text-[10px] font-mono text-muted-foreground/50 uppercase mb-2 block">Attribute Name</label>
                       <input 
                         type="text"
                         autoFocus
                         value={newAttrName}
                         onChange={e => setNewAttrName(e.target.value)}
                         onKeyDown={e => e.key === 'Enter' && handleCreateAttribute()}
-                        className="w-full bg-white/5 border border-white/10 rounded-xl py-2 px-3 text-sm focus:outline-none focus:border-emerald-500/50"
+                        className="w-full bg-muted border border-border rounded-xl py-2 px-3 text-sm focus:outline-none focus:border-emerald-500/50"
                         placeholder="e.g. Color, Size, Material"
                       />
                     </div>
@@ -177,7 +177,7 @@ export default function AttributesPage() {
                       <button onClick={handleCreateAttribute} className="flex-1 bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 py-2 rounded-xl text-xs font-medium flex justify-center items-center gap-1 transition-colors cursor-pointer">
                         <Check size={14} /> Create
                       </button>
-                      <button onClick={() => setIsAddingAttr(false)} className="flex-1 bg-white/5 hover:bg-white/10 text-white/70 py-2 rounded-xl text-xs font-medium flex justify-center items-center gap-1 transition-colors cursor-pointer">
+                      <button onClick={() => setIsAddingAttr(false)} className="flex-1 bg-muted hover:bg-accent text-muted-foreground py-2 rounded-xl text-xs font-medium flex justify-center items-center gap-1 transition-colors cursor-pointer">
                         <X size={14} /> Cancel
                       </button>
                     </div>
@@ -185,10 +185,10 @@ export default function AttributesPage() {
                 )}
 
                 {attributes.map(attr => (
-                  <div key={attr.id} className="rounded-2xl bg-white/2 border border-white/5 overflow-hidden flex flex-col group relative">
+                  <div key={attr.id} className="rounded-2xl bg-white/2 border border-border overflow-hidden flex flex-col group relative">
                     {/* Header */}
                     <div 
-                      className="p-5 flex justify-between items-center cursor-pointer hover:bg-white/2 transition-colors border-b border-white/5 h-20"
+                      className="p-5 flex justify-between items-center cursor-pointer hover:bg-white/2 transition-colors border-b border-border h-20"
                       onClick={() => {
                         if (editingAttrId !== attr.id) setExpandedAttrId(expandedAttrId === attr.id ? null : attr.id)
                       }}
@@ -201,12 +201,12 @@ export default function AttributesPage() {
                             value={editAttrName}
                             onChange={e => setEditAttrName(e.target.value)}
                             onKeyDown={e => e.key === 'Enter' && handleUpdateAttribute(attr.id)}
-                            className="flex-1 bg-white/5 border border-white/10 rounded-lg py-1 px-2 text-sm focus:outline-none focus:border-blue-500/50"
+                            className="flex-1 bg-muted border border-border rounded-lg py-1 px-2 text-sm focus:outline-none focus:border-blue-500/50"
                           />
                           <button onClick={() => handleUpdateAttribute(attr.id)} className="px-2 text-blue-400 hover:bg-blue-400/10 rounded-lg">
                             <Check size={14} />
                           </button>
-                          <button onClick={() => setEditingAttrId(null)} className="px-2 text-white/40 hover:text-white rounded-lg">
+                          <button onClick={() => setEditingAttrId(null)} className="px-2 text-muted-foreground/40 hover:text-foreground rounded-lg">
                             <X size={14} />
                           </button>
                         </div>
@@ -217,7 +217,7 @@ export default function AttributesPage() {
                               <Tags size={14} className="text-white/30" />
                               {attr.name}
                             </h4>
-                            <p className="text-xs text-white/50 mt-1 font-mono">{attr.values?.length || 0} values</p>
+                            <p className="text-xs text-muted-foreground/50 mt-1 font-mono">{attr.values?.length || 0} values</p>
                           </div>
                           <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                             <button 
@@ -244,7 +244,7 @@ export default function AttributesPage() {
                       {attr.values?.length > 0 ? (
                         <div className="flex flex-wrap gap-2">
                           {attr.values.map((v: any) => (
-                            <div key={v.id} className="px-2.5 py-1 rounded-md bg-white/5 border border-white/10 text-xs text-white/80 flex items-center gap-2 group/val">
+                            <div key={v.id} className="px-2.5 py-1 rounded-md bg-muted border border-border text-xs text-muted-foreground flex items-center gap-2 group/val">
                               <span>{v.value}</span>
                               <button 
                                 onClick={() => handleDeleteValue(attr.id, v.id)}
@@ -267,7 +267,7 @@ export default function AttributesPage() {
                           value={newValueMap[attr.id] || ''}
                           onChange={e => setNewValueMap(prev => ({ ...prev, [attr.id]: e.target.value }))}
                           onKeyDown={e => e.key === 'Enter' && handleAddValue(attr.id)}
-                          className="flex-1 bg-white/5 border border-white/10 rounded-lg py-1.5 px-3 text-xs focus:outline-none focus:border-blue-500/50"
+                          className="flex-1 bg-muted border border-border rounded-lg py-1.5 px-3 text-xs focus:outline-none focus:border-blue-500/50"
                         />
                         <button 
                           onClick={() => handleAddValue(attr.id)}

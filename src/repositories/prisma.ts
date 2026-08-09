@@ -173,12 +173,22 @@ export class PrismaRepository<T = any> {
       // Remove UI-only fields that are NOT in the Customer Prisma schema
       delete mapped.rating;
       delete mapped.performanceRating;
+      delete mapped.averageLeadTime;
+      delete mapped.certifications;
+      delete mapped.productsSuppliedIds;
+      delete mapped.items;
+      delete mapped.expectedShipmentDate;
+      delete mapped.containerType;
       // Remove computed/bridged fields that shouldn't go to DB
       delete mapped.updatedAt;   // managed by Prisma @updatedAt
       delete mapped.createdAt;   // managed by Prisma @default(now())
     } else if (this.modelName === 'supplier') {
-      // productsSuppliedIds NOT in Prisma schema
+      // productsSuppliedIds and certifications NOT in Prisma schema
       delete mapped.productsSuppliedIds;
+      delete mapped.certifications;
+      delete mapped.items;
+      delete mapped.expectedShipmentDate;
+      delete mapped.containerType;
       delete mapped.creditLimit;
       delete mapped.segment;
       // Map rating -> performanceRating for supplier
@@ -239,6 +249,9 @@ export class PrismaRepository<T = any> {
           const itemPayload: any = {
             variantId: i.variantId || i.productId,
             quantity: Number(i.quantity),
+            taxId: i.taxId || null,
+            taxRate: i.taxRate ? Number(i.taxRate) : null,
+            taxAmount: i.taxAmount ? Number(i.taxAmount) : null,
           };
           if (this.modelName !== 'shipment') {
             itemPayload.unitPrice = Number(i.unitPrice);
@@ -266,6 +279,9 @@ export class PrismaRepository<T = any> {
               const itemPayload: any = {
                 variantId: i.variantId || i.productId,
                 quantity: Number(i.quantity),
+                taxId: i.taxId || null,
+                taxRate: i.taxRate ? Number(i.taxRate) : null,
+                taxAmount: i.taxAmount ? Number(i.taxAmount) : null,
               };
               if (this.modelName !== 'shipment') {
                 itemPayload.unitPrice = Number(i.unitPrice);

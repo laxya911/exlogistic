@@ -13,7 +13,7 @@ export default async function WorkflowsPage() {
       <PageHeaderUpdater title="Workflow Automation"  />
       <div className="space-y-6">
         <div className="flex justify-between items-center">
-          <p className="text-white/60">Configure automated business rules and triggers.</p>
+          <p className="text-muted-foreground/60">Configure automated business rules and triggers.</p>
           <form action={seedStandardWorkflow}>
             <button type="submit" className="px-4 py-2 bg-blue-600 hover:bg-blue-500 rounded-xl text-sm font-medium transition-colors cursor-pointer">
               + Seed Demo Rule
@@ -21,10 +21,10 @@ export default async function WorkflowsPage() {
           </form>
         </div>
 
-        <div className="glass p-6 rounded-[2rem] border border-white/5">
+        <div className="glass p-6 rounded-[2rem] border border-border">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="text-[10px] font-mono text-white/40 uppercase tracking-wider border-b border-white/5">
+              <tr className="text-[10px] font-mono text-muted-foreground/40 uppercase tracking-wider border-b border-border">
                 <th className="pb-4 font-medium">Rule Name</th>
                 <th className="pb-4 font-medium">Trigger</th>
                 <th className="pb-4 font-medium">Action</th>
@@ -41,10 +41,10 @@ export default async function WorkflowsPage() {
                 </tr>
               ) : (
                 rules.map((rule) => (
-                  <tr key={rule.id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
+                  <tr key={rule.id} className="border-b border-border hover:bg-muted transition-colors">
                     <td className="py-4 font-medium">{rule.name}</td>
                     <td className="py-4">
-                      <span className="px-2 py-1 bg-white/5 rounded-md text-xs font-mono">
+                      <span className="px-2 py-1 bg-muted rounded-md text-xs font-mono">
                         {rule.triggerEntity}
                       </span>
                     </td>

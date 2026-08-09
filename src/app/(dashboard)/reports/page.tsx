@@ -8,6 +8,7 @@ import {
 import { PageHeaderUpdater } from '@/components/layout/page-context';
 import { ReportEngine, ReportConfig, FilterCondition, FilterOperator } from '@/lib/reporting/engine';
 import { toast } from 'sonner';
+import { formatDate } from '@/lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '@/lib/utils';
 
@@ -230,7 +231,7 @@ export default function AdvancedReportBuilder() {
     doc.setFontSize(16);
     doc.text(`Matrix Report: ${entity.toUpperCase()}`, 14, 15);
     doc.setFontSize(10);
-    doc.text(`Generated on ${new Date().toLocaleDateString()}`, 14, 22);
+    doc.text(`Generated on ${formatDate(new Date())}`, 14, 22);
 
     autoTable(doc, {
       head: [cols.map(c => c.toUpperCase())],
@@ -270,16 +271,16 @@ export default function AdvancedReportBuilder() {
         
         {/* Left Sidebar - Configuration */}
         <div className="w-full xl:w-80 flex flex-col gap-6 shrink-0">
-          <div className="glass rounded-2xl border border-white/5 p-5">
+          <div className="glass rounded-2xl border border-border p-5">
             <div className="flex items-center justify-between mb-6">
-              <h3 className="text-xs font-mono font-bold uppercase tracking-widest text-white flex items-center gap-2">
+              <h3 className="text-xs font-mono font-bold uppercase tracking-widest text-foreground flex items-center gap-2">
                 <Settings2 size={14} className="text-blue-400" />
                 Parameters
               </h3>
               <div className="relative" ref={savedListRef}>
                 <button 
                   onClick={() => setShowSavedList(!showSavedList)}
-                  className="p-1.5 bg-white/5 hover:bg-white/10 rounded-lg transition-colors text-white/70 hover:text-white"
+                  className="p-1.5 bg-muted hover:bg-accent rounded-lg transition-colors text-muted-foreground hover:text-foreground"
                   title="Load Saved Config"
                 >
                   <FolderOpen size={14} />
@@ -292,17 +293,17 @@ export default function AdvancedReportBuilder() {
                       initial={{ opacity: 0, y: 5 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: 5 }}
-                      className="absolute top-full right-0 mt-2 w-64 bg-[#0a0a0a] border border-white/10 rounded-xl shadow-2xl z-50 p-2 overflow-hidden"
+                      className="absolute top-full right-0 mt-2 w-64 bg-background border border-border rounded-xl shadow-2xl z-50 p-2 overflow-hidden"
                     >
-                      <div className="text-[9px] font-mono text-white/50 uppercase tracking-widest px-2 py-1 mb-1 border-b border-white/5">Saved Reports</div>
+                      <div className="text-[9px] font-mono text-muted-foreground/50 uppercase tracking-widest px-2 py-1 mb-1 border-b border-border">Saved Reports</div>
                       {savedConfigs.length === 0 ? (
-                        <div className="px-2 py-4 text-xs text-white/40 text-center">No saved reports</div>
+                        <div className="px-2 py-4 text-xs text-muted-foreground/40 text-center">No saved reports</div>
                       ) : (
                         savedConfigs.map((cfg, i) => (
                           <button 
                             key={i} 
                             onClick={() => loadConfiguration(cfg)}
-                            className="w-full text-left px-3 py-2 rounded-lg text-sm text-white/80 hover:text-white hover:bg-white/5 transition-colors"
+                            className="w-full text-left px-3 py-2 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
                           >
                             {cfg.name} <span className="text-[9px] text-blue-400 font-mono ml-2">({cfg.entity})</span>
                           </button>
@@ -316,35 +317,35 @@ export default function AdvancedReportBuilder() {
 
             {/* Entity Selection */}
             <div className="mb-6">
-              <label className="text-[10px] font-mono text-white/50 uppercase tracking-widest block mb-2">Data Source</label>
+              <label className="text-[10px] font-mono text-muted-foreground/50 uppercase tracking-widest block mb-2">Data Source</label>
               <div className="relative">
                 <select 
                   value={entity}
                   onChange={(e) => setEntity(e.target.value)}
-                  className="w-full appearance-none bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500/50"
+                  className="w-full appearance-none bg-muted border border-border rounded-xl px-4 py-2.5 text-sm text-foreground focus:outline-none focus:border-blue-500/50"
                 >
-                  {ENTITIES.map(e => <option key={e.id} value={e.id} className="bg-[#080808]">{e.label}</option>)}
+                  {ENTITIES.map(e => <option key={e.id} value={e.id} className="bg-background">{e.label}</option>)}
                 </select>
-                <ChevronDown size={14} className="absolute right-4 top-1/2 -translate-y-1/2 text-white/50 pointer-events-none" />
+                <ChevronDown size={14} className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground/50 pointer-events-none" />
               </div>
             </div>
 
             {/* Column Selection */}
             <div className="mb-6">
-              <label className="text-[10px] font-mono text-white/50 uppercase tracking-widest block mb-2 justify-between">
+              <label className="text-[10px] font-mono text-muted-foreground/50 uppercase tracking-widest block mb-2 justify-between">
                 <span>Display Columns</span>
                 <span className="text-blue-400">{config.columns?.length || 0} selected</span>
               </label>
-              <div className="max-h-40 overflow-y-auto custom-scrollbar space-y-1 bg-white/5 rounded-xl border border-white/5 p-2">
+              <div className="max-h-40 overflow-y-auto custom-scrollbar space-y-1 bg-muted rounded-xl border border-border p-2">
                 {allColumns.map(col => (
-                  <label key={col} className="flex items-center gap-2 p-1.5 hover:bg-white/5 rounded-lg cursor-pointer group" onClick={(e) => { e.preventDefault(); toggleColumn(col); }}>
+                  <label key={col} className="flex items-center gap-2 p-1.5 hover:bg-muted rounded-lg cursor-pointer group" onClick={(e) => { e.preventDefault(); toggleColumn(col); }}>
                     <div className={cn(
                       "w-4 h-4 rounded border flex items-center justify-center transition-colors shrink-0",
-                      config.columns?.includes(col) ? "bg-blue-500 border-blue-500" : "border-white/20 group-hover:border-white/40"
+                      config.columns?.includes(col) ? "bg-blue-500 border-blue-500" : "border-border group-hover:border-white/40"
                     )}>
-                      {config.columns?.includes(col) && <Check size={10} className="text-white" />}
+                      {config.columns?.includes(col) && <Check size={10} className="text-foreground" />}
                     </div>
-                    <span className="text-xs text-white/80 group-hover:text-white truncate">{col}</span>
+                    <span className="text-xs text-muted-foreground group-hover:text-foreground truncate">{col}</span>
                   </label>
                 ))}
               </div>
@@ -353,25 +354,25 @@ export default function AdvancedReportBuilder() {
             {/* Grouping & Sorting */}
             <div className="grid grid-cols-2 gap-4 mb-6">
               <div>
-                <label className="text-[10px] font-mono text-white/50 uppercase tracking-widest block mb-2">Group By</label>
+                <label className="text-[10px] font-mono text-muted-foreground/50 uppercase tracking-widest block mb-2">Group By</label>
                 <select 
                   value={config.groupBy || ''}
                   onChange={(e) => setConfig({...config, groupBy: e.target.value})}
-                  className="w-full bg-white/5 border border-white/10 rounded-lg px-2 py-2 text-xs text-white focus:outline-none focus:border-blue-500/50"
+                  className="w-full bg-muted border border-border rounded-lg px-2 py-2 text-xs text-foreground focus:outline-none focus:border-blue-500/50"
                 >
-                  <option value="" className="bg-[#080808]">None</option>
-                  {allColumns.map(col => <option key={col} value={col} className="bg-[#080808]">{col}</option>)}
+                  <option value="" className="bg-background">None</option>
+                  {allColumns.map(col => <option key={col} value={col} className="bg-background">{col}</option>)}
                 </select>
               </div>
               <div>
-                <label className="text-[10px] font-mono text-white/50 uppercase tracking-widest block mb-2">Sort By</label>
+                <label className="text-[10px] font-mono text-muted-foreground/50 uppercase tracking-widest block mb-2">Sort By</label>
                 <select 
                   value={config.sortBy || ''}
                   onChange={(e) => setConfig({...config, sortBy: e.target.value})}
-                  className="w-full bg-white/5 border border-white/10 rounded-lg px-2 py-2 text-xs text-white focus:outline-none focus:border-blue-500/50"
+                  className="w-full bg-muted border border-border rounded-lg px-2 py-2 text-xs text-foreground focus:outline-none focus:border-blue-500/50"
                 >
-                  <option value="" className="bg-[#080808]">Default</option>
-                  {allColumns.map(col => <option key={col} value={col} className="bg-[#080808]">{col}</option>)}
+                  <option value="" className="bg-background">Default</option>
+                  {allColumns.map(col => <option key={col} value={col} className="bg-background">{col}</option>)}
                 </select>
               </div>
             </div>
@@ -379,39 +380,39 @@ export default function AdvancedReportBuilder() {
             {/* Filters */}
             <div className="mb-6">
               <div className="flex justify-between items-center mb-2">
-                <label className="text-[10px] font-mono text-white/50 uppercase tracking-widest block">Data Filters</label>
+                <label className="text-[10px] font-mono text-muted-foreground/50 uppercase tracking-widest block">Data Filters</label>
                 <button onClick={addFilter} className="text-[10px] font-mono text-blue-400 uppercase tracking-widest hover:text-blue-300 flex items-center gap-1">
                   <Plus size={10} /> Add
                 </button>
               </div>
               <div className="space-y-2">
                 {(!config.filters || config.filters.length === 0) && (
-                  <div className="text-xs text-white/30 italic text-center py-2 bg-white/5 rounded-lg border border-white/5 border-dashed">No filters applied</div>
+                  <div className="text-xs text-white/30 italic text-center py-2 bg-muted rounded-lg border border-border border-dashed">No filters applied</div>
                 )}
                 {config.filters?.map((filter, idx) => (
-                  <div key={idx} className="p-2 bg-white/5 rounded-lg border border-white/10 space-y-2 relative">
+                  <div key={idx} className="p-2 bg-muted rounded-lg border border-border space-y-2 relative">
                     <button onClick={() => removeFilter(idx)} className="absolute top-2 right-2 text-white/30 hover:text-red-400"><X size={12} /></button>
                     <select 
                       value={filter.field} 
                       onChange={(e) => updateFilter(idx, 'field', e.target.value)}
-                      className="w-[calc(100%-20px)] bg-transparent text-xs text-white border-b border-white/10 pb-1 focus:outline-none focus:border-blue-500"
+                      className="w-[calc(100%-20px)] bg-transparent text-xs text-foreground border-b border-border pb-1 focus:outline-none focus:border-blue-500"
                     >
-                      {allColumns.map(col => <option key={col} value={col} className="bg-[#080808]">{col}</option>)}
+                      {allColumns.map(col => <option key={col} value={col} className="bg-background">{col}</option>)}
                     </select>
                     <div className="flex gap-2">
                       <select 
                         value={filter.operator} 
                         onChange={(e) => updateFilter(idx, 'operator', e.target.value as FilterOperator)}
-                        className="w-1/2 bg-white/5 text-[10px] text-white/80 border border-white/10 rounded px-1 py-1 focus:outline-none"
+                        className="w-1/2 bg-muted text-[10px] text-muted-foreground border border-border rounded px-1 py-1 focus:outline-none"
                       >
-                        {OPERATORS.map(op => <option key={op.id} value={op.id} className="bg-[#080808]">{op.label}</option>)}
+                        {OPERATORS.map(op => <option key={op.id} value={op.id} className="bg-background">{op.label}</option>)}
                       </select>
                       <input 
                         type="text" 
                         value={filter.value} 
                         onChange={(e) => updateFilter(idx, 'value', e.target.value)}
                         placeholder="Value..."
-                        className="w-1/2 bg-white/5 text-xs text-white border border-white/10 rounded px-2 py-1 focus:outline-none focus:border-blue-500"
+                        className="w-1/2 bg-muted text-xs text-foreground border border-border rounded px-2 py-1 focus:outline-none focus:border-blue-500"
                       />
                     </div>
                   </div>
@@ -429,9 +430,9 @@ export default function AdvancedReportBuilder() {
         </div>
 
         {/* Right Side - Data Table & Exports */}
-        <div className="flex-1 flex flex-col min-w-0 glass rounded-2xl border border-white/5 overflow-hidden">
+        <div className="flex-1 flex flex-col min-w-0 glass rounded-2xl border border-border overflow-hidden">
           {/* Toolbar */}
-          <div className="p-4 border-b border-white/5 flex flex-wrap items-center justify-between gap-4 bg-white/5">
+          <div className="p-4 border-b border-border flex flex-wrap items-center justify-between gap-4 bg-muted">
             <div className="flex items-center gap-2">
               <BarChart3 size={16} className="text-blue-400" />
               <span className="text-sm font-medium">{processedData.length} Records</span>
@@ -458,10 +459,10 @@ export default function AdvancedReportBuilder() {
               </div>
             ) : (
               <table className="w-full text-left border-collapse min-w-max">
-                <thead className="bg-[#0a0a0a] sticky top-0 z-10 shadow-md">
+                <thead className="bg-background sticky top-0 z-10 shadow-md">
                   <tr>
                     {config.columns?.map(col => (
-                      <th key={col} className="px-4 py-3 text-[10px] font-mono text-white/50 uppercase tracking-widest border-b border-white/5 whitespace-nowrap">
+                      <th key={col} className="px-4 py-3 text-[10px] font-mono text-muted-foreground/50 uppercase tracking-widest border-b border-border whitespace-nowrap">
                         {col}
                       </th>
                     ))}
@@ -476,9 +477,9 @@ export default function AdvancedReportBuilder() {
                         </td>
                       </tr>
                     ) : (
-                      <tr key={`row-${i}`} className="hover:bg-white/5 transition-colors">
+                      <tr key={`row-${i}`} className="hover:bg-muted transition-colors">
                         {config.columns?.map(col => (
-                          <td key={`${i}-${col}`} className="px-4 py-3 text-xs text-white/80 whitespace-nowrap">
+                          <td key={`${i}-${col}`} className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">
                             {String(row[col] ?? '')}
                           </td>
                         ))}
@@ -492,23 +493,23 @@ export default function AdvancedReportBuilder() {
 
           {/* Pagination Footer */}
           {processedData.length > 0 && (
-            <div className="p-3 border-t border-white/5 bg-white/5 flex items-center justify-between">
-              <span className="text-[10px] font-mono text-white/50 uppercase tracking-widest">
+            <div className="p-3 border-t border-border bg-muted flex items-center justify-between">
+              <span className="text-[10px] font-mono text-muted-foreground/50 uppercase tracking-widest">
                 Showing {((currentPage - 1) * pageSize) + 1} to {Math.min(currentPage * pageSize, processedData.length)} of {processedData.length}
               </span>
               <div className="flex items-center gap-2">
                 <button 
                   onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                   disabled={currentPage === 1}
-                  className="px-3 py-1 bg-white/5 rounded hover:bg-white/10 disabled:opacity-50 text-xs font-mono"
+                  className="px-3 py-1 bg-muted rounded hover:bg-accent disabled:opacity-50 text-xs font-mono"
                 >
                   Prev
                 </button>
-                <span className="text-xs font-mono text-white/70">Page {currentPage} of {totalPages}</span>
+                <span className="text-xs font-mono text-muted-foreground">Page {currentPage} of {totalPages}</span>
                 <button 
                   onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                   disabled={currentPage === totalPages}
-                  className="px-3 py-1 bg-white/5 rounded hover:bg-white/10 disabled:opacity-50 text-xs font-mono"
+                  className="px-3 py-1 bg-muted rounded hover:bg-accent disabled:opacity-50 text-xs font-mono"
                 >
                   Next
                 </button>

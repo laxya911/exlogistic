@@ -22,13 +22,13 @@ export function VariantSelectionModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-      <div className="bg-[#111] border border-white/10 rounded-2xl p-6 w-full max-w-lg shadow-2xl">
+      <div className="bg-background border border-border rounded-2xl p-6 w-full max-w-lg shadow-2xl">
         <div className="flex justify-between items-center mb-6">
           <div>
-            <h3 className="text-white font-mono font-bold text-lg">{product.name}</h3>
-            <p className="text-[10px] text-white/50 uppercase tracking-widest mt-1">Select a Configuration Variant</p>
+            <h3 className="text-foreground font-mono font-bold text-lg">{product.name}</h3>
+            <p className="text-[10px] text-muted-foreground/50 uppercase tracking-widest mt-1">Select a Configuration Variant</p>
           </div>
-          <button onClick={onClose} className="text-white/50 hover:text-white transition-colors cursor-pointer self-start">
+          <button onClick={onClose} className="text-muted-foreground/50 hover:text-foreground transition-colors cursor-pointer self-start">
             <X size={20} />
           </button>
         </div>
@@ -43,16 +43,16 @@ export function VariantSelectionModal({
                 disabled={isSelected}
                 className={`w-full flex items-center justify-between p-4 rounded-xl border text-left transition-all ${
                   isSelected 
-                    ? 'bg-white/5 border-white/5 opacity-50 cursor-not-allowed' 
-                    : 'bg-black/50 border-white/10 hover:border-blue-500/50 hover:bg-blue-500/5 cursor-pointer'
+                    ? 'bg-muted border-border opacity-50 cursor-not-allowed' 
+                    : 'bg-black/50 border-border hover:border-blue-500/50 hover:bg-blue-500/5 cursor-pointer'
                 }`}
               >
                 <div>
                   <div className="flex items-center gap-2">
-                    <span className="text-sm font-bold text-white/90">{variant.sku}</span>
+                    <span className="text-sm font-bold text-foreground/90">{variant.sku}</span>
                     {isSelected && <span className="px-2 py-0.5 bg-blue-500/20 text-blue-400 rounded-full text-[9px] uppercase font-bold tracking-widest border border-blue-500/20">Added</span>}
                   </div>
-                  <div className="flex gap-4 mt-1 text-[11px] font-mono text-white/50">
+                  <div className="flex gap-4 mt-1 text-[11px] font-mono text-muted-foreground/50">
                     {variant.attributes && Object.entries(variant.attributes).map(([k, v]) => (
                       <span key={k}>{k}: {String(v)}</span>
                     ))}

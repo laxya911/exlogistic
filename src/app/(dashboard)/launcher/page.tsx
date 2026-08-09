@@ -48,11 +48,11 @@ export default function LauncherPage() {
             <motion.div 
               whileHover={{ scale: 1.05, y: -5 }}
               whileTap={{ scale: 0.95 }}
-              className={`w-24 h-24 rounded-2xl bg-linear-to-tr ${app.color} flex items-center justify-center shadow-lg ${app.shadow} transition-all duration-300 group-hover:shadow-2xl border border-white/10`}
+              className={`w-24 h-24 rounded-2xl bg-linear-to-tr ${app.color} flex items-center justify-center shadow-lg ${app.shadow} transition-all duration-300 group-hover:shadow-2xl border border-border`}
             >
               <app.icon size={36} className="text-white drop-shadow-md" strokeWidth={1.5} />
             </motion.div>
-            <span className="text-sm font-medium text-white/70 group-hover:text-white transition-colors tracking-wide">
+            <span className="text-sm font-medium text-muted-foreground group-hover:text-foreground transition-colors tracking-wide">
               {app.name}
             </span>
           </Link>

@@ -95,10 +95,10 @@ export function DocumentActionBar({ documentId }: { documentId: string }) {
   };
 
   return (
-    <div className="fixed bottom-8 left-1/2 -translate-x-1/2 flex items-center gap-4 p-2 bg-zinc-900/90 backdrop-blur-md rounded-2xl shadow-2xl border border-white/10 print:hidden z-50">
+    <div className="fixed bottom-8 left-1/2 -translate-x-1/2 flex items-center gap-4 p-2 bg-zinc-900/90 backdrop-blur-md rounded-2xl shadow-2xl border border-border print:hidden z-50">
       <button 
         onClick={handlePrint}
-        className="flex items-center gap-2 px-6 py-3 bg-white/10 hover:bg-white/20 text-white rounded-xl text-sm font-medium transition-colors"
+        className="flex items-center gap-2 px-6 py-3 bg-accent hover:bg-white/20 text-foreground rounded-xl text-sm font-medium transition-colors"
       >
         <Printer size={16} />
         Print

@@ -185,7 +185,7 @@ export default function NewPurchaseOrderPage() {
         {/* Top bar */}
         <div className="flex flex-wrap items-center justify-between gap-4">
           <button onClick={() => router.push('/purchase-orders')}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-[10px] font-mono uppercase text-white/90 hover:bg-white/10 cursor-pointer border-none">
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-muted border border-border text-[10px] font-mono uppercase text-foreground/90 hover:bg-accent cursor-pointer border-none">
             <ArrowLeft size={12} /> Back to ledger
           </button>
           
@@ -198,12 +198,12 @@ export default function NewPurchaseOrderPage() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
           {/* Left sidebar */}
           <div className="lg:col-span-4 space-y-6">
-            <div className="glass p-8 rounded-4xl border border-white/5 space-y-5">
-              <h4 className="text-[10px] font-mono text-white/70 uppercase tracking-widest pb-3 border-b border-white/5">
+            <div className="glass p-8 rounded-4xl border border-border space-y-5">
+              <h4 className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest pb-3 border-b border-border">
                 Vendor Details
               </h4>
               <div className="space-y-1">
-                <label className="text-[9px] text-white/70 uppercase mb-1 block">Supplier</label>
+                <label className="text-[9px] text-muted-foreground uppercase mb-1 block">Supplier</label>
                 <SearchableSelect
                   value={formState.supplierId}
                   onChange={(val) => updateFormState('supplierId', val)}

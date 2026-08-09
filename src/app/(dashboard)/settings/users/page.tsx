@@ -59,7 +59,7 @@ export default function UsersPage() {
     setEditingUser(null);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     try {
       const url = '/api/users';
@@ -105,7 +105,7 @@ export default function UsersPage() {
       <PageHeaderUpdater title="User Directory" subtitle="Access & Identity Management" />
       
       <div className="space-y-8 pb-20">
-        <div className="glass p-8 lg:p-10 rounded-[2.5rem] border border-white/5 min-h-[60vh]">
+        <div className="glass p-8 lg:p-10 rounded-[2.5rem] border border-border min-h-[60vh]">
           
           <div className="flex justify-between items-center mb-8">
             <h3 className="text-xl font-display font-medium flex items-center gap-3">
@@ -126,8 +126,8 @@ export default function UsersPage() {
             <div className="flex justify-center p-12"><div className="animate-spin text-2xl text-blue-500">⟳</div></div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-sm text-left text-white/80 border-separate border-spacing-y-2">
-                <thead className="text-[10px] font-mono uppercase tracking-widest text-white/50 bg-white/5">
+              <table className="w-full text-sm text-left text-muted-foreground border-separate border-spacing-y-2">
+                <thead className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground/50 bg-muted">
                   <tr>
                     <th className="px-6 py-4 rounded-l-xl">User</th>
                     <th className="px-6 py-4">Contact</th>
@@ -138,25 +138,25 @@ export default function UsersPage() {
                 </thead>
                 <tbody>
                   {users.map((user) => (
-                    <tr key={user.id} className="bg-white/2 hover:bg-white/5 transition-colors group">
+                    <tr key={user.id} className="bg-white/2 hover:bg-muted transition-colors group">
                       <td className="px-6 py-4 rounded-l-xl">
                         <div className="flex items-center gap-3">
                           <div className="w-8 h-8 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center font-bold shrink-0">
                             {user.name?.charAt(0) || 'U'}
                           </div>
                           <div>
-                            <p className="font-medium text-white">{user.name}</p>
-                            <p className="text-[10px] font-mono text-white/40">{user.id.substring(0,8)}</p>
+                            <p className="font-medium text-foreground">{user.name}</p>
+                            <p className="text-[10px] font-mono text-muted-foreground/40">{user.id.substring(0,8)}</p>
                           </div>
                         </div>
                       </td>
                       <td className="px-6 py-4">
                         <div className="space-y-1">
-                          <div className="flex items-center gap-2 text-xs text-white/60">
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground/60">
                             <Mail size={12} /> {user.email || '-'}
                           </div>
                           {user.phone && (
-                            <div className="flex items-center gap-2 text-xs text-white/60">
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground/60">
                               <Phone size={12} /> {user.phone}
                             </div>
                           )}
@@ -174,7 +174,7 @@ export default function UsersPage() {
                         {user.roles?.length > 0 ? (
                           <div className="flex gap-1 flex-wrap">
                             {user.roles.map((r: any) => (
-                              <span key={r.id} className="px-2 py-0.5 rounded text-[9px] bg-white/10 text-white/60 uppercase">{r.name}</span>
+                              <span key={r.id} className="px-2 py-0.5 rounded text-[9px] bg-accent text-muted-foreground/60 uppercase">{r.name}</span>
                             ))}
                           </div>
                         ) : (
@@ -195,7 +195,7 @@ export default function UsersPage() {
                   ))}
                   {users.length === 0 && (
                     <tr>
-                      <td colSpan={5} className="text-center py-12 text-white/40 italic">
+                      <td colSpan={5} className="text-center py-12 text-muted-foreground/40 italic">
                         No users found
                       </td>
                     </tr>
@@ -209,38 +209,38 @@ export default function UsersPage() {
       </div>
 
       {isModalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="bg-[#0a0a0a] border border-white/10 rounded-2xl p-6 w-full max-w-md shadow-2xl">
+        <div className="fixed inset-0 z-100 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-background border border-border rounded-2xl p-6 w-full max-w-md shadow-2xl">
             <div className="flex justify-between items-center mb-6">
               <h3 className="text-lg font-bold">{editingUser ? 'Edit Identity' : 'New Identity'}</h3>
-              <button onClick={closeModal} className="text-white/50 hover:text-white cursor-pointer border-none bg-transparent"><X size={20}/></button>
+              <button onClick={closeModal} className="text-muted-foreground/50 hover:text-foreground cursor-pointer border-none bg-transparent"><X size={20}/></button>
             </div>
             
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label className="text-[10px] font-mono text-white/70 uppercase tracking-widest px-1">Full Name</label>
+                <label className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest px-1">Full Name</label>
                 <input 
                   type="text" 
                   required
                   value={formData.name} 
                   onChange={e => setFormData({...formData, name: e.target.value})}
-                  className="w-full mt-1 bg-white/5 border border-white/10 rounded-xl py-2.5 px-4 text-sm focus:outline-none focus:border-blue-500/50 text-white" 
+                  className="w-full mt-1 bg-muted border border-border rounded-xl py-2.5 px-4 text-sm focus:outline-none focus:border-blue-500/50 text-foreground" 
                 />
               </div>
               
               <div>
-                <label className="text-[10px] font-mono text-white/70 uppercase tracking-widest px-1">Email Address</label>
+                <label className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest px-1">Email Address</label>
                 <input 
                   type="email" 
                   required
                   value={formData.email} 
                   onChange={e => setFormData({...formData, email: e.target.value})}
-                  className="w-full mt-1 bg-white/5 border border-white/10 rounded-xl py-2.5 px-4 text-sm focus:outline-none focus:border-blue-500/50 text-white" 
+                  className="w-full mt-1 bg-muted border border-border rounded-xl py-2.5 px-4 text-sm focus:outline-none focus:border-blue-500/50 text-foreground" 
                 />
               </div>
 
               <div>
-                <label className="text-[10px] font-mono text-white/70 uppercase tracking-widest px-1">
+                <label className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest px-1">
                   Password {editingUser && '(Leave blank to keep)'}
                 </label>
                 <input 
@@ -248,35 +248,35 @@ export default function UsersPage() {
                   required={!editingUser}
                   value={formData.password} 
                   onChange={e => setFormData({...formData, password: e.target.value})}
-                  className="w-full mt-1 bg-white/5 border border-white/10 rounded-xl py-2.5 px-4 text-sm focus:outline-none focus:border-blue-500/50 text-white" 
+                  className="w-full mt-1 bg-muted border border-border rounded-xl py-2.5 px-4 text-sm focus:outline-none focus:border-blue-500/50 text-foreground" 
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="text-[10px] font-mono text-white/70 uppercase tracking-widest px-1">Phone</label>
+                  <label className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest px-1">Phone</label>
                   <input 
                     type="text" 
                     value={formData.phone} 
                     onChange={e => setFormData({...formData, phone: e.target.value})}
-                    className="w-full mt-1 bg-white/5 border border-white/10 rounded-xl py-2.5 px-4 text-sm focus:outline-none focus:border-blue-500/50 text-white" 
+                    className="w-full mt-1 bg-muted border border-border rounded-xl py-2.5 px-4 text-sm focus:outline-none focus:border-blue-500/50 text-foreground" 
                   />
                 </div>
                 <div>
-                  <label className="text-[10px] font-mono text-white/70 uppercase tracking-widest px-1">Status</label>
+                  <label className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest px-1">Status</label>
                   <select
                     value={formData.status}
                     onChange={e => setFormData({...formData, status: e.target.value})}
-                    className="w-full mt-1 bg-white/5 border border-white/10 rounded-xl py-2.5 px-4 text-sm focus:outline-none focus:border-blue-500/50 text-white appearance-none cursor-pointer"
+                    className="w-full mt-1 bg-muted border border-border rounded-xl py-2.5 px-4 text-sm focus:outline-none focus:border-blue-500/50 text-foreground appearance-none cursor-pointer"
                   >
-                    <option value="ACTIVE" className="bg-[#111]">ACTIVE</option>
-                    <option value="INACTIVE" className="bg-[#111]">INACTIVE</option>
+                    <option value="ACTIVE" className="bg-background">ACTIVE</option>
+                    <option value="INACTIVE" className="bg-background">INACTIVE</option>
                   </select>
                 </div>
               </div>
 
               <div className="pt-4 flex justify-end gap-3">
-                <button type="button" onClick={closeModal} className="px-4 py-2 text-sm text-white/60 hover:text-white cursor-pointer border-none bg-transparent">Cancel</button>
+                <button type="button" onClick={closeModal} className="px-4 py-2 text-sm text-muted-foreground/60 hover:text-foreground cursor-pointer border-none bg-transparent">Cancel</button>
                 <button type="submit" className="px-5 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-sm font-medium transition-all cursor-pointer border-none">
                   {editingUser ? 'Update Identity' : 'Create Identity'}
                 </button>

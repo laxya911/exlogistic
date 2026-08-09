@@ -118,10 +118,10 @@ export function SearchableSelect({
   return (
     <div ref={wrapperRef} className={cn("relative w-full", isOpen ? "z-50" : "z-auto", className)}>
       <div 
-        className="w-full bg-[#0b0b0b] border border-white/10 rounded-xl py-3 px-4 text-sm font-mono text-white focus:outline-none cursor-pointer flex justify-between items-center"
+        className="w-full bg-background border border-border rounded-xl py-3 px-4 text-sm font-mono text-foreground focus:outline-none cursor-pointer flex justify-between items-center"
         onClick={() => setIsOpen(!isOpen)}
       >
-        <span className={!value || (multiple && value.length === 0) ? 'text-white/50' : 'text-white truncate pr-4'}>
+        <span className={!value || (multiple && value.length === 0) ? 'text-muted-foreground/50' : 'text-foreground truncate pr-4'}>
           {getDisplayValue()}
         </span>
       </div>
@@ -136,17 +136,17 @@ export function SearchableSelect({
             exit={{ opacity: 0, y: -5 }}
             transition={{ duration: 0.15 }}
             style={dropdownStyle}
-            className="bg-[#111] border border-white/10 rounded-xl shadow-2xl overflow-hidden"
+            className="bg-background border border-border rounded-xl shadow-2xl overflow-hidden"
           >
-            <div className="p-2 border-b border-white/5 flex items-center gap-2">
-              <Search size={14} className="text-white/50 ml-2" />
+            <div className="p-2 border-b border-border flex items-center gap-2">
+              <Search size={14} className="text-muted-foreground/50 ml-2" />
               <input
                 autoFocus
                 type="text"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search..."
-                className="w-full bg-transparent border-none focus:outline-none text-sm text-white py-1"
+                className="w-full bg-transparent border-none focus:outline-none text-sm text-foreground py-1"
               />
             </div>
             
@@ -163,7 +163,7 @@ export function SearchableSelect({
                       onClick={() => handleSelect(opt.value)}
                       className={cn(
                         "px-3 py-2 text-sm rounded-lg cursor-pointer flex items-center justify-between",
-                        isSelected ? "bg-blue-600/20 text-blue-400" : "hover:bg-white/5 text-white/90"
+                        isSelected ? "bg-blue-600/20 text-blue-400" : "hover:bg-muted text-foreground/90"
                       )}
                     >
                       {opt.label}
@@ -172,7 +172,7 @@ export function SearchableSelect({
                   );
                 })
               ) : (
-                <div className="px-3 py-4 text-sm text-center text-white/40">
+                <div className="px-3 py-4 text-sm text-center text-muted-foreground/40">
                   No results found
                 </div>
               )}
@@ -180,7 +180,7 @@ export function SearchableSelect({
             
             {(onAddClick || onAddNew) && (
               <div 
-                className="p-2 border-t border-white/5 bg-white/2"
+                className="p-2 border-t border-border bg-white/2"
               >
                 <button
                   type="button"

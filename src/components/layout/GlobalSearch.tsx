@@ -120,7 +120,7 @@ export function GlobalSearch() {
   return (
     <div className="relative w-full max-w-md" ref={dropdownRef}>
       <div className="relative group">
-        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-white/40 group-focus-within:text-blue-400 transition-colors">
+        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-muted-foreground/40 group-focus-within:text-blue-400 transition-colors">
           <Search size={16} />
         </div>
         <input 
@@ -133,15 +133,15 @@ export function GlobalSearch() {
           }}
           onFocus={() => { if (query) setOpen(true); }}
           placeholder="Search matrix (Ctrl+K)"
-          className="w-full bg-white/5 border border-white/10 rounded-2xl py-3 pl-11 pr-12 text-sm text-white placeholder-white/30 focus:outline-none focus:border-blue-500/50 focus:bg-white/10 transition-all font-mono shadow-inner"
+          className="w-full bg-muted border border-border rounded-2xl py-3 pl-11 pr-12 text-sm text-foreground placeholder-white/30 focus:outline-none focus:border-blue-500/50 focus:bg-accent transition-all font-mono shadow-inner"
         />
         <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
           {loading ? (
-            <Loader2 size={14} className="text-white/40 animate-spin" />
+            <Loader2 size={14} className="text-muted-foreground/40 animate-spin" />
           ) : (
-            <div className="hidden sm:flex items-center gap-1 px-1.5 py-1 rounded bg-white/5 border border-white/10">
-              <Command size={10} className="text-white/50" />
-              <span className="text-[9px] font-mono font-bold text-white/50">K</span>
+            <div className="hidden sm:flex items-center gap-1 px-1.5 py-1 rounded bg-muted border border-border">
+              <Command size={10} className="text-muted-foreground/50" />
+              <span className="text-[9px] font-mono font-bold text-muted-foreground/50">K</span>
             </div>
           )}
         </div>
@@ -154,11 +154,11 @@ export function GlobalSearch() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 5 }}
             transition={{ duration: 0.15 }} // Fast animation
-            className="absolute top-full left-0 right-0 mt-2 bg-[#0a0a0a]/95 backdrop-blur-3xl border border-white/10 rounded-2xl shadow-2xl z-50 overflow-hidden flex flex-col max-h-[400px]"
+            className="absolute top-full left-0 right-0 mt-2 bg-background/95 backdrop-blur-3xl border border-border rounded-2xl shadow-2xl z-50 overflow-hidden flex flex-col max-h-[400px]"
           >
             <div className="overflow-y-auto custom-scrollbar p-2">
               {results.length === 0 && !loading ? (
-                <div className="p-8 text-center text-xs text-white/50 font-mono uppercase tracking-widest">
+                <div className="p-8 text-center text-xs text-muted-foreground/50 font-mono uppercase tracking-widest">
                   No records found
                 </div>
               ) : (
@@ -169,18 +169,18 @@ export function GlobalSearch() {
                       onClick={() => handleSelect(r.url)}
                       onMouseEnter={() => setSelectedIndex(index)}
                       className={`flex justify-between items-center p-3 rounded-xl transition-colors cursor-pointer group ${
-                        index === selectedIndex ? 'bg-blue-500/20 border border-blue-500/30' : 'hover:bg-white/5 border border-transparent'
+                        index === selectedIndex ? 'bg-blue-500/20 border border-blue-500/30' : 'hover:bg-muted border border-transparent'
                       }`}
                     >
                       <div className="flex flex-col">
-                        <span className={`text-sm font-medium ${index === selectedIndex ? 'text-white' : 'text-white/90 group-hover:text-white'}`}>
+                        <span className={`text-sm font-medium ${index === selectedIndex ? 'text-foreground' : 'text-foreground/90 group-hover:text-foreground'}`}>
                           {r.title}
                         </span>
                         <div className="flex items-center gap-2 mt-1 text-[10px] font-mono">
-                          <span className="px-1.5 py-0.5 rounded bg-white/10 text-white/70 uppercase tracking-widest">
+                          <span className="px-1.5 py-0.5 rounded bg-accent text-muted-foreground uppercase tracking-widest">
                             {r.type}
                           </span>
-                          <span className="text-white/40 truncate max-w-[200px]">
+                          <span className="text-muted-foreground/40 truncate max-w-[200px]">
                             {r.subtitle}
                           </span>
                         </div>

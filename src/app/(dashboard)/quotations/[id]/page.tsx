@@ -8,7 +8,7 @@ import {
   DollarSign, Calendar, Anchor, Clock, Layers, Globe, User, TrendingUp, 
   Activity, MapPin, FileDown, ExternalLink, MessageSquare, Building, Save, X
 } from 'lucide-react';
-import { formatCurrency, formatDate, cn } from '@/lib/utils';
+import { cn, formatCurrency, formatDate } from '@/lib/utils';
 import { toast } from 'sonner';
 import { Quotation, Customer, Product, Port } from '@/types';
 import { QuotationMetadataCard } from '@/components/sales/quotation-metadata-card';
@@ -370,8 +370,8 @@ export default function QuotationDetailPage() {
       case 'SENT': return 'text-blue-400 bg-blue-500/10 border-blue-500/20';
       case 'DRAFT': return 'text-amber-400 bg-amber-500/10 border-amber-500/20';
       case 'REVISED': return 'text-purple-400 bg-purple-500/10 border-purple-500/20';
-      case 'EXPIRED': return 'text-white/80 bg-white/5 border-white/10';
-      default: return 'text-white/70 bg-white/5';
+      case 'EXPIRED': return 'text-muted-foreground bg-muted border-border';
+      default: return 'text-muted-foreground bg-muted';
     }
   };
 
@@ -393,13 +393,13 @@ export default function QuotationDetailPage() {
         {/* Top bar control actions */}
         <div className="flex flex-wrap items-center justify-between gap-4">
           <button onClick={() => router.push('/quotations')}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-[10px] font-mono uppercase text-white/90 hover:bg-white/10 hover:text-white cursor-pointer">
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-muted border border-border text-[10px] font-mono uppercase text-foreground/90 hover:bg-accent hover:text-foreground cursor-pointer">
             <ArrowLeft size={12} /> Back to vault
           </button>
 
           {isEditing ? (
             <div className="flex items-center gap-3">
-              <button onClick={handleEditToggle} disabled={saving} className="flex items-center gap-1.5 px-5 py-3 rounded-2xl bg-white/5 border border-white/10 text-white/70 hover:bg-white/10 text-[10px] font-mono uppercase tracking-widest transition-all cursor-pointer">
+              <button onClick={handleEditToggle} disabled={saving} className="flex items-center gap-1.5 px-5 py-3 rounded-2xl bg-muted border border-border text-muted-foreground hover:bg-accent text-[10px] font-mono uppercase tracking-widest transition-all cursor-pointer">
                 <X size={12} /> Discard
               </button>
               <button onClick={handleSaveEdit} disabled={saving} className="flex items-center gap-1.5 px-6 py-3 bg-blue-500 text-black hover:bg-blue-400 rounded-2xl text-[10px] font-mono font-bold uppercase tracking-widest transition-all border-none cursor-pointer">
@@ -408,7 +408,7 @@ export default function QuotationDetailPage() {
             </div>
           ) : (
             <div className="flex flex-wrap items-center gap-2.5">
-              <button onClick={handleDelete} className="p-3.5 rounded-2xl bg-white/5 border border-white/10 text-white/70 hover:text-rose-400 hover:bg-rose-500/10 transition-all cursor-pointer" title="Soft delete proposal">
+              <button onClick={handleDelete} className="p-3.5 rounded-2xl bg-muted border border-border text-muted-foreground hover:text-rose-400 hover:bg-rose-500/10 transition-all cursor-pointer" title="Soft delete proposal">
                 <Trash2 size={14} />
               </button>
 
@@ -464,31 +464,31 @@ export default function QuotationDetailPage() {
 
             {/* Remarks in Edit Mode */}
             {isEditing && (
-              <div className="glass p-8 rounded-4xl border border-white/5 space-y-3">
-                <label className="text-[10px] font-mono text-white/70 uppercase tracking-widest">Remarks</label>
+              <div className="glass p-8 rounded-4xl border border-border space-y-3">
+                <label className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest">Remarks</label>
                 <textarea 
                   value={formState.remarks || ''} onChange={e => updateFormState('remarks', e.target.value)}
                   placeholder="Special clauses..."
-                  className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm text-white/90 outline-none focus:border-blue-500/50 transition-all h-32 resize-none"
+                  className="w-full bg-black/40 border border-border rounded-xl px-4 py-3 text-sm text-foreground/90 outline-none focus:border-blue-500/50 transition-all h-32 resize-none"
                 />
               </div>
             )}
 
             {/* Customer CRM Profile Card */}
             {customer && !isEditing && (
-              <div className="glass p-8 rounded-4xl border border-white/5 space-y-6">
-                <h4 className="text-[10px] font-mono text-white/70 uppercase tracking-widest pb-4 border-b border-white/5 flex items-center gap-2">
+              <div className="glass p-8 rounded-4xl border border-border space-y-6">
+                <h4 className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest pb-4 border-b border-border flex items-center gap-2">
                   <User size={14} className="text-blue-400" /> Customer CRM Node
                 </h4>
                 <div className="flex gap-4 items-start">
-                  <div className="w-12 h-12 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-white/80">
+                  <div className="w-12 h-12 rounded-xl bg-muted border border-border flex items-center justify-center text-muted-foreground">
                     <Building size={20} />
                   </div>
                   <div className="flex-1 min-w-0 font-mono">
-                    <h5 className="font-sans font-bold text-sm text-white/90 truncate">{customer.name}</h5>
-                    <p className="text-[9px] text-white/80 uppercase mt-0.5">{customer.segment} CLIENT • {customer.country}</p>
+                    <h5 className="font-sans font-bold text-sm text-foreground/90 truncate">{customer.name}</h5>
+                    <p className="text-[9px] text-muted-foreground uppercase mt-0.5">{customer.segment} CLIENT • {customer.country}</p>
                     <p className="text-[10px] text-blue-400 truncate mt-2">{customer.email}</p>
-                    <p className="text-[10px] text-white/70 truncate">{customer.phone}</p>
+                    <p className="text-[10px] text-muted-foreground truncate">{customer.phone}</p>
                   </div>
                 </div>
               </div>
@@ -496,18 +496,18 @@ export default function QuotationDetailPage() {
 
             {/* Document Vault PDF Reference */}
             {!isEditing && (
-              <div className="glass p-8 rounded-4xl border border-white/5 space-y-4">
-                <h4 className="text-[10px] font-mono text-white/70 uppercase tracking-widest pb-2 border-b border-white/5">
+              <div className="glass p-8 rounded-4xl border border-border space-y-4">
+                <h4 className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest pb-2 border-b border-border">
                   Proposal Vault Documents
                 </h4>
                 {(Array.isArray(quotation.documents) ? quotation.documents : []).length > 0 ? (
                   (Array.isArray(quotation.documents) ? quotation.documents : []).map(doc => (
-                    <div key={doc.id} className="flex justify-between items-center p-3.5 bg-white/2 border border-white/5 rounded-xl text-[11px] font-mono">
+                    <div key={doc.id} className="flex justify-between items-center p-3.5 bg-white/2 border border-border rounded-xl text-[11px] font-mono">
                       <div className="flex items-center gap-2">
                         <FileText size={14} className="text-blue-400" />
-                        <span className="text-white/80 font-bold truncate max-w-37.5">{doc.name}</span>
+                        <span className="text-muted-foreground font-bold truncate max-w-37.5">{doc.name}</span>
                       </div>
-                      <a href={doc.url} className="text-white/80 hover:text-white transition-colors" title="Download Vault PDF">
+                      <a href={doc.url} className="text-muted-foreground hover:text-foreground transition-colors" title="Download Vault PDF">
                         <ExternalLink size={12} />
                       </a>
                     </div>
@@ -540,14 +540,14 @@ export default function QuotationDetailPage() {
                 taxes={taxes}
               />
             ) : (
-              <div className="glass p-8 rounded-4xl border border-white/5 space-y-6">
-                <h3 className="text-sm font-mono text-white/70 uppercase tracking-widest flex items-center gap-2 pb-4 border-b border-white/5">
+              <div className="glass p-8 rounded-4xl border border-border space-y-6">
+                <h3 className="text-sm font-mono text-muted-foreground uppercase tracking-widest flex items-center gap-2 pb-4 border-b border-border">
                   <Layers size={14} className="text-blue-400" /> Itemized Commodities List
                 </h3>
                 
                 <div className="overflow-x-auto font-mono">
                   <table className="w-full text-left text-xs">
-                    <thead className="text-white/70 uppercase tracking-wider border-b border-white/5">
+                    <thead className="text-muted-foreground uppercase tracking-wider border-b border-border">
                       <tr>
                         <th className="pb-4">Commodity SKU</th>
                         <th className="pb-4 text-right">Quantity</th>
@@ -558,7 +558,7 @@ export default function QuotationDetailPage() {
                     </thead>
                     <tbody className="divide-y divide-white/5">
                       {quotation.items.map((item, idx) => (
-                        <tr key={idx} className="text-white/80">
+                        <tr key={idx} className="text-muted-foreground">
                           <td className="py-4">
                             <p className="font-sans font-bold text-white/95">
                               {item.variant ? `${item.variant.product?.name || item.variant.title} (${item.variant.sku})` : getProductName(item.productId || item.variantId || '')}
@@ -566,33 +566,33 @@ export default function QuotationDetailPage() {
                           </td>
                           <td className="py-4 text-right font-bold">{item.quantity} MT</td>
                           <td className="py-4 text-right font-bold">{formatCurrency(item.unitPrice)}</td>
-                          <td className="py-4 text-right font-bold text-white/70">
+                          <td className="py-4 text-right font-bold text-muted-foreground">
                             {item.tax ? item.tax.name : (item.taxId ? (taxes.find(t => t.id === item.taxId)?.name || 'Tax') : '-')}
                             {item.taxAmount ? ` (${formatCurrency(item.taxAmount)})` : ''}
                           </td>
-                          <td className="py-4 text-right font-bold text-white">{formatCurrency(item.totalPrice)}</td>
+                          <td className="py-4 text-right font-bold text-foreground">{formatCurrency(item.totalPrice)}</td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
                 </div>
 
-                <div className="border-t border-white/5 pt-6 flex justify-end font-mono text-xs">
+                <div className="border-t border-border pt-6 flex justify-end font-mono text-xs">
                   <div className="w-full max-w-sm space-y-2.5">
-                    <div className="flex justify-between text-white/70">
+                    <div className="flex justify-between text-muted-foreground">
                       <span>Proposed Margin Percentage</span>
                       <span>{quotation.marginPercentage || 0}%</span>
                     </div>
-                    <div className="flex justify-between text-white/70 pt-2">
+                    <div className="flex justify-between text-muted-foreground pt-2">
                       <span>Untaxed Amount</span>
-                      <span className="font-bold text-white">{formatCurrency(quotation.untaxedAmount || 0)}</span>
+                      <span className="font-bold text-foreground">{formatCurrency(quotation.untaxedAmount || 0)}</span>
                     </div>
-                    <div className="flex justify-between text-white/70 pt-2">
+                    <div className="flex justify-between text-muted-foreground pt-2">
                       <span>Total Tax Amount</span>
-                      <span className="font-bold text-white">{formatCurrency(quotation.totalTaxAmount || 0)}</span>
+                      <span className="font-bold text-foreground">{formatCurrency(quotation.totalTaxAmount || 0)}</span>
                     </div>
-                    <div className="h-px bg-white/5 my-3" />
-                    <div className="flex justify-between text-base font-bold text-white">
+                    <div className="h-px bg-muted my-3" />
+                    <div className="flex justify-between text-base font-bold text-foreground">
                       <span>Total Proposal Value (Gross)</span>
                       <span className="text-blue-400">{formatCurrency(quotation.totalValue)}</span>
                     </div>
@@ -600,8 +600,8 @@ export default function QuotationDetailPage() {
                 </div>
 
                 {quotation.remarks && (
-                  <div className="mt-8 p-5 bg-white/5 rounded-2xl border border-white/10 text-xs text-white/70 font-mono">
-                    <span className="font-bold text-white/90 uppercase mb-2 block">Special Clauses & Remarks</span>
+                  <div className="mt-8 p-5 bg-muted rounded-2xl border border-border text-xs text-muted-foreground font-mono">
+                    <span className="font-bold text-foreground/90 uppercase mb-2 block">Special Clauses & Remarks</span>
                     {quotation.remarks}
                   </div>
                 )}
@@ -610,8 +610,8 @@ export default function QuotationDetailPage() {
 
             {/* Negotiation / Communication Logger */}
             {!isEditing && (
-              <div className="glass p-8 rounded-4xl border border-white/5 space-y-6">
-                <h3 className="text-sm font-mono text-white/70 uppercase tracking-widest flex items-center gap-2 pb-4 border-b border-white/5">
+              <div className="glass p-8 rounded-4xl border border-border space-y-6">
+                <h3 className="text-sm font-mono text-muted-foreground uppercase tracking-widest flex items-center gap-2 pb-4 border-b border-border">
                   <MessageSquare size={14} className="text-blue-400" /> Negotiation Timeline
                 </h3>
                 
@@ -621,12 +621,12 @@ export default function QuotationDetailPage() {
                     value={communicationNote}
                     onChange={(e) => setCommunicationNote(e.target.value)}
                     placeholder="Log a call, email, or counter-offer detail..."
-                    className="flex-1 bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm text-white/90 outline-none focus:border-blue-500/50 transition-all font-mono"
+                    className="flex-1 bg-black/40 border border-border rounded-xl px-4 py-3 text-sm text-foreground/90 outline-none focus:border-blue-500/50 transition-all font-mono"
                     onKeyDown={(e) => e.key === 'Enter' && handleSaveNote()}
                   />
                   <button 
                     onClick={handleSaveNote}
-                    className="px-6 py-3 bg-white/5 hover:bg-white/10 border border-white/10 text-white font-mono uppercase text-[10px] tracking-widest rounded-xl transition-all cursor-pointer"
+                    className="px-6 py-3 bg-muted hover:bg-accent border border-border text-foreground font-mono uppercase text-[10px] tracking-widest rounded-xl transition-all cursor-pointer"
                   >
                     Log Note
                   </button>
@@ -634,23 +634,23 @@ export default function QuotationDetailPage() {
 
                 <div className="space-y-4 pt-4">
                   {(Array.isArray(quotation.timeline) ? quotation.timeline : []).map((event: any, i: number) => (
-                    <div key={event.id || i} className="flex gap-4 p-4 rounded-2xl bg-white/2 border border-white/5">
+                    <div key={event.id || i} className="flex gap-4 p-4 rounded-2xl bg-white/2 border border-border">
                       <div className="w-8 h-8 rounded-full bg-blue-500/10 border border-blue-500/20 flex items-center justify-center shrink-0">
                         <User size={12} className="text-blue-400" />
                       </div>
                       <div className="flex-1 min-w-0 font-mono">
                         <div className="flex justify-between items-start mb-1">
-                          <h5 className="font-bold text-xs text-white/90">{event.title}</h5>
-                          <span className="text-[9px] text-white/50 whitespace-nowrap ml-4">
-                            {new Date(event.date).toLocaleDateString()} {new Date(event.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          <h5 className="font-bold text-xs text-foreground/90">{event.title}</h5>
+                          <span className="text-[9px] text-muted-foreground/50 whitespace-nowrap ml-4">
+                            {formatDate(event.date)}
                           </span>
                         </div>
-                        <p className="text-[10px] text-white/70">{event.description}</p>
+                        <p className="text-[10px] text-muted-foreground">{event.description}</p>
                       </div>
                     </div>
                   ))}
                   {(Array.isArray(quotation.timeline) ? quotation.timeline : []).length === 0 && (
-                    <p className="text-center py-6 text-[10px] uppercase font-mono text-white/20 border border-dashed border-white/10 rounded-2xl">
+                    <p className="text-center py-6 text-[10px] uppercase font-mono text-white/20 border border-dashed border-border rounded-2xl">
                       No negotiation history logged
                     </p>
                   )}

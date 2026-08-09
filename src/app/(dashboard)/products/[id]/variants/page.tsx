@@ -56,7 +56,7 @@ export default function VariantsPage({ params }: { params: Promise<{ id: string 
     setSaving(false);
   };
 
-  if (loading) return <div className="p-8 text-white">Loading...</div>;
+  if (loading) return <div className="p-8 text-foreground">Loading...</div>;
 
   return (
     <>
@@ -65,7 +65,7 @@ export default function VariantsPage({ params }: { params: Promise<{ id: string 
       <div className="space-y-6">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <button onClick={() => router.push(`/products/${id}`)}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-[10px] font-mono uppercase text-white/90 hover:bg-white/10 cursor-pointer">
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-muted border border-border text-[10px] font-mono uppercase text-foreground/90 hover:bg-accent cursor-pointer">
             <ArrowLeft size={12} /> Back to Product
           </button>
           <button onClick={handleSave} disabled={saving} className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-black font-bold text-[10px] uppercase rounded cursor-pointer hover:bg-blue-400">
@@ -73,9 +73,9 @@ export default function VariantsPage({ params }: { params: Promise<{ id: string 
           </button>
         </div>
 
-        <div className="glass rounded-3xl border border-white/5 overflow-hidden">
+        <div className="glass rounded-3xl border border-border overflow-hidden">
           <table className="w-full text-left text-sm font-mono">
-            <thead className="bg-white/2 text-white/70 uppercase tracking-[0.2em] border-b border-white/5">
+            <thead className="bg-white/2 text-muted-foreground uppercase tracking-[0.2em] border-b border-border">
               <tr>
                 <th className="py-5 px-6">Variant Name</th>
                 <th className="py-5 px-6 w-48">Images (URLs)</th>
@@ -89,7 +89,7 @@ export default function VariantsPage({ params }: { params: Promise<{ id: string 
                 <tr key={i} className="hover:bg-white/2">
                   <td className="py-4 px-6">{v.title}</td>
                   <td className="py-2 px-4">
-                    <input className="w-full bg-white/5 border border-white/10 rounded-lg py-2 px-3 text-white focus:outline-none text-[10px]" 
+                    <input className="w-full bg-muted border border-border rounded-lg py-2 px-3 text-foreground focus:outline-none text-[10px]" 
                       placeholder="url1, url2..."
                       value={Array.isArray(v.images) ? (v.images.length > 0 && typeof v.images[0] === 'string' ? v.images.join(', ') : v.images.map((img: any) => img.url).join(', ')) : (v.imageUrl || '')} 
                       onChange={(e) => {
@@ -99,17 +99,17 @@ export default function VariantsPage({ params }: { params: Promise<{ id: string 
                     }} />
                   </td>
                   <td className="py-2 px-4">
-                    <input className="w-full bg-white/5 border border-white/10 rounded-lg py-2 px-3 text-white focus:outline-none" value={v.sku} onChange={(e) => {
+                    <input className="w-full bg-muted border border-border rounded-lg py-2 px-3 text-foreground focus:outline-none" value={v.sku} onChange={(e) => {
                       const newV = [...variants]; newV[i].sku = e.target.value; setVariants(newV);
                     }} />
                   </td>
                   <td className="py-2 px-4">
-                    <input type="number" className="w-full bg-white/5 border border-white/10 rounded-lg py-2 px-3 text-white focus:outline-none" value={v.purchasePrice} onChange={(e) => {
+                    <input type="number" className="w-full bg-muted border border-border rounded-lg py-2 px-3 text-foreground focus:outline-none" value={v.purchasePrice} onChange={(e) => {
                       const newV = [...variants]; newV[i].purchasePrice = Number(e.target.value); setVariants(newV);
                     }} />
                   </td>
                   <td className="py-2 px-4">
-                    <input type="number" className="w-full bg-white/5 border border-white/10 rounded-lg py-2 px-3 text-white focus:outline-none" value={v.sellingPrice} onChange={(e) => {
+                    <input type="number" className="w-full bg-muted border border-border rounded-lg py-2 px-3 text-foreground focus:outline-none" value={v.sellingPrice} onChange={(e) => {
                       const newV = [...variants]; newV[i].sellingPrice = Number(e.target.value); setVariants(newV);
                     }} />
                   </td>
@@ -117,7 +117,7 @@ export default function VariantsPage({ params }: { params: Promise<{ id: string 
               ))}
               {variants.length === 0 && (
                 <tr>
-                   <td colSpan={4} className="py-8 text-center text-white/50">No variants found</td>
+                   <td colSpan={4} className="py-8 text-center text-muted-foreground/50">No variants found</td>
                 </tr>
               )}
             </tbody>

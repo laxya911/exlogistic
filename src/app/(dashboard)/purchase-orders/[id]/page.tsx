@@ -234,14 +234,14 @@ export default function PurchaseOrderDetailPage() {
 
   const getStatusStyle = (status: string) => {
     switch (status) {
-      case 'DRAFT': return 'text-white/70 bg-white/5 border-white/10';
+      case 'DRAFT': return 'text-muted-foreground bg-muted border-border';
       case 'ISSUED': return 'text-blue-400 bg-blue-500/10 border-blue-500/20';
       case 'ACKNOWLEDGED': return 'text-cyan-400 bg-cyan-500/10 border-cyan-500/20';
       case 'IN_PRODUCTION': return 'text-amber-400 bg-amber-500/10 border-amber-500/20';
       case 'DISPATCHED': return 'text-purple-400 bg-purple-500/10 border-purple-500/20';
       case 'RECEIVED': return 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20';
       case 'CANCELLED': return 'text-rose-400 bg-rose-500/10 border-rose-500/20';
-      default: return 'text-white/80 bg-white/5 border-white/10';
+      default: return 'text-muted-foreground bg-muted border-border';
     }
   };
 
@@ -277,7 +277,7 @@ export default function PurchaseOrderDetailPage() {
         {/* Top bar */}
         <div className="flex flex-wrap items-center justify-between gap-4">
           <button onClick={() => router.push('/purchase-orders')}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-[10px] font-mono uppercase text-white/90 hover:bg-white/10 cursor-pointer">
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-muted border border-border text-[10px] font-mono uppercase text-foreground/90 hover:bg-accent cursor-pointer">
             <ArrowLeft size={12} /> Back to ledger
           </button>
 
@@ -285,7 +285,7 @@ export default function PurchaseOrderDetailPage() {
             {isEditing ? (
               <>
                 <button onClick={() => setIsEditing(false)}
-                  className="px-5 py-2.5 rounded-xl text-xs font-mono uppercase tracking-widest text-white/70 hover:bg-white/5 border border-white/10 transition-colors bg-transparent cursor-pointer">
+                  className="px-5 py-2.5 rounded-xl text-xs font-mono uppercase tracking-widest text-muted-foreground hover:bg-muted border border-border transition-colors bg-transparent cursor-pointer">
                   Cancel
                 </button>
                 <button onClick={handleSaveEdit} disabled={saving}
@@ -296,7 +296,7 @@ export default function PurchaseOrderDetailPage() {
             ) : (
               <>
                 <button onClick={handleDelete}
-                  className="p-3.5 rounded-2xl bg-white/5 border border-white/10 text-white/70 hover:text-rose-400 hover:bg-rose-500/10 transition-all cursor-pointer" title="Soft delete">
+                  className="p-3.5 rounded-2xl bg-muted border border-border text-muted-foreground hover:text-rose-400 hover:bg-rose-500/10 transition-all cursor-pointer" title="Soft delete">
                   <Trash2 size={14} />
                 </button>
 
@@ -355,21 +355,21 @@ export default function PurchaseOrderDetailPage() {
 
         {/* Progress Stepper */}
         {!isCancelled && (
-          <div className="glass p-6 rounded-3xl border border-white/5">
+          <div className="glass p-6 rounded-3xl border border-border">
             <div className="flex items-center gap-2 overflow-x-auto">
               {STATUS_FLOW.map((step, i) => (
                 <React.Fragment key={step}>
                   <div className={cn(
                     'flex items-center gap-2 px-3 py-2 rounded-xl text-[9px] font-mono uppercase tracking-widest whitespace-nowrap transition-all',
-                    i < statusIdx ? 'text-white/80 bg-white/3' :
+                    i < statusIdx ? 'text-muted-foreground bg-white/3' :
                     i === statusIdx ? 'text-black bg-amber-400 font-bold' :
-                    'text-white/70 bg-white/2'
+                    'text-muted-foreground bg-white/2'
                   )}>
                     {i < statusIdx && <CheckCircle2 size={9} />}
                     {step.replace('_', ' ')}
                   </div>
                   {i < STATUS_FLOW.length - 1 && (
-                    <div className={cn('h-px flex-1 min-w-[12px]', i < statusIdx ? 'bg-amber-400/30' : 'bg-white/5')} />
+                    <div className={cn('h-px flex-1 min-w-[12px]', i < statusIdx ? 'bg-amber-400/30' : 'bg-muted')} />
                   )}
                 </React.Fragment>
               ))}
@@ -394,19 +394,19 @@ export default function PurchaseOrderDetailPage() {
 
             {/* Supplier Card */}
             {supplier && (
-              <div className="glass p-8 rounded-4xl border border-white/5 space-y-4">
-                <h4 className="text-[10px] font-mono text-white/70 uppercase tracking-widest pb-3 border-b border-white/5 flex items-center gap-2">
+              <div className="glass p-8 rounded-4xl border border-border space-y-4">
+                <h4 className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest pb-3 border-b border-border flex items-center gap-2">
                   <User size={12} className="text-amber-400" /> Vendor / Supplier Node
                 </h4>
                 <div className="flex items-start gap-3">
-                  <div className="w-12 h-12 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-white/80">
+                  <div className="w-12 h-12 rounded-xl bg-muted border border-border flex items-center justify-center text-muted-foreground">
                     <Building size={20} />
                   </div>
                   <div className="flex-1 min-w-0 font-mono">
-                    <p className="font-sans font-bold text-sm text-white/90 truncate">{supplier.name}</p>
-                    <p className="text-[9px] text-white/80 uppercase">{supplier.country}</p>
+                    <p className="font-sans font-bold text-sm text-foreground/90 truncate">{supplier.name}</p>
+                    <p className="text-[9px] text-muted-foreground uppercase">{supplier.country}</p>
                     <p className="text-[10px] text-amber-400 truncate mt-1.5">{supplier.email}</p>
-                    <p className="text-[10px] text-white/70">{supplier.phone}</p>
+                    <p className="text-[10px] text-muted-foreground">{supplier.phone}</p>
                   </div>
                 </div>
               </div>
@@ -414,38 +414,38 @@ export default function PurchaseOrderDetailPage() {
 
             {/* Quality & Packaging Specs */}
             {(po.qualitySpec || po.packagingSpec) && (
-              <div className="glass p-8 rounded-4xl border border-white/5 space-y-4">
-                <h4 className="text-[10px] font-mono text-white/70 uppercase tracking-widest pb-2 border-b border-white/5">
+              <div className="glass p-8 rounded-4xl border border-border space-y-4">
+                <h4 className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest pb-2 border-b border-border">
                   Quality & Packaging Spec
                 </h4>
                 {po.qualitySpec && (
                   <div>
-                    <p className="text-[9px] font-mono text-white/70 uppercase mb-1">Quality</p>
-                    <p className="text-[11px] font-mono text-white/70 leading-relaxed">{po.qualitySpec}</p>
+                    <p className="text-[9px] font-mono text-muted-foreground uppercase mb-1">Quality</p>
+                    <p className="text-[11px] font-mono text-muted-foreground leading-relaxed">{po.qualitySpec}</p>
                   </div>
                 )}
                 {po.packagingSpec && (
-                  <div className="pt-2 border-t border-white/5">
-                    <p className="text-[9px] font-mono text-white/70 uppercase mb-1">Packaging</p>
-                    <p className="text-[11px] font-mono text-white/70 leading-relaxed">{po.packagingSpec}</p>
+                  <div className="pt-2 border-t border-border">
+                    <p className="text-[9px] font-mono text-muted-foreground uppercase mb-1">Packaging</p>
+                    <p className="text-[11px] font-mono text-muted-foreground leading-relaxed">{po.packagingSpec}</p>
                   </div>
                 )}
               </div>
             )}
 
             {/* Documents */}
-            <div className="glass p-8 rounded-4xl border border-white/5 space-y-4">
-              <h4 className="text-[10px] font-mono text-white/70 uppercase tracking-widest pb-2 border-b border-white/5">
+            <div className="glass p-8 rounded-4xl border border-border space-y-4">
+              <h4 className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest pb-2 border-b border-border">
                 PO Documents
               </h4>
               {(po.documents || []).length > 0 ? (
                 (po.documents || []).map(doc => (
-                  <div key={doc.id} className="flex justify-between items-center p-3 bg-white/2 border border-white/5 rounded-xl text-[11px] font-mono">
+                  <div key={doc.id} className="flex justify-between items-center p-3 bg-white/2 border border-border rounded-xl text-[11px] font-mono">
                     <div className="flex items-center gap-2">
                       <FileText size={13} className="text-amber-400 shrink-0" />
-                      <span className="text-white/80 truncate max-w-[140px]">{doc.name}</span>
+                      <span className="text-muted-foreground truncate max-w-[140px]">{doc.name}</span>
                     </div>
-                    <a href={doc.url} className="text-white/80 hover:text-white transition-colors shrink-0">
+                    <a href={doc.url} className="text-muted-foreground hover:text-foreground transition-colors shrink-0">
                       <ExternalLink size={12} />
                     </a>
                   </div>
@@ -482,26 +482,26 @@ export default function PurchaseOrderDetailPage() {
 
             {/* Remarks */}
             {po.remarks && (
-              <div className="glass p-8 rounded-4xl border border-white/5 space-y-3">
-                <h4 className="text-[10px] font-mono text-white/70 uppercase tracking-widest pb-2 border-b border-white/5">Special Remarks & Instructions</h4>
-                <p className="text-[11px] font-mono text-white/70 whitespace-pre-wrap leading-relaxed">{po.remarks}</p>
+              <div className="glass p-8 rounded-4xl border border-border space-y-3">
+                <h4 className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest pb-2 border-b border-border">Special Remarks & Instructions</h4>
+                <p className="text-[11px] font-mono text-muted-foreground whitespace-pre-wrap leading-relaxed">{po.remarks}</p>
               </div>
             )}
 
             {/* Timeline & Notes */}
-            <div className="glass p-8 rounded-4xl border border-white/5 space-y-6">
-              <h3 className="text-sm font-mono text-white/70 uppercase tracking-widest flex items-center gap-2 pb-4 border-b border-white/5">
+            <div className="glass p-8 rounded-4xl border border-border space-y-6">
+              <h3 className="text-sm font-mono text-muted-foreground uppercase tracking-widest flex items-center gap-2 pb-4 border-b border-border">
                 <Activity size={14} className="text-amber-400" /> Procurement Timeline
               </h3>
 
               {/* Note logger */}
-              <div className="p-4 rounded-2xl bg-white/2 border border-white/5 space-y-3">
-                <p className="text-[8px] font-mono text-white/70 uppercase tracking-wider">Log Procurement Note</p>
+              <div className="p-4 rounded-2xl bg-white/2 border border-border space-y-3">
+                <p className="text-[8px] font-mono text-muted-foreground uppercase tracking-wider">Log Procurement Note</p>
                 <textarea
                   value={noteText}
                   onChange={e => setNoteText(e.target.value)}
                   placeholder="Record supplier communications, quality hold notifications, or delivery updates..."
-                  className="w-full bg-[#070707] border border-white/10 rounded-xl p-3 text-[11px] font-mono text-white focus:outline-none focus:border-amber-500/50 min-h-[56px]"
+                  className="w-full bg-background border border-border rounded-xl p-3 text-[11px] font-mono text-foreground focus:outline-none focus:border-amber-500/50 min-h-[56px]"
                 />
                 <div className="flex justify-end">
                   <button onClick={handleSaveNote} disabled={!noteText.trim()}
@@ -512,15 +512,15 @@ export default function PurchaseOrderDetailPage() {
               </div>
 
               {/* Events list */}
-              <div className="max-h-[300px] overflow-y-auto custom-scrollbar pr-2 space-y-6 relative before:absolute before:left-[11px] before:top-2 before:bottom-2 before:w-px before:bg-white/5">
+              <div className="max-h-[300px] overflow-y-auto custom-scrollbar pr-2 space-y-6 relative before:absolute before:left-[11px] before:top-2 before:bottom-2 before:w-px before:bg-muted">
                 {(po.timeline || []).map((ev, idx) => (
                   <div key={ev.id || idx} className="relative pl-8">
-                    <div className="absolute left-0 top-1 w-6 h-6 rounded-full bg-[#0a0a0a] border border-white/15 flex items-center justify-center z-10 text-amber-400">
+                    <div className="absolute left-0 top-1 w-6 h-6 rounded-full bg-background border border-border flex items-center justify-center z-10 text-amber-400">
                       {getTimelineIcon(ev.type)}
                     </div>
-                    <p className="text-[8px] font-mono text-white/70 uppercase mb-0.5">{formatDate(ev.date)}</p>
-                    <p className="text-xs font-bold text-white/90 mb-0.5">{ev.title}</p>
-                    <p className="text-[10px] text-white/70 leading-relaxed font-sans">{ev.description}</p>
+                    <p className="text-[8px] font-mono text-muted-foreground uppercase mb-0.5">{formatDate(ev.date)}</p>
+                    <p className="text-xs font-bold text-foreground/90 mb-0.5">{ev.title}</p>
+                    <p className="text-[10px] text-muted-foreground leading-relaxed font-sans">{ev.description}</p>
                   </div>
                 ))}
               </div>

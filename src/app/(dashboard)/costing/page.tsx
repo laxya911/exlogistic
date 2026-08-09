@@ -1,12 +1,14 @@
 'use client';
 
+import { useRouter } from 'next/navigation';
+
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { PageHeaderUpdater } from '@/components/layout/page-context';
 import {
   Calculator, TrendingUp, DollarSign, Percent, ArrowRight,
   ShieldCheck, Package, Warehouse, Truck, Star, StarOff,
   Trash2, Save, RefreshCw, FileDown, Copy, ChevronDown, ChevronUp,
-  BarChart3, Target, CheckCircle2, PlusCircle, X
+  BarChart3, Target, CheckCircle2, PlusCircle, X, FileText
 } from 'lucide-react';
 import { formatCurrency, cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
@@ -127,7 +129,7 @@ function MarginGauge({ value, max = 50 }: { value: number; max?: number }) {
           className="text-3xl font-bold font-mono" style={{ color }}>
           {value.toFixed(1)}%
         </motion.span>
-        <span className="text-[8px] font-mono text-white/70 uppercase tracking-widest mt-1">Gross Margin</span>
+        <span className="text-[8px] font-mono text-muted-foreground uppercase tracking-widest mt-1">Gross Margin</span>
       </div>
     </div>
   );
@@ -174,10 +176,10 @@ function VariantSelectorModal({ product, isOpen, onClose, onSelect, addedVariant
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-      <div className="bg-[#111] border border-white/10 rounded-2xl p-6 w-full max-w-md shadow-2xl">
+      <div className="bg-background border border-border rounded-2xl p-6 w-full max-w-md shadow-2xl">
         <div className="flex justify-between items-center mb-6">
-          <h3 className="text-white font-mono font-bold">Select Variant: {product.name}</h3>
-          <button onClick={onClose} className="text-white/50 hover:text-white transition-colors cursor-pointer">
+          <h3 className="text-foreground font-mono font-bold">Select Variant: {product.name}</h3>
+          <button onClick={onClose} className="text-muted-foreground/50 hover:text-foreground transition-colors cursor-pointer">
             <X size={20} />
           </button>
         </div>
@@ -186,7 +188,7 @@ function VariantSelectorModal({ product, isOpen, onClose, onSelect, addedVariant
           <div className="space-y-6">
             {Object.keys(attributeMap).map(attrName => (
               <div key={attrName} className="space-y-2">
-                <label className="text-[10px] font-mono text-white/50 uppercase tracking-widest">{attrName}</label>
+                <label className="text-[10px] font-mono text-muted-foreground/50 uppercase tracking-widest">{attrName}</label>
                 <div className="flex flex-wrap gap-2">
                   {Array.from(attributeMap[attrName]).map(val => (
                     <button
@@ -196,7 +198,7 @@ function VariantSelectorModal({ product, isOpen, onClose, onSelect, addedVariant
                         "px-4 py-2 rounded-lg text-sm font-bold border transition-colors cursor-pointer",
                         selectedAttrs[attrName] === val
                           ? "bg-emerald-500/20 border-emerald-500 text-emerald-400"
-                          : "bg-white/5 border-white/10 text-white/70 hover:bg-white/10"
+                          : "bg-muted border-border text-muted-foreground hover:bg-accent"
                       )}
                     >
                       {val}
@@ -206,10 +208,10 @@ function VariantSelectorModal({ product, isOpen, onClose, onSelect, addedVariant
               </div>
             ))}
 
-            <div className="pt-4 border-t border-white/10">
+            <div className="pt-4 border-t border-border">
               {matchedVariant ? (
                 addedVariantIds.includes(matchedVariant.id) ? (
-                  <button disabled className="w-full py-3 rounded-xl bg-white/5 text-white/40 font-bold cursor-not-allowed">
+                  <button disabled className="w-full py-3 rounded-xl bg-muted text-muted-foreground/40 font-bold cursor-not-allowed">
                     Variant Already Added
                   </button>
                 ) : (
@@ -222,7 +224,7 @@ function VariantSelectorModal({ product, isOpen, onClose, onSelect, addedVariant
                   </button>
                 )
               ) : (
-                <button disabled className="w-full py-3 rounded-xl bg-white/5 text-white/40 font-bold cursor-not-allowed">
+                <button disabled className="w-full py-3 rounded-xl bg-muted text-muted-foreground/40 font-bold cursor-not-allowed">
                   {Object.keys(selectedAttrs).length === Object.keys(attributeMap).length 
                     ? "Combination Unavailable" 
                     : "Select all options"}
@@ -242,17 +244,17 @@ function VariantSelectorModal({ product, isOpen, onClose, onSelect, addedVariant
                   className={cn(
                     "w-full flex justify-between items-center p-4 rounded-xl border text-left transition-colors",
                     isAdded 
-                      ? "bg-white/5 border-white/5 opacity-50 cursor-not-allowed" 
-                      : "bg-white/2 border-white/10 hover:border-emerald-500/50 hover:bg-emerald-500/5 cursor-pointer"
+                      ? "bg-muted border-border opacity-50 cursor-not-allowed" 
+                      : "bg-white/2 border-border hover:border-emerald-500/50 hover:bg-emerald-500/5 cursor-pointer"
                   )}
                 >
                   <div>
-                    <p className="text-sm font-bold text-white/90">{v.title || v.sku}</p>
-                    <p className="text-[10px] font-mono text-white/50">{v.sku}</p>
+                    <p className="text-sm font-bold text-foreground/90">{v.title || v.sku}</p>
+                    <p className="text-[10px] font-mono text-muted-foreground/50">{v.sku}</p>
                   </div>
                   <div className="text-right">
                     <p className="text-sm font-sans text-emerald-400 font-bold">{formatCurrency(v.purchasePrice, v.currency || 'USD')}</p>
-                    <p className="text-[10px] font-mono text-white/50">{v.grossWeight}kg | {v.volumeCBM}m³</p>
+                    <p className="text-[10px] font-mono text-muted-foreground/50">{v.grossWeight}kg | {v.volumeCBM}m³</p>
                   </div>
                 </button>
               );
@@ -289,14 +291,14 @@ function ContainerBlueprint({ items, totalCBM, maxCBM }: { items: any[], totalCB
 
   return (
     <div className="mt-8">
-      <div className="flex justify-between items-center text-[9px] font-mono text-white/50 uppercase tracking-widest mb-3">
+      <div className="flex justify-between items-center text-[9px] font-mono text-muted-foreground/50 uppercase tracking-widest mb-3">
         <span>[ Rear Doors ]</span>
         <span>Container Blueprint ({maxCBM} CBM)</span>
         <span>[ Nose / Front ]</span>
       </div>
       
       {/* Container Box */}
-      <div className="relative w-full h-24 border-[3px] border-white/20 rounded-sm p-1 bg-[#0a0a0a] shadow-inner flex flex-row-reverse overflow-hidden">
+      <div className="relative w-full h-24 border-[3px] border-border rounded-sm p-1 bg-background shadow-inner flex flex-row-reverse overflow-hidden">
         {/* Draw Segments (Loaded back-to-front so flex-row-reverse pushes them to the Nose first) */}
         {segments.map((seg, i) => (
           <motion.div
@@ -315,14 +317,14 @@ function ContainerBlueprint({ items, totalCBM, maxCBM }: { items: any[], totalCB
         ))}
         {/* Free Space Indicator */}
         {!isOverloaded && remainingPct > 0 && (
-          <div className="h-full bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGcgc3Ryb2tlPSJyZ2JhKDI1NSwgMjU1LCAyNTUsIDAuMDUpIiBzdHJva2Utd2lkdGg9IjIiIGZpbGw9Im5vbmUiPjxwb2x5Z29uIHBvaW50cz0iMCA0MCA0MCAwIi8+PC9nPjwvc3ZnPg==')] flex items-center justify-center flex-grow">
+          <div className="h-full bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGcgc3Ryb2tlPSJyZ2JhKDI1NSwgMjU1LCAyNTUsIDAuMDUpIiBzdHJva2Utd2lkdGg9IjIiIGZpbGw9Im5vbmUiPjxwb2x5Z29uIHBvaW50cz0iMCA0MCA0MCAwIi8+PC9nPjwvc3ZnPg==')] flex items-center justify-center grow">
             <span className="text-white/20 text-[10px] font-mono uppercase">Free Space</span>
           </div>
         )}
         {/* Overload Indicator */}
         {isOverloaded && (
           <div className="absolute inset-y-0 left-0 w-8 bg-rose-500/80 backdrop-blur-sm flex items-center justify-center border-l-4 border-rose-600 shadow-[0_0_15px_rgba(244,63,94,0.5)] z-10">
-            <span className="text-white text-[9px] font-bold rotate-180" style={{ writingMode: 'vertical-rl' }}>OVERLOAD</span>
+            <span className="text-foreground text-[9px] font-bold rotate-180" style={{ writingMode: 'vertical-rl' }}>OVERLOAD</span>
           </div>
         )}
       </div>
@@ -332,7 +334,7 @@ function ContainerBlueprint({ items, totalCBM, maxCBM }: { items: any[], totalCB
         {segments.map((seg, i) => (
           <div key={i} className="flex items-center gap-1.5">
             <div className={cn('w-2 h-2 rounded-sm', seg.color)} />
-            <span className="text-[10px] font-mono text-white/70">
+            <span className="text-[10px] font-mono text-muted-foreground">
               {seg._meta?.name || 'Item'} ({(seg.qty * seg.cbm).toFixed(1)} CBM)
             </span>
           </div>
@@ -346,6 +348,9 @@ function ContainerBlueprint({ items, totalCBM, maxCBM }: { items: any[], totalCB
 // Main page
 // ──────────────────────────────────────────
 export default function CostingPage() {
+  const router = useRouter();
+  
+  // — Global Data State —
   const [products, setProducts] = useState<any[]>([]);
   const [suppliers, setSuppliers] = useState<any[]>([]);
   const [savedScenarios, setSavedScenarios] = useState<CostingScenario[]>([]);
@@ -387,9 +392,9 @@ export default function CostingPage() {
         fetch('/api/suppliers').then(r => r.json()),
         fetch('/api/costing').then(r => r.json())
       ]);
-      setProducts(pRes);
-      setSuppliers(sRes);
-      setSavedScenarios(scRes);
+      setProducts(Array.isArray(pRes) ? pRes : []);
+      setSuppliers(Array.isArray(sRes) ? sRes : []);
+      setSavedScenarios(Array.isArray(scRes) ? scRes : []);
       if (pRes.length > 0) {
         // Start with an empty list for a clean view
       }
@@ -427,6 +432,11 @@ export default function CostingPage() {
     setOriginH(280); setDestH(420); setInsuranceRate(0.5); setCustomsRate(5.0);
     setInspection(180); setMisc(120); setTargetMargin(22); setScenarioName('');
     toast.success('Scenario reset to defaults');
+  };
+
+  const draftQuote = (sc: CostingScenario) => {
+    toast.info('Drafting quote from scenario...');
+    router.push(`/quotations/new?scenarioId=${sc.id}`);
   };
 
   const handleSave = async () => {
@@ -524,12 +534,12 @@ export default function CostingPage() {
 
   const loadScenario = (sc: CostingScenario) => {
     if (sc.items && sc.items.length > 0) {
-      setItems(sc.items.map(item => ({
+      setItems(sc.items.map((item: any) => ({
         productId: item.productId,
         qty: item.quantity,
-        unitPrice: item.unitPurchasePrice,
-        weight: item.grossWeight || 25,
-        cbm: item.volumeCBM || 0.04
+        unitPrice: item.unitPrice || item.unitPurchasePrice || 0,
+        weight: item.grossWeight || item.weight || 25,
+        cbm: item.volumeCBM || item.cbm || 0.04
       })));
     }
     setPurchaseCurrency('USD'); // Defaulting since it wasn't saved in old model
@@ -574,8 +584,8 @@ export default function CostingPage() {
 
   const compareScenarios = savedScenarios.filter(s => compareIds.includes(s.id));
 
-  const inputCls = "w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-sm font-mono focus:outline-none focus:border-emerald-500/50 transition-all text-white";
-  const labelCls = "text-[9px] font-mono text-white/70 uppercase tracking-widest";
+  const inputCls = "w-full bg-muted border border-border rounded-xl py-3 px-4 text-sm font-mono focus:outline-none focus:border-emerald-500/50 transition-all text-foreground";
+  const labelCls = "text-[9px] font-mono text-muted-foreground uppercase tracking-widest";
 
   return (
     <>
@@ -590,7 +600,7 @@ export default function CostingPage() {
             { label: 'Avg Selling / Unit', value: formatCurrency(live.avgSellingPerUnit, targetCurrency), color: 'text-emerald-400', icon: Target },
             { label: 'Total Profit', value: formatCurrency(live.totalProfit, targetCurrency), color: 'text-purple-400', icon: TrendingUp },
           ].map((k, i) => (
-            <motion.div key={i} animate={{ opacity: 1 }} className="glass p-5 rounded-3xl border border-white/5">
+            <motion.div key={i} animate={{ opacity: 1 }} className="glass p-5 rounded-3xl border border-border">
               <div className="flex justify-between items-start mb-2">
                 <p className={labelCls}>{k.label}</p>
                 <k.icon size={14} className={k.color} />
@@ -609,12 +619,12 @@ export default function CostingPage() {
           <div className="xl:col-span-2 space-y-6">
 
             {/* Currency & Logistics Profile */}
-            <div className="glass p-8 rounded-4xl border border-white/5 space-y-6">
-              <div className="flex justify-between items-center pb-4 border-b border-white/5">
-                <h3 className="text-xs font-mono text-white/70 uppercase tracking-widest flex items-center gap-2">
+            <div className="glass p-8 rounded-4xl border border-border space-y-6">
+              <div className="flex justify-between items-center pb-4 border-b border-border">
+                <h3 className="text-xs font-mono text-muted-foreground uppercase tracking-widest flex items-center gap-2">
                   <Calculator size={14} className="text-blue-400" /> Currency & Logistics Profile
                 </h3>
-                <button onClick={handleReset} className="flex items-center gap-1.5 text-[9px] font-mono text-white/80 hover:text-white uppercase cursor-pointer bg-transparent border-none">
+                <button onClick={handleReset} className="flex items-center gap-1.5 text-[9px] font-mono text-muted-foreground hover:text-foreground uppercase cursor-pointer bg-transparent border-none">
                   <RefreshCw size={11} /> Reset
                 </button>
               </div>
@@ -622,19 +632,19 @@ export default function CostingPage() {
                 <div className="space-y-1.5">
                   <label className={labelCls}>Purchase Currency</label>
                   <select value={purchaseCurrency} onChange={e => setPurchaseCurrency(e.target.value)} className={inputCls + ' cursor-pointer'}>
-                    {Object.keys(MOCK_FX_RATES).map(c => <option key={c} value={c} className="bg-[#0c0c0c]">{c}</option>)}
+                    {Object.keys(MOCK_FX_RATES).map(c => <option key={c} value={c} className="bg-background">{c}</option>)}
                   </select>
                 </div>
                 <div className="space-y-1.5">
                   <label className={labelCls}>Target Currency</label>
                   <select value={targetCurrency} onChange={e => setTargetCurrency(e.target.value)} className={inputCls + ' cursor-pointer'}>
-                    {Object.keys(MOCK_FX_RATES).map(c => <option key={c} value={c} className="bg-[#0c0c0c]">{c}</option>)}
+                    {Object.keys(MOCK_FX_RATES).map(c => <option key={c} value={c} className="bg-background">{c}</option>)}
                   </select>
                 </div>
                 <div className="space-y-1.5">
                   <label className={labelCls}>Container Type</label>
                   <select value={containerType} onChange={e => setContainerType(e.target.value)} className={inputCls + ' cursor-pointer'}>
-                    {Object.keys(CONTAINER_CAPACITIES).map(t => <option key={t} value={t} className="bg-[#0c0c0c]">{t}</option>)}
+                    {Object.keys(CONTAINER_CAPACITIES).map(t => <option key={t} value={t} className="bg-background">{t}</option>)}
                   </select>
                 </div>
                 <div className="space-y-1.5">
@@ -645,22 +655,22 @@ export default function CostingPage() {
             </div>
 
             {/* Commodity Items */}
-            <div className="glass p-8 rounded-4xl border border-white/5 space-y-4">
-              <div className="flex justify-between items-center pb-4 border-b border-white/5">
-                <h3 className="text-xs font-mono text-white/70 uppercase tracking-widest flex items-center gap-2">
+            <div className="glass p-8 rounded-4xl border border-border space-y-4">
+              <div className="flex justify-between items-center pb-4 border-b border-border">
+                <h3 className="text-xs font-mono text-muted-foreground uppercase tracking-widest flex items-center gap-2">
                   <Package size={14} className="text-emerald-400" /> Commodity Line Items
                 </h3>
               </div>
               
               <div className="space-y-3">
                 {items.length === 0 && (
-                  <div className="p-6 rounded-2xl border border-white/5 bg-white/2 text-center">
-                    <p className="text-[11px] font-mono text-white/40 uppercase tracking-widest">No line items added yet</p>
+                  <div className="p-6 rounded-2xl border border-border bg-white/2 text-center">
+                    <p className="text-[11px] font-mono text-muted-foreground/40 uppercase tracking-widest">No line items added yet</p>
                     <p className="text-[10px] font-mono text-white/30 mt-1">Start by adding a product to this container.</p>
                   </div>
                 )}
                 {items.map((item, idx) => (
-                  <div key={idx} className="flex flex-wrap md:flex-nowrap items-end gap-3 p-4 rounded-2xl bg-white/2 border border-white/5 relative group">
+                  <div key={idx} className="flex flex-wrap md:flex-nowrap items-end gap-3 p-4 rounded-2xl bg-white/2 border border-border relative group">
                     <div className="w-full md:w-2/5 space-y-1.5">
                        <label className={labelCls}>Product</label>
                       <SearchableSelect
@@ -678,7 +688,7 @@ export default function CostingPage() {
                         value={item.productId}
                         onChange={(val) => val && handleProductSelect(val, idx)}
                         placeholder="Search product..."
-                        className="bg-white/5 border border-white/10"
+                        className="bg-muted border border-border"
                       />
                       {item._meta && <p className="text-[9px] text-emerald-400/80 mt-1 uppercase font-mono">{item._meta.name} - {item._meta.sku}</p>}
                     </div>
@@ -695,8 +705,8 @@ export default function CostingPage() {
                       }} className={inputCls} />
                     </div>
                     <div className="w-full md:w-1/5 pb-2 text-right">
-                      <p className="text-[9px] text-white/50 uppercase font-mono mb-1">Total ({targetCurrency})</p>
-                      <p className="font-bold font-sans text-white/90">{formatCurrency(item.qty * item.unitPrice * fxRate)}</p>
+                      <p className="text-[9px] text-muted-foreground/50 uppercase font-mono mb-1">Total ({targetCurrency})</p>
+                      <p className="font-bold font-sans text-foreground/90">{formatCurrency(item.qty * item.unitPrice * fxRate)}</p>
                     </div>
                     <button onClick={() => setItems(items.filter((_, i) => i !== idx))}
                       className="absolute -right-2 -top-2 p-1.5 bg-rose-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer shadow-lg z-10">
@@ -713,28 +723,28 @@ export default function CostingPage() {
               </div>
             </div>
 
-            <div className="glass p-8 rounded-4xl border border-white/5 space-y-4">
+            <div className="glass p-8 rounded-4xl border border-border space-y-4">
 
             {/* Freight Parameters */}
-              <h3 className="text-xs font-mono text-white/70 uppercase tracking-widest flex items-center gap-2 pb-4 border-b border-white/5">
+              <h3 className="text-xs font-mono text-muted-foreground uppercase tracking-widest flex items-center gap-2 pb-4 border-b border-border">
                 <Truck size={14} className="text-blue-400" /> Container Utilization
               </h3>
               
               {/* Capacity Utilization Progress */}
-              <div className="p-5 rounded-2xl bg-white/2 border border-white/5 space-y-4">
+              <div className="p-5 rounded-2xl bg-white/2 border border-border space-y-4">
                 <div className="flex justify-between items-center text-[10px] font-mono">
-                  <span className="text-white/70 uppercase">Capacity Utilization ({containerCount}x {containerType})</span>
+                  <span className="text-muted-foreground uppercase">Capacity Utilization ({containerCount}x {containerType})</span>
                   <div className="flex gap-4">
                     <span><span className="text-blue-400">Vol:</span> {live.totalCBM.toFixed(1)} / {(CONTAINER_CAPACITIES[containerType].maxCBM * containerCount).toFixed(1)} CBM</span>
                     <span><span className="text-amber-400">Wt:</span> {live.totalWeight.toLocaleString()} / {(CONTAINER_CAPACITIES[containerType].maxWeight * containerCount).toLocaleString()} KG</span>
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <div className="relative h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
+                  <div className="relative h-1.5 w-full bg-muted rounded-full overflow-hidden">
                     <motion.div initial={{ width: 0 }} animate={{ width: `${Math.min(100, (live.totalCBM / (CONTAINER_CAPACITIES[containerType].maxCBM * containerCount)) * 100)}%` }}
                       className={cn('absolute left-0 top-0 bottom-0', (live.totalCBM > CONTAINER_CAPACITIES[containerType].maxCBM * containerCount) ? 'bg-rose-500' : 'bg-blue-400')} />
                   </div>
-                  <div className="relative h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
+                  <div className="relative h-1.5 w-full bg-muted rounded-full overflow-hidden">
                     <motion.div initial={{ width: 0 }} animate={{ width: `${Math.min(100, (live.totalWeight / (CONTAINER_CAPACITIES[containerType].maxWeight * containerCount)) * 100)}%` }}
                       className={cn('absolute left-0 top-0 bottom-0', (live.totalWeight > CONTAINER_CAPACITIES[containerType].maxWeight * containerCount) ? 'bg-rose-500' : 'bg-amber-400')} />
                   </div>
@@ -753,8 +763,8 @@ export default function CostingPage() {
             </div>
 
             {/* Freight Parameters */}
-            <div className="glass p-8 rounded-4xl border border-white/5 space-y-6">
-              <h3 className="text-xs font-mono text-white/70 uppercase tracking-widest flex items-center gap-2 pb-4 border-b border-white/5">
+            <div className="glass p-8 rounded-4xl border border-border space-y-6">
+              <h3 className="text-xs font-mono text-muted-foreground uppercase tracking-widest flex items-center gap-2 pb-4 border-b border-border">
                 <Truck size={14} className="text-blue-400" /> Freight & Port Parameters
               </h3>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -782,14 +792,14 @@ export default function CostingPage() {
                 </div>
               </div>
               <div className="p-4 rounded-2xl bg-blue-500/5 border border-blue-500/10 flex justify-between items-center text-xs font-mono">
-                <span className="text-white/80 uppercase text-[9px]">Total Freight Cost ({containerCount}x {containerType})</span>
+                <span className="text-muted-foreground uppercase text-[9px]">Total Freight Cost ({containerCount}x {containerType})</span>
                 <span className="text-blue-400 font-bold font-sans">{formatCurrency(live.totalFreight, targetCurrency)}</span>
               </div>
             </div>
 
             {/* Rate Parameters */}
-            <div className="glass p-8 rounded-4xl border border-white/5 space-y-6">
-              <h3 className="text-xs font-mono text-white/70 uppercase tracking-widest flex items-center gap-2 pb-4 border-b border-white/5">
+            <div className="glass p-8 rounded-4xl border border-border space-y-6">
+              <h3 className="text-xs font-mono text-muted-foreground uppercase tracking-widest flex items-center gap-2 pb-4 border-b border-border">
                 <Percent size={14} className="text-amber-400" /> Duty, Insurance & Additional Charges
               </h3>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
@@ -801,16 +811,16 @@ export default function CostingPage() {
                   { label: 'Misc / Agency Charges (USD)', value: misc, setter: setMisc, step: 10, computed: null },
                   { label: 'Target Gross Margin %', value: targetMargin, setter: setTargetMargin, step: 1, computed: null, highlight: true },
                 ].map((item, i) => (
-                  <div key={i} className={cn('p-4 rounded-2xl border space-y-2', item.highlight ? 'border-emerald-500/30 bg-emerald-500/5' : 'border-white/5 bg-white/2')}>
+                  <div key={i} className={cn('p-4 rounded-2xl border space-y-2', item.highlight ? 'border-emerald-500/30 bg-emerald-500/5' : 'border-border bg-white/2')}>
                     <p className={cn(labelCls, item.highlight && 'text-emerald-400/60')}>{item.label}</p>
                     <input
                       type="number" value={item.value} step={item.step}
                       readOnly={!item.setter}
                       onChange={item.setter ? e => item.setter!(Number(e.target.value)) : undefined}
-                      className={cn('w-full bg-transparent border-none text-xl font-bold font-sans focus:outline-none', item.highlight ? 'text-emerald-400' : 'text-white/90', !item.setter && 'opacity-40')}
+                      className={cn('w-full bg-transparent border-none text-xl font-bold font-sans focus:outline-none', item.highlight ? 'text-emerald-400' : 'text-foreground/90', !item.setter && 'opacity-40')}
                     />
                     {item.computed !== null && (
-                      <p className="text-[9px] font-mono text-white/70">= {formatCurrency(item.computed)}</p>
+                      <p className="text-[9px] font-mono text-muted-foreground">= {formatCurrency(item.computed)}</p>
                     )}
                   </div>
                 ))}
@@ -818,8 +828,8 @@ export default function CostingPage() {
             </div>
 
             {/* Landed Cost Breakdown Table */}
-            <div className="glass p-8 rounded-4xl border border-white/5 space-y-4">
-              <h3 className="text-xs font-mono text-white/70 uppercase tracking-widest flex items-center gap-2 pb-4 border-b border-white/5">
+            <div className="glass p-8 rounded-4xl border border-border space-y-4">
+              <h3 className="text-xs font-mono text-muted-foreground uppercase tracking-widest flex items-center gap-2 pb-4 border-b border-border">
                 <BarChart3 size={14} className="text-purple-400" /> Full Landed Cost Breakdown
               </h3>
               <div className="space-y-2 text-xs font-mono">
@@ -833,10 +843,10 @@ export default function CostingPage() {
                   <div key={i} className="flex items-center gap-4 py-2 border-b border-white/3">
                     <div className="flex-1 min-w-0">
                       <div className="flex justify-between items-center mb-1.5">
-                        <span className="text-white/70 text-[9px] uppercase truncate">{row.label}</span>
-                        <span className="text-white/80 font-bold ml-3 shrink-0">{formatCurrency(row.value, targetCurrency)}</span>
+                        <span className="text-muted-foreground text-[9px] uppercase truncate">{row.label}</span>
+                        <span className="text-muted-foreground font-bold ml-3 shrink-0">{formatCurrency(row.value, targetCurrency)}</span>
                       </div>
-                      <div className="w-full h-1 bg-white/5 rounded-full overflow-hidden">
+                      <div className="w-full h-1 bg-muted rounded-full overflow-hidden">
                         <motion.div
                           initial={{ width: 0 }}
                           animate={{ width: `${row.pct}%` }}
@@ -845,11 +855,11 @@ export default function CostingPage() {
                         />
                       </div>
                     </div>
-                    <span className="text-[9px] text-white/70 w-8 text-right shrink-0">{row.pct.toFixed(0)}%</span>
+                    <span className="text-[9px] text-muted-foreground w-8 text-right shrink-0">{row.pct.toFixed(0)}%</span>
                   </div>
                 ))}
-                <div className="flex justify-between items-center pt-3 text-sm font-bold border-t border-white/10">
-                  <span className="text-white/90 font-mono text-xs uppercase">Total Landed Cost</span>
+                <div className="flex justify-between items-center pt-3 text-sm font-bold border-t border-border">
+                  <span className="text-foreground/90 font-mono text-xs uppercase">Total Landed Cost</span>
                   <span className="text-blue-400 font-sans text-xl">{formatCurrency(live.totalLanded, targetCurrency)}</span>
                 </div>
               </div>
@@ -860,9 +870,9 @@ export default function CostingPage() {
           <div className="space-y-6 xl:col-span-1 sticky top-6 h-fit">
 
             {/* Margin Gauge */}
-            <div className="glass p-8 rounded-4xl border border-white/5 space-y-5">
+            <div className="glass p-8 rounded-4xl border border-border space-y-5">
               <MarginGauge value={targetMargin} />
-              <div className="space-y-3 text-xs font-mono border-t border-white/5 pt-5">
+              <div className="space-y-3 text-xs font-mono border-t border-border pt-5">
                 {[
                   { label: 'Break-even Quantity', value: `${live.breakEven.toLocaleString()} units` },
                   { label: 'Avg Gross Profit / Unit', value: formatCurrency(live.avgProfitPerUnit, targetCurrency) },
@@ -871,8 +881,8 @@ export default function CostingPage() {
                   { label: 'Total Gross Profit', value: formatCurrency(live.totalProfit, targetCurrency) },
                 ].map(item => (
                   <div key={item.label} className="flex justify-between items-center">
-                    <span className="text-white/70 uppercase text-[9px]">{item.label}</span>
-                    <span className="font-bold text-white/80">{item.value}</span>
+                    <span className="text-muted-foreground uppercase text-[9px]">{item.label}</span>
+                    <span className="font-bold text-muted-foreground">{item.value}</span>
                   </div>
                 ))}
               </div>
@@ -880,16 +890,16 @@ export default function CostingPage() {
 
             {/* Supplier Card */}
             {selectedSupplier && (
-              <div className="glass p-6 rounded-4xl border border-white/5 space-y-3">
-                <h4 className="text-[9px] font-mono text-white/70 uppercase tracking-widest pb-2 border-b border-white/5 flex items-center gap-1.5">
+              <div className="glass p-6 rounded-4xl border border-border space-y-3">
+                <h4 className="text-[9px] font-mono text-muted-foreground uppercase tracking-widest pb-2 border-b border-border flex items-center gap-1.5">
                   <Warehouse size={11} className="text-emerald-400" /> Supplier Intelligence
                 </h4>
-                <p className="font-bold text-white/90 text-sm">{selectedSupplier.name}</p>
-                <div className="grid grid-cols-2 gap-2 text-[10px] font-mono text-white/70">
-                  <div><p className="text-[8px] uppercase mb-0.5">Lead Time</p><p className="font-bold text-white/70">{selectedSupplier.averageLeadTime}d</p></div>
+                <p className="font-bold text-foreground/90 text-sm">{selectedSupplier.name}</p>
+                <div className="grid grid-cols-2 gap-2 text-[10px] font-mono text-muted-foreground">
+                  <div><p className="text-[8px] uppercase mb-0.5">Lead Time</p><p className="font-bold text-muted-foreground">{selectedSupplier.averageLeadTime}d</p></div>
                   <div><p className="text-[8px] uppercase mb-0.5">Rating</p><p className="font-bold text-amber-400">{selectedSupplier.performanceRating}/5</p></div>
-                  <div><p className="text-[8px] uppercase mb-0.5">Country</p><p className="font-bold text-white/70">{selectedSupplier.country}</p></div>
-                  <div><p className="text-[8px] uppercase mb-0.5">Payment</p><p className="font-bold text-white/70 truncate">{selectedSupplier.paymentTerms}</p></div>
+                  <div><p className="text-[8px] uppercase mb-0.5">Country</p><p className="font-bold text-muted-foreground">{selectedSupplier.country}</p></div>
+                  <div><p className="text-[8px] uppercase mb-0.5">Payment</p><p className="font-bold text-muted-foreground truncate">{selectedSupplier.paymentTerms}</p></div>
                 </div>
               </div>
             )}
@@ -899,14 +909,14 @@ export default function CostingPage() {
               <h4 className="text-[9px] font-mono text-emerald-400/60 uppercase tracking-widest">Save Current Scenario</h4>
               <input type="text" value={scenarioName} onChange={e => setScenarioName(e.target.value)}
                 placeholder="e.g. Basmati Japan Q4 2025"
-                className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-xs font-mono focus:outline-none focus:border-emerald-500/50 text-white" />
+                className="w-full bg-muted border border-border rounded-xl py-3 px-4 text-xs font-mono focus:outline-none focus:border-emerald-500/50 text-foreground" />
               <div className="flex gap-2">
                 <button onClick={handleSave} disabled={savingScenario || !scenarioName.trim()}
                   className="flex-1 flex items-center justify-center gap-1.5 py-3 bg-emerald-500 text-black text-[9px] font-mono font-bold uppercase rounded-xl hover:bg-emerald-400 disabled:opacity-40 cursor-pointer border-none">
                   <Save size={12} /> {savingScenario ? 'Saving...' : 'Save to Ledger'}
                 </button>
                 <button onClick={exportCSV}
-                  className="p-3 bg-white/5 border border-white/10 rounded-xl text-white/70 hover:text-white cursor-pointer">
+                  className="p-3 bg-muted border border-border rounded-xl text-muted-foreground hover:text-foreground cursor-pointer">
                   <FileDown size={14} />
                 </button>
               </div>
@@ -915,15 +925,15 @@ export default function CostingPage() {
         </div>
 
         {/* ── Saved Scenarios Ledger ── */}
-        <div className="glass rounded-4xl border border-white/5 overflow-hidden">
+        <div className="glass rounded-4xl border border-border overflow-hidden">
           <button onClick={() => setShowSaved(!showSaved)}
-            className="w-full flex justify-between items-center p-6 border-b border-white/5 bg-transparent cursor-pointer">
+            className="w-full flex justify-between items-center p-6 border-b border-border bg-transparent cursor-pointer">
             <div className="flex items-center gap-3">
               <ShieldCheck size={16} className="text-emerald-400" />
-              <span className="text-xs font-mono text-white/70 uppercase tracking-widest">Scenario Ledger</span>
-              <span className="px-2 py-0.5 bg-white/5 rounded text-[9px] font-mono text-white/80">{savedScenarios.length} saved</span>
+              <span className="text-xs font-mono text-muted-foreground uppercase tracking-widest">Scenario Ledger</span>
+              <span className="px-2 py-0.5 bg-muted rounded text-[9px] font-mono text-muted-foreground">{savedScenarios.length} saved</span>
             </div>
-            {showSaved ? <ChevronUp size={16} className="text-white/70" /> : <ChevronDown size={16} className="text-white/70" />}
+            {showSaved ? <ChevronUp size={16} className="text-muted-foreground" /> : <ChevronDown size={16} className="text-muted-foreground" />}
           </button>
 
           <AnimatePresence>
@@ -931,7 +941,7 @@ export default function CostingPage() {
               <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
                 <div className="overflow-x-auto">
                   <table className="w-full text-xs font-mono text-left">
-                    <thead className="text-white/15 uppercase text-[9px] tracking-widest border-b border-white/5 bg-white/2">
+                    <thead className="text-white/15 uppercase text-[9px] tracking-widest border-b border-border bg-white/2">
                       <tr>
                         <th className="py-4 px-5">Scenario</th>
                         <th className="py-4 px-5 text-right">Product Cost</th>
@@ -950,14 +960,14 @@ export default function CostingPage() {
                             <div className="flex items-center gap-2">
                               {sc.isFavourite && <Star size={10} className="text-amber-400 shrink-0" fill="currentColor" />}
                               <div>
-                                <p className="font-bold text-white/80">{sc.scenarioName}</p>
-                                <p className="text-[9px] text-white/70">{sc.freight.containerCount}x {sc.freight.containerType} · {sc.freight.originPort}→{sc.freight.destinationPort}</p>
+                                <p className="font-bold text-muted-foreground">{sc.scenarioName}</p>
+                                <p className="text-[9px] text-muted-foreground">{sc.freight.containerCount}x {sc.freight.containerType} · {sc.freight.originPort}→{sc.freight.destinationPort}</p>
                               </div>
                             </div>
                           </td>
-                          <td className="py-4 px-5 text-right text-white/70">{formatCurrency(sc.costs.productCost, sc.currency || 'USD')}</td>
-                          <td className="py-4 px-5 text-right text-white/70">{formatCurrency(sc.costs.freightCost, sc.currency || 'USD')}</td>
-                          <td className="py-4 px-5 text-right font-bold text-white/80">{formatCurrency(sc.costs.totalLandedCost, sc.currency || 'USD')}</td>
+                          <td className="py-4 px-5 text-right text-muted-foreground">{formatCurrency(sc.costs.productCost, sc.currency || 'USD')}</td>
+                          <td className="py-4 px-5 text-right text-muted-foreground">{formatCurrency(sc.costs.freightCost, sc.currency || 'USD')}</td>
+                          <td className="py-4 px-5 text-right font-bold text-muted-foreground">{formatCurrency(sc.costs.totalLandedCost, sc.currency || 'USD')}</td>
                           <td className="py-4 px-5 text-right text-emerald-400 font-bold">{formatCurrency(sc.result.targetSellingPricePerUnit, sc.currency || 'USD')}</td>
                           <td className="py-4 px-5 text-right">
                             <span className={cn('text-[9px] font-bold px-2 py-0.5 rounded border',
@@ -970,10 +980,11 @@ export default function CostingPage() {
                           <td className="py-4 px-5 text-right text-purple-400 font-bold">{formatCurrency(sc.result.totalGrossProfit, sc.currency || 'USD')}</td>
                           <td className="py-4 px-5 text-right">
                             <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                              <button onClick={() => loadScenario(sc)} title="Load into builder" className="p-1.5 rounded hover:bg-white/10 text-white/80 hover:text-white cursor-pointer bg-transparent border-none"><Copy size={11} /></button>
-                              <button onClick={() => handleToggleFav(sc.id)} title="Toggle favourite" className="p-1.5 rounded hover:bg-amber-500/10 text-white/80 hover:text-amber-400 cursor-pointer bg-transparent border-none">{sc.isFavourite ? <StarOff size={11} /> : <Star size={11} />}</button>
-                              <button onClick={() => toggleCompare(sc.id)} title="Compare" className={cn('p-1.5 rounded cursor-pointer bg-transparent border-none', compareIds.includes(sc.id) ? 'text-emerald-400 bg-emerald-500/10' : 'text-white/80 hover:text-emerald-400 hover:bg-emerald-500/10')}><BarChart3 size={11} /></button>
-                              <button onClick={() => handleDelete(sc.id)} title="Delete" className="p-1.5 rounded hover:bg-rose-500/10 text-white/80 hover:text-rose-400 cursor-pointer bg-transparent border-none"><Trash2 size={11} /></button>
+                              <button onClick={() => draftQuote(sc)} title="Draft Quote from Scenario" className="p-1.5 rounded hover:bg-blue-500/10 text-muted-foreground hover:text-blue-400 cursor-pointer bg-transparent border-none"><FileText size={11} /></button>
+                              <button onClick={() => loadScenario(sc)} title="Load into builder" className="p-1.5 rounded hover:bg-accent text-muted-foreground hover:text-foreground cursor-pointer bg-transparent border-none"><Copy size={11} /></button>
+                              <button onClick={() => handleToggleFav(sc.id)} title="Toggle favourite" className="p-1.5 rounded hover:bg-amber-500/10 text-muted-foreground hover:text-amber-400 cursor-pointer bg-transparent border-none">{sc.isFavourite ? <StarOff size={11} /> : <Star size={11} />}</button>
+                              <button onClick={() => toggleCompare(sc.id)} title="Compare" className={cn('p-1.5 rounded cursor-pointer bg-transparent border-none', compareIds.includes(sc.id) ? 'text-emerald-400 bg-emerald-500/10' : 'text-muted-foreground hover:text-emerald-400 hover:bg-emerald-500/10')}><BarChart3 size={11} /></button>
+                              <button onClick={() => handleDelete(sc.id)} title="Delete" className="p-1.5 rounded hover:bg-rose-500/10 text-muted-foreground hover:text-rose-400 cursor-pointer bg-transparent border-none"><Trash2 size={11} /></button>
                             </div>
                           </td>
                         </tr>
@@ -994,16 +1005,16 @@ export default function CostingPage() {
           {compareScenarios.length >= 2 && (
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 20 }}
               className="glass rounded-4xl border border-emerald-500/20 overflow-hidden">
-              <div className="p-6 border-b border-white/5 flex justify-between items-center">
+              <div className="p-6 border-b border-border flex justify-between items-center">
                 <div className="flex items-center gap-3">
                   <BarChart3 size={16} className="text-emerald-400" />
-                  <span className="text-xs font-mono text-white/70 uppercase tracking-widest">Scenario Comparison ({compareScenarios.length} selected)</span>
+                  <span className="text-xs font-mono text-muted-foreground uppercase tracking-widest">Scenario Comparison ({compareScenarios.length} selected)</span>
                 </div>
-                <button onClick={() => setCompareIds([])} className="text-white/70 hover:text-white cursor-pointer bg-transparent border-none"><X size={14} /></button>
+                <button onClick={() => setCompareIds([])} className="text-muted-foreground hover:text-foreground cursor-pointer bg-transparent border-none"><X size={14} /></button>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-xs font-mono text-left">
-                  <thead className="border-b border-white/5 text-[9px] text-white/15 uppercase tracking-widest bg-white/2">
+                  <thead className="border-b border-border text-[9px] text-white/15 uppercase tracking-widest bg-white/2">
                     <tr>
                       <th className="py-3 px-5">Metric</th>
                       {compareScenarios.map(sc => <th key={sc.id} className="py-3 px-5 text-right">{sc.scenarioName.split('—')[0].trim()}</th>)}
@@ -1023,8 +1034,8 @@ export default function CostingPage() {
                       { label: 'Break-even Qty', key: (s: CostingScenario) => `${s.result.breakEvenQty.toLocaleString()}` },
                     ].map(row => (
                       <tr key={row.label} className="hover:bg-white/2">
-                        <td className="py-3 px-5 text-white/70 uppercase text-[9px]">{row.label}</td>
-                        {compareScenarios.map(sc => <td key={sc.id} className="py-3 px-5 text-right text-white/70 font-bold">{row.key(sc)}</td>)}
+                        <td className="py-3 px-5 text-muted-foreground uppercase text-[9px]">{row.label}</td>
+                        {compareScenarios.map(sc => <td key={sc.id} className="py-3 px-5 text-right text-muted-foreground font-bold">{row.key(sc)}</td>)}
                       </tr>
                     ))}
                   </tbody>

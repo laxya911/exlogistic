@@ -307,6 +307,36 @@ model Supplier {
   version   Int          @default(1)
 }
 
+model Forwarder {
+  id      String  @id @default(uuid())
+  name    String
+  slug    String? @unique
+  email   String  @unique
+  phone   String
+  address String
+  country String
+
+  shipments Shipment[]
+
+  performanceRating Float?
+  averageLeadTime   Float?
+  certifications    Json?
+  contacts          Json?
+  paymentTerms      Json?
+  notes             String?
+  website           String?
+  taxId             String?
+  documents         Json?
+  timeline          Json?
+  preferredPorts    Json?
+
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+  deletedAt DateTime?
+  status    EntityStatus @default(ACTIVE)
+  version   Int          @default(1)
+}
+
 model ProductSupplier {
   productId     String
   supplierId    String
@@ -588,6 +618,7 @@ model Shipment {
   remarks           String?
 
   salesOrder SalesOrder     @relation(fields: [salesOrderId], references: [id], onDelete: Restrict)
+  forwarder  Forwarder?     @relation(fields: [forwarderId], references: [id], onDelete: SetNull)
   items      ShipmentItem[]
 
   createdAt DateTime @default(now())
@@ -920,4 +951,24 @@ model WorkflowRule {
   updatedAt        DateTime @updatedAt
   
   @@index([triggerEntity, isActive])
+}
+
+// ---------------------------------------------------------------------------
+// Costing & Estimations
+// ---------------------------------------------------------------------------
+
+model CostingScenario {
+  id              String   @id @default(uuid())
+  name            String
+  description     String?
+  items           Json     // Array of items { productId, qty, unitPrice, ... }
+  freightSettings Json     // { originPort, destPort, containerType, ... }
+  costs           Json     // { productCost, freightCost, totalLanded, ... }
+  metrics         Json     // { totalCBM, totalWeight, margin, ... }
+  
+  isTemplate      Boolean  @default(false)
+  userId          String?
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 }

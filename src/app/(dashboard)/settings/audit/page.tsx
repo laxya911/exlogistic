@@ -45,7 +45,7 @@ export default function AuditLogsPage() {
       case 'UPDATE': return 'text-amber-400 bg-amber-500/10 border-amber-500/20';
       case 'DELETE': return 'text-red-400 bg-red-500/10 border-red-500/20';
       case 'LOGIN': return 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20';
-      default: return 'text-white/70 bg-white/5 border-white/10';
+      default: return 'text-muted-foreground bg-muted border-border';
     }
   };
 
@@ -55,8 +55,8 @@ export default function AuditLogsPage() {
       <div className="flex flex-col gap-8 pb-20 max-w-7xl">
         
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-          <div className="flex items-center gap-4 bg-white/5 border border-white/10 p-2 rounded-2xl w-full md:w-96">
-            <Search size={16} className="text-white/40 ml-2" />
+          <div className="flex items-center gap-4 bg-muted border border-border p-2 rounded-2xl w-full md:w-96">
+            <Search size={16} className="text-muted-foreground/40 ml-2" />
             <input 
               type="text" 
               placeholder="Search entity or user..." 
@@ -67,7 +67,7 @@ export default function AuditLogsPage() {
           </div>
           
           <div className="flex items-center gap-2">
-            <Filter size={16} className="text-white/40" />
+            <Filter size={16} className="text-muted-foreground/40" />
             {['ALL', 'CREATE', 'UPDATE', 'DELETE', 'LOGIN'].map(action => (
               <button
                 key={action}
@@ -76,7 +76,7 @@ export default function AuditLogsPage() {
                   "px-4 py-2 rounded-xl text-xs font-mono uppercase tracking-widest transition-all",
                   filterAction === action 
                     ? "bg-blue-600 text-white shadow-[0_0_15px_rgba(37,99,235,0.3)]" 
-                    : "bg-white/5 text-white/60 hover:bg-white/10"
+                    : "bg-muted text-muted-foreground/60 hover:bg-accent"
                 )}
               >
                 {action}
@@ -85,11 +85,11 @@ export default function AuditLogsPage() {
           </div>
         </div>
 
-        <div className="glass rounded-[2.5rem] border border-white/5 overflow-hidden">
+        <div className="glass rounded-[2.5rem] border border-border overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="border-b border-white/5 text-[10px] font-mono uppercase tracking-widest text-white/40 bg-white/[0.02]">
+                <tr className="border-b border-border text-[10px] font-mono uppercase tracking-widest text-muted-foreground/40 bg-white/[0.02]">
                   <th className="px-8 py-5 font-medium">Timestamp</th>
                   <th className="px-8 py-5 font-medium">Action</th>
                   <th className="px-8 py-5 font-medium">Entity</th>
@@ -99,9 +99,9 @@ export default function AuditLogsPage() {
               </thead>
               <tbody className="divide-y divide-white/5 text-sm">
                 {loading ? (
-                  <tr><td colSpan={5} className="p-8 text-center text-white/50">Loading logs...</td></tr>
+                  <tr><td colSpan={5} className="p-8 text-center text-muted-foreground/50">Loading logs...</td></tr>
                 ) : filteredLogs.length === 0 ? (
-                  <tr><td colSpan={5} className="p-8 text-center text-white/50">No audit records found.</td></tr>
+                  <tr><td colSpan={5} className="p-8 text-center text-muted-foreground/50">No audit records found.</td></tr>
                 ) : (
                   filteredLogs.map((log, idx) => (
                     <motion.tr 
@@ -111,7 +111,7 @@ export default function AuditLogsPage() {
                       key={log.id} 
                       className="hover:bg-white/2 transition-colors group"
                     >
-                      <td className="px-8 py-5 text-white/60 font-mono text-xs">
+                      <td className="px-8 py-5 text-muted-foreground/60 font-mono text-xs">
                         {new Date(log.timestamp).toLocaleString()}
                       </td>
                       <td className="px-8 py-5">
@@ -120,13 +120,13 @@ export default function AuditLogsPage() {
                         </span>
                       </td>
                       <td className="px-8 py-5">
-                        <div className="font-medium text-white/90">{log.entityType}</div>
-                        <div className="text-[10px] font-mono text-white/40 mt-1">{log.entityId.substring(0,8)}...</div>
+                        <div className="font-medium text-foreground/90">{log.entityType}</div>
+                        <div className="text-[10px] font-mono text-muted-foreground/40 mt-1">{log.entityId.substring(0,8)}...</div>
                       </td>
                       <td className="px-8 py-5">
                         <div className="flex items-center gap-2">
-                          <User size={14} className="text-white/40"/>
-                          <span className="text-white/80">{log.user?.email || 'System'}</span>
+                          <User size={14} className="text-muted-foreground/40"/>
+                          <span className="text-muted-foreground">{log.user?.email || 'System'}</span>
                         </div>
                       </td>
                       <td className="px-8 py-5 text-right">

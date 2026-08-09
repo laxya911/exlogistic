@@ -1,13 +1,15 @@
 'use client';
 
-import { useMemo, ReactNode } from 'react';
+import { useMemo, ReactNode, useState, useEffect } from 'react';
 import { 
   Bell, 
   Menu, 
   X, 
   Grid3X3,
   User,
-  Hexagon
+  Hexagon,
+  Sun,
+  Moon
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
@@ -17,6 +19,7 @@ import { useSession, signOut } from 'next-auth/react';
 import { NotificationBell } from './NotificationBell';
 import { GlobalSearch } from './GlobalSearch';
 import { usePageHeader } from './page-context';
+import { useTheme } from 'next-themes';
 
 interface MasterPageProps {
   children: ReactNode;
@@ -93,6 +96,12 @@ export function MasterPage({ children }: MasterPageProps) {
   const { data: session } = useSession();
   const pathname = usePathname();
   const { title: pageTitle, subtitle } = usePageHeader();
+  const { theme, setTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const isLauncher = pathname === '/launcher';
 
@@ -104,10 +113,10 @@ export function MasterPage({ children }: MasterPageProps) {
     <div className="h-screen w-full bg-(--background) text-(--text-primary) flex flex-col font-sans overflow-hidden selection:bg-blue-500/30">
       
       {/* Top Header Navbar */}
-      <header className="h-(--header-height) px-4 flex items-center justify-between border-b border-white/5 glass z-20 shrink-0">
+      <header className="h-(--header-height) px-4 flex items-center justify-between border-b border-(--surface-border) glass z-20 shrink-0">
         <div className="flex items-center gap-4">
-          <Link href="/launcher" className="p-2 hover:bg-white/10 rounded-lg transition-colors group">
-            <Grid3X3 className="text-white/70 group-hover:text-white" size={20} />
+          <Link href="/launcher" className="p-2 hover:bg-(--surface-hover) rounded-lg transition-colors group">
+            <Grid3X3 className="text-(--text-secondary) group-hover:text-(--text-primary)" size={20} />
           </Link>
 
           {!isLauncher && (
@@ -128,7 +137,7 @@ export function MasterPage({ children }: MasterPageProps) {
             </>
           )}
           {isLauncher && (
-            <h1 className="text-lg font-display font-medium text-white/50 tracking-widest uppercase">ExLogis Global Launcher</h1>
+            <h1 className="text-lg font-display font-medium text-(--text-muted) tracking-widest uppercase">ExLogis Global Launcher</h1>
           )}
         </div>
 
@@ -136,10 +145,25 @@ export function MasterPage({ children }: MasterPageProps) {
           <div className="hidden lg:block z-50">
             <GlobalSearch />
           </div>
+          <button
+            onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+            className="p-2 rounded-lg hover:bg-(--surface-hover) transition-colors cursor-pointer border-none bg-transparent"
+            title="Toggle theme"
+          >
+            {mounted ? (
+              theme === 'dark' ? (
+                <Sun size={18} className="text-(--text-secondary) hover:text-(--text-primary)" />
+              ) : (
+                <Moon size={18} className="text-(--text-secondary) hover:text-(--text-primary)" />
+              )
+            ) : (
+              <div className="w-4.5 h-4.5" />
+            )}
+          </button>
           <NotificationBell />
           <div className="w-8 h-8 rounded-full bg-linear-to-tr from-blue-500 to-indigo-600 p-0.5 shadow-lg relative cursor-pointer" onClick={() => signOut({ callbackUrl: '/login' })}>
-            <div className="w-full h-full bg-[#080808] rounded-full flex items-center justify-center overflow-hidden">
-              <User size={14} className="text-white/80" />
+            <div className="w-full h-full bg-(--background) rounded-full flex items-center justify-center overflow-hidden">
+              <User size={14} className="text-(--text-secondary)" />
             </div>
           </div>
         </div>

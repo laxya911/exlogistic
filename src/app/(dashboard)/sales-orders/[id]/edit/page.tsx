@@ -187,7 +187,7 @@ export default function EditSalesOrderPage() {
     });
   }, [items, marginPercentage]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setValidationErrors([]);
 
@@ -233,7 +233,7 @@ export default function EditSalesOrderPage() {
   };
 
   if (loading) {
-    return <div className="p-8 text-white/50 text-xs font-mono uppercase tracking-widest">Loading order data...</div>;
+    return <div className="p-8 text-muted-foreground/50 text-xs font-mono uppercase tracking-widest">Loading order data...</div>;
   }
 
   // Generate options for dropdowns
@@ -265,13 +265,13 @@ export default function EditSalesOrderPage() {
 
         <form onSubmit={handleSubmit} className="space-y-6">
           
-          <div className="glass p-6 rounded-3xl border border-white/5 space-y-6">
+          <div className="glass p-6 rounded-3xl border border-border space-y-6">
             <h2 className="text-xs font-mono font-bold uppercase tracking-widest text-emerald-400 flex items-center gap-2">
               <Layers size={14} /> Contract Metadata
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
-                <label className="text-[10px] font-mono uppercase tracking-widest text-white/50">Buyer / Consignee</label>
+                <label className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground/50">Buyer / Consignee</label>
                 <SearchableSelect
                   options={customerOptions}
                   value={customerId}
@@ -281,14 +281,14 @@ export default function EditSalesOrderPage() {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <label className="text-[10px] font-mono uppercase tracking-widest text-white/50">Origin Port</label>
-                  <select value={originPortId} onChange={e => setOriginPortId(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white/90 outline-none focus:border-blue-500/50 transition-all">
+                  <label className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground/50">Origin Port</label>
+                  <select value={originPortId} onChange={e => setOriginPortId(e.target.value)} className="w-full bg-muted border border-border rounded-xl px-4 py-3 text-sm text-foreground/90 outline-none focus:border-blue-500/50 transition-all">
                     {ports.map(p => <option key={p.id} value={p.id}>{p.code}</option>)}
                   </select>
                 </div>
                 <div className="space-y-2">
-                  <label className="text-[10px] font-mono uppercase tracking-widest text-white/50">Destination Port</label>
-                  <select value={destinationPortId} onChange={e => setDestinationPortId(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white/90 outline-none focus:border-blue-500/50 transition-all">
+                  <label className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground/50">Destination Port</label>
+                  <select value={destinationPortId} onChange={e => setDestinationPortId(e.target.value)} className="w-full bg-muted border border-border rounded-xl px-4 py-3 text-sm text-foreground/90 outline-none focus:border-blue-500/50 transition-all">
                     {ports.map(p => <option key={p.id} value={p.id}>{p.code}</option>)}
                   </select>
                 </div>
@@ -296,8 +296,8 @@ export default function EditSalesOrderPage() {
               
               <div className="grid grid-cols-3 gap-4">
                 <div className="space-y-2">
-                  <label className="text-[10px] font-mono uppercase tracking-widest text-white/50">Incoterm</label>
-                  <select value={incoterm} onChange={e => setIncoterm(e.target.value as any)} className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white/90 outline-none focus:border-blue-500/50 transition-all">
+                  <label className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground/50">Incoterm</label>
+                  <select value={incoterm} onChange={e => setIncoterm(e.target.value as any)} className="w-full bg-muted border border-border rounded-xl px-4 py-3 text-sm text-foreground/90 outline-none focus:border-blue-500/50 transition-all">
                     <option value="FOB">FOB</option>
                     <option value="CFR">CFR</option>
                     <option value="CIF">CIF</option>
@@ -306,16 +306,16 @@ export default function EditSalesOrderPage() {
                   </select>
                 </div>
                 <div className="space-y-2">
-                  <label className="text-[10px] font-mono uppercase tracking-widest text-white/50">Currency</label>
-                  <select value={currency} onChange={e => setCurrency(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white/90 outline-none focus:border-blue-500/50 transition-all">
+                  <label className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground/50">Currency</label>
+                  <select value={currency} onChange={e => setCurrency(e.target.value)} className="w-full bg-muted border border-border rounded-xl px-4 py-3 text-sm text-foreground/90 outline-none focus:border-blue-500/50 transition-all">
                     <option value="USD">USD</option>
                     <option value="EUR">EUR</option>
                     <option value="JPY">JPY</option>
                   </select>
                 </div>
                 <div className="space-y-2">
-                  <label className="text-[10px] font-mono uppercase tracking-widest text-white/50">Container Type</label>
-                  <select value={containerType} onChange={e => setContainerType(e.target.value as any)} className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white/90 outline-none focus:border-blue-500/50 transition-all">
+                  <label className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground/50">Container Type</label>
+                  <select value={containerType} onChange={e => setContainerType(e.target.value as any)} className="w-full bg-muted border border-border rounded-xl px-4 py-3 text-sm text-foreground/90 outline-none focus:border-blue-500/50 transition-all">
                     <option value="20GP">20' GP</option>
                     <option value="40GP">40' GP</option>
                     <option value="40HQ">40' HQ</option>
@@ -326,19 +326,19 @@ export default function EditSalesOrderPage() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <label className="text-[10px] font-mono uppercase tracking-widest text-white/50">Payment Terms</label>
-                  <input type="text" value={paymentTerms} onChange={e => setPaymentTerms(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white/90 outline-none focus:border-blue-500/50 transition-all" />
+                  <label className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground/50">Payment Terms</label>
+                  <input type="text" value={paymentTerms} onChange={e => setPaymentTerms(e.target.value)} className="w-full bg-muted border border-border rounded-xl px-4 py-3 text-sm text-foreground/90 outline-none focus:border-blue-500/50 transition-all" />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-[10px] font-mono uppercase tracking-widest text-white/50">Expected Shipment Date</label>
-                  <input type="date" value={expectedShipment} onChange={e => setExpectedShipment(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white/90 outline-none focus:border-blue-500/50 transition-all scheme-dark" />
+                  <label className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground/50">Expected Shipment Date</label>
+                  <input type="date" value={expectedShipment} onChange={e => setExpectedShipment(e.target.value)} className="w-full bg-muted border border-border rounded-xl px-4 py-3 text-sm text-foreground/90 outline-none focus:border-blue-500/50 transition-all scheme-dark" />
                 </div>
               </div>
             </div>
           </div>
 
-          <div className="glass rounded-3xl border border-white/5 overflow-hidden">
-            <div className="p-6 border-b border-white/5 flex items-center justify-between bg-black/20">
+          <div className="glass rounded-3xl border border-border overflow-hidden">
+            <div className="p-6 border-b border-border flex items-center justify-between bg-black/20">
               <h2 className="text-xs font-mono font-bold uppercase tracking-widest text-blue-400 flex items-center gap-2">
                 <Calculator size={14} /> Line Items
               </h2>
@@ -348,14 +348,14 @@ export default function EditSalesOrderPage() {
             </div>
             
             <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse min-w-[800px]">
+              <table className="w-full text-left border-collapse min-w-200">
                 <thead>
-                  <tr className="border-b border-white/5 bg-white/2">
-                    <th className="py-3 px-6 text-[10px] font-mono uppercase tracking-widest text-white/40 w-12">#</th>
-                    <th className="py-3 px-6 text-[10px] font-mono uppercase tracking-widest text-white/40 min-w-[250px]">SKU / Variant</th>
-                    <th className="py-3 px-6 text-[10px] font-mono uppercase tracking-widest text-white/40 w-32">Qty</th>
-                    <th className="py-3 px-6 text-[10px] font-mono uppercase tracking-widest text-white/40 w-32">Base Unit Px</th>
-                    <th className="py-3 px-6 text-[10px] font-mono uppercase tracking-widest text-white/40 w-40">Base Total</th>
+                  <tr className="border-b border-border bg-white/2">
+                    <th className="py-3 px-6 text-[10px] font-mono uppercase tracking-widest text-muted-foreground/40 w-12">#</th>
+                    <th className="py-3 px-6 text-[10px] font-mono uppercase tracking-widest text-muted-foreground/40 min-w-62.5">SKU / Variant</th>
+                    <th className="py-3 px-6 text-[10px] font-mono uppercase tracking-widest text-muted-foreground/40 w-32">Qty</th>
+                    <th className="py-3 px-6 text-[10px] font-mono uppercase tracking-widest text-muted-foreground/40 w-32">Base Unit Px</th>
+                    <th className="py-3 px-6 text-[10px] font-mono uppercase tracking-widest text-muted-foreground/40 w-40">Base Total</th>
                     <th className="py-3 px-6 w-16"></th>
                   </tr>
                 </thead>
@@ -372,11 +372,11 @@ export default function EditSalesOrderPage() {
                         />
                       </td>
                       <td className="py-3 px-6">
-                        <div className="flex items-center bg-white/5 border border-white/10 rounded-xl px-2 focus-within:border-blue-500/50 transition-all">
+                        <div className="flex items-center bg-muted border border-border rounded-xl px-2 focus-within:border-blue-500/50 transition-all">
                           <input 
                             type="number" min="1" 
                             value={item.quantity} onChange={e => updateItem(i, 'quantity', parseInt(e.target.value) || 0)}
-                            className="w-full bg-transparent py-2.5 text-sm text-white/90 outline-none font-mono"
+                            className="w-full bg-transparent py-2.5 text-sm text-foreground/90 outline-none font-mono"
                           />
                           <span className="text-xs text-white/30 font-mono ml-2">{item.uom}</span>
                         </div>
@@ -387,11 +387,11 @@ export default function EditSalesOrderPage() {
                           <input 
                             type="number" min="0" step="0.01"
                             value={item.unitPrice} onChange={e => updateItem(i, 'unitPrice', parseFloat(e.target.value) || 0)}
-                            className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white/90 outline-none focus:border-blue-500/50 transition-all font-mono"
+                            className="w-full bg-muted border border-border rounded-xl px-3 py-2.5 text-sm text-foreground/90 outline-none focus:border-blue-500/50 transition-all font-mono"
                           />
                         </div>
                       </td>
-                      <td className="py-3 px-6 text-sm text-white/70 font-mono">
+                      <td className="py-3 px-6 text-sm text-muted-foreground font-mono">
                         {formatCurrency(item.total)}
                       </td>
                       <td className="py-3 px-6 text-right">
@@ -408,21 +408,21 @@ export default function EditSalesOrderPage() {
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="md:col-span-2 space-y-2">
-              <label className="text-[10px] font-mono uppercase tracking-widest text-white/50">Logistics / Compliance Remarks</label>
+              <label className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground/50">Logistics / Compliance Remarks</label>
               <textarea 
                 value={remarks} onChange={e => setRemarks(e.target.value)}
                 placeholder="Include special packaging instructions, pallet requirements, or customs declarations..."
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white/90 outline-none focus:border-blue-500/50 transition-all h-32 resize-none"
+                className="w-full bg-muted border border-border rounded-xl px-4 py-3 text-sm text-foreground/90 outline-none focus:border-blue-500/50 transition-all h-32 resize-none"
               />
             </div>
             
-            <div className="glass p-6 rounded-3xl border border-white/5 space-y-4">
-              <h3 className="text-[10px] font-mono uppercase tracking-widest text-white/50 flex items-center gap-2 mb-4">
+            <div className="glass p-6 rounded-3xl border border-border space-y-4">
+              <h3 className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground/50 flex items-center gap-2 mb-4">
                 <TrendingUp size={12} /> Pricing Engine
               </h3>
               
               <div className="space-y-1">
-                <label className="text-[10px] font-mono uppercase tracking-widest text-white/40">Apply Markup Margin (%)</label>
+                <label className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground/40">Apply Markup Margin (%)</label>
                 <div className="flex items-center gap-3">
                   <input 
                     type="range" min="0" max="60" step="1"
@@ -434,25 +434,25 @@ export default function EditSalesOrderPage() {
                 <p className="text-[9px] text-white/30 mt-1">Pricing applied automatically to unit cost</p>
               </div>
 
-              <div className="pt-4 mt-4 border-t border-white/5 space-y-2">
+              <div className="pt-4 mt-4 border-t border-border space-y-2">
                 <div className="flex justify-between text-xs">
-                  <span className="text-white/40">Cost of Goods:</span>
-                  <span className="font-mono text-white/70">{formatCurrency(costOfGoods)}</span>
+                  <span className="text-muted-foreground/40">Cost of Goods:</span>
+                  <span className="font-mono text-muted-foreground">{formatCurrency(costOfGoods)}</span>
                 </div>
                 <div className="flex justify-between text-xs">
                   <span className="text-emerald-400/70">Est. Gross Profit:</span>
                   <span className="font-mono text-emerald-400">+{formatCurrency(grossProfit)}</span>
                 </div>
-                <div className="flex justify-between text-lg pt-2 mt-2 border-t border-white/5">
-                  <span className="text-white/70 font-bold">Total Sales:</span>
-                  <span className="font-mono text-white font-bold">{formatCurrency(totalValue)}</span>
+                <div className="flex justify-between text-lg pt-2 mt-2 border-t border-border">
+                  <span className="text-muted-foreground font-bold">Total Sales:</span>
+                  <span className="font-mono text-foreground font-bold">{formatCurrency(totalValue)}</span>
                 </div>
               </div>
             </div>
           </div>
 
           <div className="flex justify-end gap-3 pt-6">
-            <button type="button" onClick={() => router.back()} className="px-6 py-3 rounded-2xl border border-white/10 text-white/70 hover:bg-white/5 text-xs font-bold uppercase tracking-widest transition-all">
+            <button type="button" onClick={() => router.back()} className="px-6 py-3 rounded-2xl border border-border text-muted-foreground hover:bg-muted text-xs font-bold uppercase tracking-widest transition-all">
               Discard Changes
             </button>
             <button type="submit" className="px-8 py-3 rounded-2xl bg-blue-500 text-black hover:bg-blue-400 text-xs font-bold uppercase tracking-widest transition-all shadow-[0_0_20px_rgba(59,130,246,0.3)]">

@@ -40,7 +40,8 @@ import {
   CreditCard,
   MessageSquare,
   CheckCircle2,
-  UserPlus
+  UserPlus,
+  Building2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { PageHeaderUpdater } from '@/components/layout/page-context';
@@ -48,6 +49,7 @@ import { Customer, Contact, Port, Quotation, SalesOrder, Shipment } from '@/type
 import { formatCurrency, cn, formatDate } from '@/lib/utils';
 import { toast } from 'sonner';
 import { useCustomers, CustomerSortField, SortOrder } from '@/hooks/useCustomers';
+import { Pagination } from '@/components/ui/pagination';
 
 export default function CustomerCRMPage() {
   const hook = useCustomers();
@@ -55,6 +57,9 @@ export default function CustomerCRMPage() {
     customers,
     rawCustomers,
     loading,
+    currentPage,
+    setCurrentPage,
+    totalPages,
     searchQuery,
     setSearchQuery,
     searchField,
@@ -207,17 +212,18 @@ export default function CustomerCRMPage() {
         portsCount[portId] = (portsCount[portId] || 0) + 1;
       }
     });
-    let topPort = 'N/A';
+    let topPortName = 'N/A';
     let maxCount = 0;
     Object.entries(portsCount).forEach(([p, count]) => {
       if (count > maxCount) {
         maxCount = count;
-        topPort = p;
+        const port = ports.find((x: any) => x.id === p);
+        topPortName = port ? port.name : p;
       }
     });
 
-    return { activeCount: active.length, exposure, premiumCount, topPort };
-  }, [rawCustomers]);
+    return { activeCount: active.length, exposure, premiumCount, topPort: topPortName };
+  }, [rawCustomers, ports]);
 
   const openCreateForm = () => {
     setFormMode('create');
@@ -269,7 +275,7 @@ export default function CustomerCRMPage() {
     setShowFormDrawer(true);
   };
 
-  const handleFormSubmit = async (e: React.FormEvent) => {
+  const handleFormSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setFormErrors([]);
 
@@ -344,7 +350,7 @@ export default function CustomerCRMPage() {
     const timelineEvent = {
       id: `EV-${Math.random().toString(36).substr(2, 9)}`,
       date: new Date().toISOString(),
-      type: 'COMMUNICATION_LOGGED',
+      type: 'COMMUNICATION_LOGGED' as const,
       title: `${commType} Recorded`,
       description: communicationNote.trim(),
       userId: 'USR-001'
@@ -352,19 +358,12 @@ export default function CustomerCRMPage() {
 
     const updatedTimeline = [timelineEvent, ...(activeCustomer.timeline || [])];
 
-    try {
-      const res = await fetch(`/api/customers/${activeCustomer.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ timeline: updatedTimeline })
-      });
-      if (!res.ok) throw new Error('Note logger failed');
-      const updated = await res.json();
-      
+    const result = await updateCustomer(activeCustomer.id, { timeline: updatedTimeline });
+    
+    if (result.success) {
       toast.success('Communication note saved to timeline');
       setCommunicationNote('');
-      setSelectedCustomer(updated);
-    } catch (e) {
+    } else {
       toast.error('Failed to log note');
     }
   };
@@ -380,13 +379,13 @@ export default function CustomerCRMPage() {
           { label: 'Premium Segment Accounts', value: `${dashboardStats.premiumCount} Clients`, icon: TrendingUp, color: 'text-emerald-400' },
           { label: 'Top Discharge Port', value: dashboardStats.topPort, icon: Compass, color: 'text-violet-400' },
         ].map((item, i) => (
-          <div key={i} className="glass p-6 rounded-3xl border border-white/5 flex items-center gap-4">
-            <div className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center text-white/70">
+          <div key={i} className="glass p-6 rounded-3xl border border-border flex items-center gap-4">
+            <div className="w-12 h-12 rounded-2xl bg-muted flex items-center justify-center text-muted-foreground">
               <item.icon size={20} className={item.color} />
             </div>
             <div>
-              <p className="text-[10px] font-mono text-white/70 uppercase tracking-widest mb-0.5">{item.label}</p>
-              <p className="font-sans font-bold text-lg text-white">{item.value}</p>
+              <p className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest mb-0.5">{item.label}</p>
+              <p className="font-sans font-bold text-lg text-foreground">{item.value}</p>
             </div>
           </div>
         ))}
@@ -399,31 +398,31 @@ export default function CustomerCRMPage() {
           activeCustomer ? "lg:col-span-6" : "lg:col-span-12"
         )}>
           {/* Main Controls Panel */}
-          <div className="glass p-6 rounded-3xl border border-white/5 space-y-4">
+          <div className="glass p-6 rounded-3xl border border-border space-y-4">
             <div className="flex flex-col md:flex-row justify-between items-center gap-4">
               {/* Search input with category options */}
-              <div className="relative w-full max-w-lg flex items-center bg-white/5 border border-white/10 rounded-2xl overflow-hidden focus-within:border-blue-500/50 transition-all">
+              <div className="relative w-full max-w-lg flex items-center bg-muted border border-border rounded-2xl overflow-hidden focus-within:border-blue-500/50 transition-all">
                 <select 
                   value={searchField} 
                   onChange={(e) => setSearchField(e.target.value as any)}
-                  className="bg-transparent text-white/70 text-[10px] font-mono uppercase pl-4 focus:outline-none border-r border-white/10 pr-2 h-12"
+                  className="bg-transparent text-muted-foreground text-[10px] font-mono uppercase pl-4 focus:outline-none border-r border-border pr-2 h-12"
                 >
-                  <option value="all" className="bg-[#0b0b0b]">All Fields</option>
-                  <option value="name" className="bg-[#0b0b0b]">Company</option>
-                  <option value="email" className="bg-[#0b0b0b]">Email</option>
-                  <option value="country" className="bg-[#0b0b0b]">Country</option>
-                  <option value="segment" className="bg-[#0b0b0b]">Segment</option>
+                  <option value="all" className="bg-background">All Fields</option>
+                  <option value="name" className="bg-background">Company</option>
+                  <option value="email" className="bg-background">Email</option>
+                  <option value="country" className="bg-background">Country</option>
+                  <option value="segment" className="bg-background">Segment</option>
                 </select>
-                <Search className="absolute left-28 text-white/70" size={16} />
+                <Search className="absolute left-28 text-muted-foreground" size={16} />
                 <input 
                   type="text" 
                   placeholder="Query Client Coordinates..." 
-                  className="w-full bg-transparent py-3 pl-12 pr-4 text-xs focus:outline-none text-white font-mono"
+                  className="w-full bg-transparent py-3 pl-12 pr-4 text-xs focus:outline-none text-foreground font-mono"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
                 {searchQuery && (
-                  <button onClick={() => setSearchQuery('')} className="p-2 text-white/70 hover:text-white/90">
+                  <button onClick={() => setSearchQuery('')} className="p-2 text-muted-foreground hover:text-foreground/90">
                     <X size={14} />
                   </button>
                 )}
@@ -437,7 +436,7 @@ export default function CustomerCRMPage() {
                     "flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-3 border rounded-2xl text-[10px] font-mono uppercase tracking-widest transition-all",
                     Object.values(filters).some(arr => arr.length > 0)
                       ? "bg-blue-500/10 border-blue-500 text-blue-400"
-                      : "bg-white/5 border-white/10 text-white/90 hover:bg-white/10"
+                      : "bg-muted border-border text-foreground/90 hover:bg-accent"
                   )}
                 >
                   <Filter size={14} /> Filters
@@ -459,12 +458,12 @@ export default function CustomerCRMPage() {
                   initial={{ height: 0, opacity: 0 }}
                   animate={{ height: 'auto', opacity: 1 }}
                   exit={{ height: 0, opacity: 0 }}
-                  className="overflow-hidden border-t border-white/5 pt-4"
+                  className="overflow-hidden border-t border-border pt-4"
                 >
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-6 text-[10px] font-mono">
                     {/* Country Filter */}
                     <div className="space-y-2">
-                      <p className="text-white/70 uppercase tracking-wider">Country</p>
+                      <p className="text-muted-foreground uppercase tracking-wider">Country</p>
                       <div className="flex flex-wrap gap-1.5">
                         {filterOptions.countries.map(c => (
                           <button
@@ -474,8 +473,8 @@ export default function CustomerCRMPage() {
                               countries: prev.countries.includes(c) ? prev.countries.filter(x => x !== c) : [...prev.countries, c]
                             }))}
                             className={cn(
-                              "px-2.5 py-1 rounded bg-[#101010] border text-[9px]",
-                              filters.countries.includes(c) ? "border-blue-500 text-blue-400 bg-blue-500/5" : "border-white/5 text-white/70"
+                              "px-2.5 py-1 rounded bg-card border text-[9px]",
+                              filters.countries.includes(c) ? "border-blue-500 text-blue-400 bg-blue-500/5" : "border-border text-muted-foreground"
                             )}
                           >
                             {c}
@@ -486,7 +485,7 @@ export default function CustomerCRMPage() {
 
                     {/* Segment Filter */}
                     <div className="space-y-2">
-                      <p className="text-white/70 uppercase tracking-wider">Segment</p>
+                      <p className="text-muted-foreground uppercase tracking-wider">Segment</p>
                       <div className="flex flex-wrap gap-1.5">
                         {filterOptions.segments.map(s => (
                           <button
@@ -496,8 +495,8 @@ export default function CustomerCRMPage() {
                               segments: prev.segments.includes(s) ? prev.segments.filter(x => x !== s) : [...prev.segments, s]
                             }))}
                             className={cn(
-                              "px-2.5 py-1 rounded bg-[#101010] border text-[9px]",
-                              filters.segments.includes(s) ? "border-blue-500 text-blue-400 bg-blue-500/5" : "border-white/5 text-white/70"
+                              "px-2.5 py-1 rounded bg-card border text-[9px]",
+                              filters.segments.includes(s) ? "border-blue-500 text-blue-400 bg-blue-500/5" : "border-border text-muted-foreground"
                             )}
                           >
                             {s}
@@ -508,7 +507,7 @@ export default function CustomerCRMPage() {
 
                     {/* Status Filter */}
                     <div className="space-y-2">
-                      <p className="text-white/70 uppercase tracking-wider">Status</p>
+                      <p className="text-muted-foreground uppercase tracking-wider">Status</p>
                       <div className="flex flex-wrap gap-1.5">
                         {['ACTIVE', 'INACTIVE', 'ARCHIVED'].map(s => (
                           <button
@@ -518,8 +517,8 @@ export default function CustomerCRMPage() {
                               statuses: prev.statuses.includes(s) ? prev.statuses.filter(x => x !== s) : [...prev.statuses, s]
                             }))}
                             className={cn(
-                              "px-2.5 py-1 rounded bg-[#101010] border text-[9px]",
-                              filters.statuses.includes(s) ? "border-blue-500 text-blue-400 bg-blue-500/5" : "border-white/5 text-white/70"
+                              "px-2.5 py-1 rounded bg-card border text-[9px]",
+                              filters.statuses.includes(s) ? "border-blue-500 text-blue-400 bg-blue-500/5" : "border-border text-muted-foreground"
                             )}
                           >
                             {s}
@@ -528,10 +527,10 @@ export default function CustomerCRMPage() {
                       </div>
                     </div>
                   </div>
-                  <div className="flex justify-end gap-3 mt-6 border-t border-white/5 pt-4">
+                  <div className="flex justify-end gap-3 mt-6 border-t border-border pt-4">
                     <button 
                       onClick={() => setFilters({ countries: [], segments: [], statuses: [] })}
-                      className="px-4 py-2 rounded bg-white/5 text-[9px] font-mono text-white/70 hover:bg-white/10"
+                      className="px-4 py-2 rounded bg-muted text-[9px] font-mono text-muted-foreground hover:bg-accent"
                     >
                       Clear CRM Filters
                     </button>
@@ -575,7 +574,7 @@ export default function CustomerCRMPage() {
                   </button>
                   <button 
                     onClick={() => hook.bulkExportCSV(selectedIds)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-black text-white hover:bg-black/90 rounded-lg text-[9px] font-mono font-bold uppercase border-none cursor-pointer"
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-black text-foreground hover:bg-black/90 rounded-lg text-[9px] font-mono font-bold uppercase border-none cursor-pointer"
                   >
                     <FileDown size={12} /> Export CSV
                   </button>
@@ -585,10 +584,10 @@ export default function CustomerCRMPage() {
           </AnimatePresence>
 
           {/* Client Table Grid */}
-          <div className="glass rounded-3xl border border-white/5 overflow-hidden">
+          <div className="glass rounded-3xl border border-border overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs font-mono">
-                <thead className="bg-white/2 text-white/70 uppercase tracking-[0.2em] border-b border-white/5">
+                <thead className="bg-white/2 text-muted-foreground uppercase tracking-[0.2em] border-b border-border">
                   <tr>
                     <th className="py-5 px-6 w-8 text-center">
                       <input 
@@ -604,7 +603,7 @@ export default function CustomerCRMPage() {
                           setSortBy('name');
                           setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
                         }}
-                        className="flex items-center gap-2 hover:text-white transition-colors bg-transparent border-none cursor-pointer text-white/70 text-xs font-mono uppercase"
+                        className="flex items-center gap-2 hover:text-foreground transition-colors bg-transparent border-none cursor-pointer text-muted-foreground text-xs font-mono uppercase"
                       >
                         Company {sortBy === 'name' && (sortOrder === 'asc' ? <ChevronUp size={10} /> : <ChevronDown size={10} />)}
                       </button>
@@ -615,7 +614,7 @@ export default function CustomerCRMPage() {
                           setSortBy('country');
                           setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
                         }}
-                        className="flex items-center gap-2 hover:text-white transition-colors bg-transparent border-none cursor-pointer text-white/70 text-xs font-mono uppercase"
+                        className="flex items-center gap-2 hover:text-foreground transition-colors bg-transparent border-none cursor-pointer text-muted-foreground text-xs font-mono uppercase"
                       >
                         Country {sortBy === 'country' && (sortOrder === 'asc' ? <ChevronUp size={10} /> : <ChevronDown size={10} />)}
                       </button>
@@ -626,7 +625,7 @@ export default function CustomerCRMPage() {
                           setSortBy('creditLimit');
                           setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
                         }}
-                        className="flex items-center justify-end gap-2 hover:text-white transition-colors w-full bg-transparent border-none cursor-pointer text-white/70 text-xs font-mono uppercase"
+                        className="flex items-center justify-end gap-2 hover:text-foreground transition-colors w-full bg-transparent border-none cursor-pointer text-muted-foreground text-xs font-mono uppercase"
                       >
                         Credit Limit {sortBy === 'creditLimit' && (sortOrder === 'asc' ? <ChevronUp size={10} /> : <ChevronDown size={10} />)}
                       </button>
@@ -654,17 +653,17 @@ export default function CustomerCRMPage() {
                       </td>
                       <td className="py-4 px-6">
                         <div>
-                          <p className="font-sans font-bold text-sm text-white/90 truncate max-w-[200px]">{c.name}</p>
-                          <p className="text-[9px] text-white/70 tracking-tighter truncate max-w-[200px]">{c.email}</p>
+                          <p className="font-sans font-bold text-sm text-foreground/90 truncate max-w-50">{c.name}</p>
+                          <p className="text-[9px] text-muted-foreground tracking-tighter truncate max-w-50">{c.email}</p>
                         </div>
                       </td>
-                      <td className="py-4 px-6 text-white/70">
+                      <td className="py-4 px-6 text-muted-foreground">
                         <div className="flex items-center gap-1">
-                          <Globe size={10} className="text-white/70" />
+                          <Globe size={10} className="text-muted-foreground" />
                           <span>{c.country}</span>
                         </div>
                       </td>
-                      <td className="py-4 px-6 text-right font-sans font-bold text-white/80">
+                      <td className="py-4 px-6 text-right font-sans font-bold text-muted-foreground">
                         {formatCurrency(c.creditLimit)}
                       </td>
                       <td className="py-4 px-6 text-right">
@@ -672,7 +671,7 @@ export default function CustomerCRMPage() {
                           <span className={cn(
                             "px-2 py-0.5 rounded text-[8px] font-mono font-bold uppercase",
                             c.segment === 'PREMIUM' && "bg-blue-500/10 text-blue-400 border border-blue-500/20",
-                            c.segment === 'STANDARD' && "bg-white/5 text-white/90 border border-white/10",
+                            c.segment === 'STANDARD' && "bg-muted text-foreground/90 border border-border",
                             c.segment === 'LOW_VOLUME' && "bg-amber-500/10 text-amber-400 border border-amber-500/20"
                           )}>{c.segment}</span>
                           <span className="text-[8px] text-white/25 mt-1 uppercase tracking-wider">{c.entityStatus}</span>
@@ -682,7 +681,7 @@ export default function CustomerCRMPage() {
                   ))}
                   {customers.length === 0 && (
                     <tr>
-                      <td colSpan={5} className="py-16 text-center text-white/70 font-mono text-xs uppercase tracking-widest">
+                      <td colSpan={5} className="py-16 text-center text-muted-foreground font-mono text-xs uppercase tracking-widest">
                         No Client Nodes Matched Filters
                       </td>
                     </tr>
@@ -690,6 +689,12 @@ export default function CustomerCRMPage() {
                 </tbody>
               </table>
             </div>
+            
+            <Pagination 
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={setCurrentPage}
+            />
           </div>
         </div>
 
@@ -703,19 +708,19 @@ export default function CustomerCRMPage() {
               className="lg:col-span-6 space-y-8"
             >
               {/* Profile Card Header */}
-              <div className="glass p-8 rounded-4xl border border-white/5 relative overflow-hidden">
+              <div className="glass p-8 rounded-4xl border border-border relative overflow-hidden">
                 {/* Control Panel Actions */}
                 <div className="absolute top-0 right-0 p-6 flex gap-2">
                   <button 
                     onClick={() => openEditForm(activeCustomer)}
-                    className="p-2.5 rounded-full bg-white/5 hover:bg-white/10 text-white/70 hover:text-white transition-colors border-none cursor-pointer"
+                    className="p-2.5 rounded-full bg-muted hover:bg-accent text-muted-foreground hover:text-foreground transition-colors border-none cursor-pointer"
                     title="Edit Client"
                   >
                     <Edit3 size={14} />
                   </button>
                   <button 
                     onClick={() => handleDuplicate(activeCustomer)}
-                    className="p-2.5 rounded-full bg-white/5 hover:bg-white/10 text-white/70 hover:text-white transition-colors border-none cursor-pointer"
+                    className="p-2.5 rounded-full bg-muted hover:bg-accent text-muted-foreground hover:text-foreground transition-colors border-none cursor-pointer"
                     title="Duplicate Client"
                   >
                     <Copy size={14} />
@@ -723,7 +728,7 @@ export default function CustomerCRMPage() {
                   {activeCustomer.entityStatus === 'ACTIVE' ? (
                     <button 
                       onClick={() => archiveCustomer(activeCustomer.id)}
-                      className="p-2.5 rounded-full bg-white/5 hover:bg-white/10 text-white/70 hover:text-white transition-colors border-none cursor-pointer"
+                      className="p-2.5 rounded-full bg-muted hover:bg-accent text-muted-foreground hover:text-foreground transition-colors border-none cursor-pointer"
                       title="Archive Client"
                     >
                       <Archive size={14} />
@@ -731,7 +736,7 @@ export default function CustomerCRMPage() {
                   ) : (
                     <button 
                       onClick={() => restoreCustomer(activeCustomer.id)}
-                      className="p-2.5 rounded-full bg-white/5 hover:bg-white/10 text-white/70 hover:text-white transition-colors border-none cursor-pointer"
+                      className="p-2.5 rounded-full bg-muted hover:bg-accent text-muted-foreground hover:text-foreground transition-colors border-none cursor-pointer"
                       title="Restore Client"
                     >
                       <RefreshCcw size={14} />
@@ -742,21 +747,21 @@ export default function CustomerCRMPage() {
                       softDeleteCustomer(activeCustomer.id);
                       setSelectedCustomer(null);
                     }}
-                    className="p-2.5 rounded-full bg-white/5 hover:bg-rose-500/10 text-white/70 hover:text-rose-400 transition-colors border-none cursor-pointer"
+                    className="p-2.5 rounded-full bg-muted hover:bg-rose-500/10 text-muted-foreground hover:text-rose-400 transition-colors border-none cursor-pointer"
                     title="Soft Delete"
                   >
                     <Trash2 size={14} />
                   </button>
                   <button 
                     onClick={() => setSelectedCustomer(null)}
-                    className="p-2.5 rounded-full bg-white/5 hover:bg-white/10 text-white/70 hover:text-white transition-colors border-none cursor-pointer"
+                    className="p-2.5 rounded-full bg-muted hover:bg-accent text-muted-foreground hover:text-foreground transition-colors border-none cursor-pointer"
                   >
                     <X size={14} />
                   </button>
                 </div>
 
                 <div className="flex flex-col sm:flex-row gap-6 items-start mb-8">
-                  <div className="w-24 h-24 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-white/70 shadow-2xl shrink-0">
+                  <div className="w-24 h-24 rounded-2xl bg-muted border border-border flex items-center justify-center text-muted-foreground shadow-2xl shrink-0">
                     <Users size={32} className="text-blue-400" />
                   </div>
                   <div className="flex-1 min-w-0 pr-12">
@@ -764,16 +769,23 @@ export default function CustomerCRMPage() {
                       <span className="px-2.5 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20 text-[8px] font-mono font-bold uppercase tracking-widest">
                         {activeCustomer.segment}
                       </span>
-                      <span className={cn(
-                        "px-2.5 py-0.5 rounded border text-[8px] font-mono font-bold uppercase tracking-widest",
-                        activeCustomer.entityStatus === 'ACTIVE' && "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
-                        activeCustomer.entityStatus === 'ARCHIVED' && "bg-amber-500/10 text-amber-400 border-amber-500/20"
-                      )}>
-                        {activeCustomer.entityStatus}
-                      </span>
+                      <select
+                        value={activeCustomer.entityStatus}
+                        onChange={(e) => updateCustomer(activeCustomer.id, { entityStatus: e.target.value as any })}
+                        className={cn(
+                          "px-2 py-0.5 rounded border text-[8px] font-mono font-bold uppercase tracking-widest bg-transparent cursor-pointer outline-none appearance-none text-center",
+                          activeCustomer.entityStatus === 'ACTIVE' && "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
+                          activeCustomer.entityStatus === 'INACTIVE' && "bg-muted text-muted-foreground border-border",
+                          activeCustomer.entityStatus === 'ARCHIVED' && "bg-amber-500/10 text-amber-400 border-amber-500/20"
+                        )}
+                      >
+                        <option value="ACTIVE" className="bg-background text-foreground">ACTIVE</option>
+                        <option value="INACTIVE" className="bg-background text-foreground">INACTIVE</option>
+                        <option value="ARCHIVED" className="bg-background text-foreground">ARCHIVED</option>
+                      </select>
                     </div>
-                    <h2 className="text-2xl font-display font-medium tracking-tight text-white mb-2 truncate">{activeCustomer.name}</h2>
-                    <p className="text-[10px] font-mono text-white/80 tracking-wider mb-2">TAX: {activeCustomer.taxId || 'N/A'} • PM: {activeCustomer.accountManagerId} • DISCHARGE PORT: {activeCustomer.preferredDischargePortId}</p>
+                    <h2 className="text-2xl font-display font-medium tracking-tight text-foreground mb-2 truncate">{activeCustomer.name}</h2>
+                    <p className="text-[10px] font-mono text-muted-foreground tracking-wider mb-2">TAX: {activeCustomer.taxId || 'N/A'} • PM: {activeCustomer.accountManagerId} • DISCHARGE PORT: {activeCustomer.preferredDischargePortId}</p>
                     <a 
                       href={activeCustomer.website} 
                       target="_blank" 
@@ -785,16 +797,16 @@ export default function CustomerCRMPage() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 border-t border-white/5 pt-6">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 border-t border-border pt-6">
                   {[
                     { label: 'Credit Limit', value: formatCurrency(activeCustomer.creditLimit), icon: CreditCard, color: 'text-rose-400' },
                     { label: 'Payment Terms', value: activeCustomer.paymentTerms, icon: Clock, color: 'text-amber-400' },
                     { label: 'Discharge Port', value: activeCustomer.preferredDischargePortId, icon: Compass, color: 'text-violet-400' },
                     { label: 'Total Revenue', value: formatCurrency(customerRelations.totalApprovedSalesValue), icon: TrendingUp, color: 'text-emerald-400' },
                   ].map((stat, i) => (
-                    <div key={i} className="p-4 rounded-xl bg-white/2 border border-white/5">
+                    <div key={i} className="p-4 rounded-xl bg-white/2 border border-border">
                       <stat.icon size={12} className={cn("mb-2 opacity-40", stat.color)} />
-                      <p className="text-[8px] font-mono text-white/70 uppercase tracking-widest mb-0.5">{stat.label}</p>
+                      <p className="text-[8px] font-mono text-muted-foreground uppercase tracking-widest mb-0.5">{stat.label}</p>
                       <p className="font-sans font-bold text-xs">{stat.value}</p>
                     </div>
                   ))}
@@ -802,8 +814,8 @@ export default function CustomerCRMPage() {
               </div>
 
               {/* Related Information Matrix Tabs */}
-              <div className="glass p-8 rounded-4xl border border-white/5">
-                <div className="flex gap-6 border-b border-white/5 mb-6 overflow-x-auto whitespace-nowrap pb-2">
+              <div className="glass p-8 rounded-4xl border border-border">
+                <div className="flex gap-6 border-b border-border mb-6 overflow-x-auto whitespace-nowrap pb-2">
                   {[
                     { id: 'contacts', label: 'Contact Directory' },
                     { id: 'history', label: 'Transactions' },
@@ -817,7 +829,7 @@ export default function CustomerCRMPage() {
                         "pb-2 text-[9px] font-mono font-bold uppercase tracking-widest bg-transparent border-none cursor-pointer",
                         detailTab === tab.id 
                           ? "text-blue-500 border-b-2 border-blue-500" 
-                          : "text-white/70 hover:text-white/70"
+                          : "text-muted-foreground hover:text-muted-foreground"
                       )}
                     >
                       {tab.label}
@@ -829,19 +841,19 @@ export default function CustomerCRMPage() {
                 {detailTab === 'contacts' && (
                   <div className="space-y-4">
                     {activeCustomer.contacts.map((c, idx) => (
-                      <div key={idx} className="p-5 rounded-2xl bg-white/2 border border-white/5 flex justify-between items-start">
+                      <div key={idx} className="p-5 rounded-2xl bg-white/2 border border-border flex justify-between items-start">
                         <div className="space-y-1">
                           <div className="flex items-center gap-2">
-                            <span className="font-sans font-bold text-sm text-white/90">{c.name}</span>
+                            <span className="font-sans font-bold text-sm text-foreground/90">{c.name}</span>
                             {c.isPrimary && (
                               <span className="px-2 py-0.5 bg-blue-500/10 text-blue-400 text-[7px] rounded border border-blue-500/20 uppercase font-mono font-bold">Primary</span>
                             )}
                           </div>
                           <p className="text-[9px] font-mono text-blue-400">{c.role}</p>
-                          <div className="flex items-center gap-1.5 text-[10px] text-white/70 font-mono mt-2">
+                          <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground font-mono mt-2">
                             <Mail size={10} /> {c.email}
                           </div>
-                          <div className="flex items-center gap-1.5 text-[10px] text-white/70 font-mono">
+                          <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground font-mono">
                             <Phone size={10} /> {c.phone}
                           </div>
                         </div>
@@ -855,20 +867,20 @@ export default function CustomerCRMPage() {
 
                 {/* History Transactions Tab */}
                 {detailTab === 'history' && (
-                  <div className="space-y-6 max-h-[350px] overflow-y-auto custom-scrollbar pr-2">
+                  <div className="space-y-6 max-h-87.5 overflow-y-auto custom-scrollbar pr-2">
                     {/* Quotation history */}
                     <div>
-                      <p className="text-[9px] font-mono text-white/70 uppercase tracking-wider mb-3">Linked Quotation history</p>
+                      <p className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider mb-3">Linked Quotation history</p>
                       <div className="space-y-2">
                         {customerRelations.clientQuotes.map(q => (
-                          <div key={q.id} className="flex justify-between items-center p-3 bg-white/2 border border-white/5 rounded-xl text-[10px] font-mono">
+                          <div key={q.id} className="flex justify-between items-center p-3 bg-white/2 border border-border rounded-xl text-[10px] font-mono">
                             <div>
-                              <p className="font-bold text-white/80">{q.quotationNo}</p>
-                              <p className="text-[8px] text-white/70">{formatDate(q.date)}</p>
+                              <p className="font-bold text-muted-foreground">{q.quotationNo}</p>
+                              <p className="text-[8px] text-muted-foreground">{formatDate(q.date)}</p>
                             </div>
                             <div className="text-right">
                               <span className="px-2 py-0.5 rounded bg-blue-500/10 text-blue-400 text-[8px]">{q.status}</span>
-                              <p className="text-[10px] font-sans font-bold text-white/80 mt-1">{formatCurrency(q.totalValue)}</p>
+                              <p className="text-[10px] font-sans font-bold text-muted-foreground mt-1">{formatCurrency(q.totalValue)}</p>
                             </div>
                           </div>
                         ))}
@@ -880,17 +892,17 @@ export default function CustomerCRMPage() {
 
                     {/* Sales Order history */}
                     <div>
-                      <p className="text-[9px] font-mono text-white/70 uppercase tracking-wider mb-3">Linked Sales Orders</p>
+                      <p className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider mb-3">Linked Sales Orders</p>
                       <div className="space-y-2">
                         {customerRelations.clientSalesOrders.map(so => (
-                          <div key={so.id} className="flex justify-between items-center p-3 bg-white/2 border border-white/5 rounded-xl text-[10px] font-mono">
+                          <div key={so.id} className="flex justify-between items-center p-3 bg-white/2 border border-border rounded-xl text-[10px] font-mono">
                             <div>
-                              <p className="font-bold text-white/80">{so.orderNo}</p>
-                              <p className="text-[8px] text-white/70">{formatDate(so.date)}</p>
+                              <p className="font-bold text-muted-foreground">{so.orderNo}</p>
+                              <p className="text-[8px] text-muted-foreground">{formatDate(so.date)}</p>
                             </div>
                             <div className="text-right">
                               <span className="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 text-[8px]">{so.status}</span>
-                              <p className="text-[10px] font-sans font-bold text-white/80 mt-1">{formatCurrency(so.totalValue)}</p>
+                              <p className="text-[10px] font-sans font-bold text-muted-foreground mt-1">{formatCurrency(so.totalValue)}</p>
                             </div>
                           </div>
                         ))}
@@ -902,17 +914,17 @@ export default function CustomerCRMPage() {
 
                     {/* Shipment history */}
                     <div>
-                      <p className="text-[9px] font-mono text-white/70 uppercase tracking-wider mb-3">Linked Shipment logs</p>
+                      <p className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider mb-3">Linked Shipment logs</p>
                       <div className="space-y-2">
                         {customerRelations.clientShipments.map(shp => (
-                          <div key={shp.id} className="flex justify-between items-center p-3 bg-white/2 border border-white/5 rounded-xl text-[10px] font-mono">
+                          <div key={shp.id} className="flex justify-between items-center p-3 bg-white/2 border border-border rounded-xl text-[10px] font-mono">
                             <div>
-                              <p className="font-bold text-white/80">{shp.shipmentNo}</p>
-                              <p className="text-[8px] text-white/70">DISPATCH: {formatDate(shp.etd)}</p>
+                              <p className="font-bold text-muted-foreground">{shp.shipmentNo}</p>
+                              <p className="text-[8px] text-muted-foreground">DISPATCH: {formatDate(shp.etd)}</p>
                             </div>
                             <div className="text-right">
                               <span className="px-2 py-0.5 rounded bg-indigo-500/10 text-indigo-400 text-[8px]">{shp.status}</span>
-                              <p className="text-[10px] font-mono text-white/70 mt-1">{shp.destinationPortId}</p>
+                              <p className="text-[10px] font-mono text-muted-foreground mt-1">{shp.destinationPortId}</p>
                             </div>
                           </div>
                         ))}
@@ -928,25 +940,25 @@ export default function CustomerCRMPage() {
                 {detailTab === 'finance' && (
                   <div className="space-y-6">
                     <div className="grid grid-cols-2 gap-4 text-center">
-                      <div className="p-4 rounded-xl bg-white/2 border border-white/5">
-                        <p className="text-[8px] font-mono text-white/70 uppercase tracking-wider mb-1">Approved Revenue</p>
+                      <div className="p-4 rounded-xl bg-white/2 border border-border">
+                        <p className="text-[8px] font-mono text-muted-foreground uppercase tracking-wider mb-1">Approved Revenue</p>
                         <p className="text-sm font-sans font-bold text-emerald-400">{formatCurrency(customerRelations.totalApprovedSalesValue)}</p>
                       </div>
-                      <div className="p-4 rounded-xl bg-white/2 border border-white/5">
-                        <p className="text-[8px] font-mono text-white/70 uppercase tracking-wider mb-1">Credit Limit</p>
+                      <div className="p-4 rounded-xl bg-white/2 border border-border">
+                        <p className="text-[8px] font-mono text-muted-foreground uppercase tracking-wider mb-1">Credit Limit</p>
                         <p className="text-sm font-sans font-bold text-rose-400">{formatCurrency(activeCustomer.creditLimit)}</p>
                       </div>
                     </div>
 
                     {/* Credit Headroom Bar Gauge */}
-                    <div className="space-y-2 p-5 rounded-2xl bg-white/2 border border-white/5">
+                    <div className="space-y-2 p-5 rounded-2xl bg-white/2 border border-border">
                       <div className="flex justify-between text-[10px] font-mono">
-                        <span className="text-white/70">Active Credit Exposure:</span>
-                        <span className="text-white/90">
+                        <span className="text-muted-foreground">Active Credit Exposure:</span>
+                        <span className="text-foreground/90">
                           {Math.round((customerRelations.totalApprovedSalesValue / activeCustomer.creditLimit) * 100) || 0}% Exposure
                         </span>
                       </div>
-                      <div className="w-full bg-white/5 h-2 rounded-full overflow-hidden">
+                      <div className="w-full bg-muted h-2 rounded-full overflow-hidden">
                         <div 
                           className={cn(
                             "h-full rounded-full transition-all duration-500",
@@ -955,7 +967,7 @@ export default function CustomerCRMPage() {
                           style={{ width: `${Math.min(100, (customerRelations.totalApprovedSalesValue / activeCustomer.creditLimit) * 100)}%` }}
                         />
                       </div>
-                      <div className="flex justify-between text-[8px] font-mono text-white/70 pt-1">
+                      <div className="flex justify-between text-[8px] font-mono text-muted-foreground pt-1">
                         <span>Used: {formatCurrency(customerRelations.totalApprovedSalesValue)}</span>
                         <span>Available Headroom: {formatCurrency(customerRelations.creditHeadroom)}</span>
                       </div>
@@ -967,25 +979,25 @@ export default function CustomerCRMPage() {
                 {detailTab === 'timeline' && (
                   <div className="space-y-6">
                     {/* Live Communication Logger Input */}
-                    <div className="p-4 rounded-2xl bg-white/2 border border-white/5 space-y-3">
+                    <div className="p-4 rounded-2xl bg-white/2 border border-border space-y-3">
                       <div className="flex justify-between items-center">
-                        <p className="text-[8px] font-mono text-white/70 uppercase tracking-wider">Log Communication Note</p>
+                        <p className="text-[8px] font-mono text-muted-foreground uppercase tracking-wider">Log Communication Note</p>
                         <select
                           value={commType}
                           onChange={(e) => setCommType(e.target.value as any)}
-                          className="bg-transparent border border-white/10 rounded px-2 py-0.5 text-[9px] font-mono text-white/90"
+                          className="bg-transparent border border-border rounded px-2 py-0.5 text-[9px] font-mono text-foreground/90"
                         >
-                          <option value="NOTE" className="bg-[#0b0b0b]">Note</option>
-                          <option value="CALL" className="bg-[#0b0b0b]">Call</option>
-                          <option value="EMAIL" className="bg-[#0b0b0b]">Email</option>
-                          <option value="MEETING" className="bg-[#0b0b0b]">Meeting</option>
+                          <option value="NOTE" className="bg-background">Note</option>
+                          <option value="CALL" className="bg-background">Call</option>
+                          <option value="EMAIL" className="bg-background">Email</option>
+                          <option value="MEETING" className="bg-background">Meeting</option>
                         </select>
                       </div>
                       <textarea
                         value={communicationNote}
                         onChange={(e) => setCommunicationNote(e.target.value)}
                         placeholder="Log meeting minutes, phone callback logs, or compliance checks..."
-                        className="w-full bg-[#070707] border border-white/10 rounded-xl p-3 text-[11px] font-mono text-white focus:outline-none focus:border-blue-500/50 min-h-[60px]"
+                        className="w-full bg-background border border-border rounded-xl p-3 text-[11px] font-mono text-foreground focus:outline-none focus:border-blue-500/50 min-h-15"
                       />
                       <div className="flex justify-end">
                         <button
@@ -999,10 +1011,10 @@ export default function CustomerCRMPage() {
                     </div>
 
                     {/* Timeline List */}
-                    <div className="max-h-[250px] overflow-y-auto custom-scrollbar pr-2 space-y-6 relative before:absolute before:left-[11px] before:top-2 before:bottom-2 before:w-px before:bg-white/5">
+                    <div className="max-h-62.5 overflow-y-auto custom-scrollbar pr-2 space-y-6 relative before:absolute before:left-2.75 before:top-2 before:bottom-2 before:w-px before:bg-muted">
                       {(activeCustomer.timeline || []).map((item, idx) => (
                         <div key={item.id || idx} className="relative pl-8">
-                          <div className="absolute left-0 top-1 w-6 h-6 rounded-full bg-[#0a0a0a] border border-white/15 flex items-center justify-center z-10 text-blue-400">
+                          <div className="absolute left-0 top-1 w-6 h-6 rounded-full bg-background border border-border flex items-center justify-center z-10 text-blue-400">
                             {item.type === 'CREATED' && <UserPlus size={10} />}
                             {item.type === 'UPDATED' && <Edit3 size={10} />}
                             {item.type === 'ARCHIVED' && <Archive size={10} />}
@@ -1011,9 +1023,9 @@ export default function CustomerCRMPage() {
                             {item.type === 'STATUS_CHANGED' && <Clock size={10} />}
                             {item.type === 'COMMUNICATION_LOGGED' && <MessageSquare size={10} />}
                           </div>
-                          <p className="text-[8px] font-mono text-white/70 uppercase mb-0.5">{formatDate(item.date)}</p>
-                          <p className="text-xs font-bold text-white/90 mb-0.5">{item.title}</p>
-                          <p className="text-[10px] text-white/70 leading-relaxed font-sans">{item.description}</p>
+                          <p className="text-[8px] font-mono text-muted-foreground uppercase mb-0.5">{formatDate(item.date)}</p>
+                          <p className="text-xs font-bold text-foreground/90 mb-0.5">{item.title}</p>
+                          <p className="text-[10px] text-muted-foreground leading-relaxed font-sans">{item.description}</p>
                         </div>
                       ))}
                     </div>
@@ -1033,13 +1045,13 @@ export default function CustomerCRMPage() {
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="glass border border-white/10 rounded-[2.5rem] p-10 w-full max-w-3xl max-h-[90vh] overflow-y-auto custom-scrollbar"
+              className="glass border border-border rounded-[2.5rem] p-10 w-full max-w-3xl max-h-[90vh] overflow-y-auto custom-scrollbar"
             >
-              <div className="flex justify-between items-center border-b border-white/5 pb-4 mb-6">
+              <div className="flex justify-between items-center border-b border-border pb-4 mb-6">
                 <h3 className="text-2xl font-display font-medium flex items-center gap-3">
                   <Users className="text-blue-500" /> {formMode === 'create' ? 'Onboard New Customer Node' : 'Modify Customer Node'}
                 </h3>
-                <button onClick={() => setShowFormDrawer(false)} className="p-2 rounded bg-white/5 hover:bg-white/10 text-white/70 hover:text-white border-none cursor-pointer">
+                <button onClick={() => setShowFormDrawer(false)} className="p-2 rounded bg-muted hover:bg-accent text-muted-foreground hover:text-foreground border-none cursor-pointer">
                   <X size={16} />
                 </button>
               </div>
@@ -1059,7 +1071,7 @@ export default function CustomerCRMPage() {
               )}
 
               {/* Form Navigation Tabs */}
-              <div className="flex gap-4 border-b border-white/5 mb-6 overflow-x-auto whitespace-nowrap pb-2 text-[9px] font-mono font-bold uppercase">
+              <div className="flex gap-4 border-b border-border mb-6 overflow-x-auto whitespace-nowrap pb-2 text-[9px] font-mono font-bold uppercase">
                 {[
                   { id: 'general', label: '1. General Info' },
                   { id: 'finance', label: '2. Financial Terms' },
@@ -1073,7 +1085,7 @@ export default function CustomerCRMPage() {
                       "pb-2 bg-transparent border-none cursor-pointer",
                       formTab === tab.id 
                         ? "text-blue-500 border-b-2 border-blue-500" 
-                        : "text-white/70 hover:text-white/70"
+                        : "text-muted-foreground hover:text-muted-foreground"
                     )}
                   >
                     {tab.label}
@@ -1087,54 +1099,54 @@ export default function CustomerCRMPage() {
                   <div className="space-y-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div className="space-y-2">
-                        <label className="text-[9px] font-mono text-white/80 uppercase block">Company Legal Name</label>
+                        <label className="text-[9px] font-mono text-muted-foreground uppercase block">Company Legal Name</label>
                         <input 
                           type="text" 
                           required
                           value={name}
                           onChange={(e) => setName(e.target.value)}
-                          className="w-full bg-[#0b0b0b] border border-white/10 rounded-xl py-3 px-4 text-xs font-mono text-white focus:outline-none focus:border-blue-500/50"
+                          className="w-full bg-background border border-border rounded-xl py-3 px-4 text-xs font-mono text-foreground focus:outline-none focus:border-blue-500/50"
                         />
                       </div>
                       <div className="space-y-2">
-                        <label className="text-[9px] font-mono text-white/80 uppercase block">Contact Email</label>
+                        <label className="text-[9px] font-mono text-muted-foreground uppercase block">Contact Email</label>
                         <input 
                           type="email" 
                           required
                           value={email}
                           onChange={(e) => setEmail(e.target.value)}
-                          className="w-full bg-[#0b0b0b] border border-white/10 rounded-xl py-3 px-4 text-xs font-mono text-white focus:outline-none"
+                          className="w-full bg-background border border-border rounded-xl py-3 px-4 text-xs font-mono text-foreground focus:outline-none"
                         />
                       </div>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                       <div className="space-y-2">
-                        <label className="text-[9px] font-mono text-white/80 uppercase block">Telephone Number</label>
+                        <label className="text-[9px] font-mono text-muted-foreground uppercase block">Telephone Number</label>
                         <input 
                           type="text" 
                           value={phone}
                           onChange={(e) => setPhone(e.target.value)}
-                          className="w-full bg-[#0b0b0b] border border-white/10 rounded-xl py-3 px-4 text-xs font-mono text-white focus:outline-none"
+                          className="w-full bg-background border border-border rounded-xl py-3 px-4 text-xs font-mono text-foreground focus:outline-none"
                         />
                       </div>
                       <div className="space-y-2">
-                        <label className="text-[9px] font-mono text-white/80 uppercase block">Country</label>
+                        <label className="text-[9px] font-mono text-muted-foreground uppercase block">Country</label>
                         <input 
                           type="text" 
                           required
                           value={country}
                           onChange={(e) => setCountry(e.target.value)}
-                          className="w-full bg-[#0b0b0b] border border-white/10 rounded-xl py-3 px-4 text-xs font-mono text-white focus:outline-none"
+                          className="w-full bg-background border border-border rounded-xl py-3 px-4 text-xs font-mono text-foreground focus:outline-none"
                         />
                       </div>
                       <div className="space-y-2">
-                        <label className="text-[9px] font-mono text-white/80 uppercase block">Tax ID / VAT Registration</label>
+                        <label className="text-[9px] font-mono text-muted-foreground uppercase block">Tax ID / VAT Registration</label>
                         <input 
                           type="text" 
                           value={taxId}
                           onChange={(e) => setTaxId(e.target.value)}
-                          className="w-full bg-[#0b0b0b] border border-white/10 rounded-xl py-3 px-4 text-xs font-mono text-white focus:outline-none"
+                          className="w-full bg-background border border-border rounded-xl py-3 px-4 text-xs font-mono text-foreground focus:outline-none"
                           placeholder="e.g. TAX-12345"
                         />
                       </div>
@@ -1142,21 +1154,21 @@ export default function CustomerCRMPage() {
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div className="space-y-2">
-                        <label className="text-[9px] font-mono text-white/80 uppercase block">Corporate Website URL</label>
+                        <label className="text-[9px] font-mono text-muted-foreground uppercase block">Corporate Website URL</label>
                         <input 
                           type="text" 
                           value={website}
                           onChange={(e) => setWebsite(e.target.value)}
-                          className="w-full bg-[#0b0b0b] border border-white/10 rounded-xl py-3 px-4 text-xs font-mono text-white focus:outline-none"
+                          className="w-full bg-background border border-border rounded-xl py-3 px-4 text-xs font-mono text-foreground focus:outline-none"
                           placeholder="e.g. https://www.company.com"
                         />
                       </div>
                       <div className="space-y-2">
-                        <label className="text-[9px] font-mono text-white/80 uppercase block">Corporate segment</label>
+                        <label className="text-[9px] font-mono text-muted-foreground uppercase block">Corporate segment</label>
                         <select 
                           value={segment}
                           onChange={(e) => setSegment(e.target.value as any)}
-                          className="w-full bg-[#0b0b0b] border border-white/10 rounded-xl py-3 px-4 text-xs font-mono text-white focus:outline-none"
+                          className="w-full bg-background border border-border rounded-xl py-3 px-4 text-xs font-mono text-foreground focus:outline-none"
                         >
                           <option value="PREMIUM">PREMIUM (Large Exposure)</option>
                           <option value="STANDARD">STANDARD (Medium Exposure)</option>
@@ -1166,11 +1178,11 @@ export default function CustomerCRMPage() {
                     </div>
 
                     <div className="space-y-2">
-                      <label className="text-[9px] font-mono text-white/80 uppercase block">Business Address Details</label>
+                      <label className="text-[9px] font-mono text-muted-foreground uppercase block">Business Address Details</label>
                       <textarea 
                         value={address}
                         onChange={(e) => setAddress(e.target.value)}
-                        className="w-full bg-[#0b0b0b] border border-white/10 rounded-xl py-3 px-4 text-xs font-mono text-white focus:outline-none min-h-[80px]" 
+                        className="w-full bg-background border border-border rounded-xl py-3 px-4 text-xs font-mono text-foreground focus:outline-none min-h-20" 
                       />
                     </div>
                   </div>
@@ -1181,27 +1193,27 @@ export default function CustomerCRMPage() {
                   <div className="space-y-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div className="space-y-2">
-                        <label className="text-[9px] font-mono text-white/80 uppercase block">Approved Credit Ceiling (USD)</label>
+                        <label className="text-[9px] font-mono text-muted-foreground uppercase block">Approved Credit Ceiling (USD)</label>
                         <div className="relative">
-                          <span className="absolute left-4 top-1/2 -translate-y-1/2 text-white/70 text-xs">$</span>
+                          <span className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground text-xs">$</span>
                           <input 
                             type="number" 
                             value={creditLimit}
                             onChange={(e) => setCreditLimit(Number(e.target.value))}
-                            className="w-full bg-[#0b0b0b] border border-white/10 rounded-xl py-3 pl-8 pr-4 text-xs font-mono text-white focus:outline-none"
+                            className="w-full bg-background border border-border rounded-xl py-3 pl-8 pr-4 text-xs font-mono text-foreground focus:outline-none"
                           />
                         </div>
                       </div>
                       
                       <div className="space-y-2">
-                        <label className="text-[9px] font-mono text-white/80 uppercase block">Preferred Discharge Port</label>
+                        <label className="text-[9px] font-mono text-muted-foreground uppercase block">Preferred Discharge Port</label>
                         <select 
                           value={preferredDischargePortId}
                           onChange={(e) => setPreferredDischargePortId(e.target.value)}
-                          className="w-full bg-[#0b0b0b] border border-white/10 rounded-xl py-3 px-4 text-xs font-mono text-white focus:outline-none"
+                          className="w-full bg-background border border-border rounded-xl py-3 px-4 text-xs font-mono text-foreground focus:outline-none"
                         >
                           {ports.map(p => (
-                            <option key={p.id} value={p.id} className="bg-[#0b0b0b]">{p.name} ({p.country})</option>
+                            <option key={p.id} value={p.id} className="bg-background">{p.name} ({p.country})</option>
                           ))}
                         </select>
                       </div>
@@ -1209,11 +1221,11 @@ export default function CustomerCRMPage() {
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div className="space-y-2">
-                        <label className="text-[9px] font-mono text-white/80 uppercase block">Payment Invoicing Terms</label>
+                        <label className="text-[9px] font-mono text-muted-foreground uppercase block">Payment Invoicing Terms</label>
                         <select 
                           value={paymentTerms}
                           onChange={(e) => setPaymentTerms(e.target.value)}
-                          className="w-full bg-[#0b0b0b] border border-white/10 rounded-xl py-3 px-4 text-xs font-mono text-white focus:outline-none"
+                          className="w-full bg-background border border-border rounded-xl py-3 px-4 text-xs font-mono text-foreground focus:outline-none"
                         >
                           <option value="30 Days Net">30 Days Net</option>
                           <option value="15 Days Advance">15 Days Advance</option>
@@ -1223,11 +1235,11 @@ export default function CustomerCRMPage() {
                       </div>
 
                       <div className="space-y-2">
-                        <label className="text-[9px] font-mono text-white/80 uppercase block">Assigned Account Manager</label>
+                        <label className="text-[9px] font-mono text-muted-foreground uppercase block">Assigned Account Manager</label>
                         <select 
                           value={accountManagerId}
                           onChange={(e) => setAccountManagerId(e.target.value)}
-                          className="w-full bg-[#0b0b0b] border border-white/10 rounded-xl py-3 px-4 text-xs font-mono text-white focus:outline-none"
+                          className="w-full bg-background border border-border rounded-xl py-3 px-4 text-xs font-mono text-foreground focus:outline-none"
                         >
                           <option value="USR-001">USR-001 (Manager A)</option>
                           <option value="USR-002">USR-002 (Manager B)</option>
@@ -1237,11 +1249,11 @@ export default function CustomerCRMPage() {
                     </div>
 
                     <div className="space-y-2">
-                      <label className="text-[9px] font-mono text-white/80 uppercase block">Internal Relationship Notes</label>
+                      <label className="text-[9px] font-mono text-muted-foreground uppercase block">Internal Relationship Notes</label>
                       <textarea 
                         value={notes}
                         onChange={(e) => setNotes(e.target.value)}
-                        className="w-full bg-[#0b0b0b] border border-white/10 rounded-xl py-3 px-4 text-xs font-mono text-white focus:outline-none min-h-[80px]" 
+                        className="w-full bg-background border border-border rounded-xl py-3 px-4 text-xs font-mono text-foreground focus:outline-none min-h-20" 
                       />
                     </div>
                   </div>
@@ -1251,11 +1263,11 @@ export default function CustomerCRMPage() {
                 {formTab === 'contacts' && (
                   <div className="space-y-6">
                     <div className="flex justify-between items-center">
-                      <span className="text-[9px] font-mono text-white/80 uppercase tracking-wider">Associated Client Managers</span>
+                      <span className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider">Associated Client Managers</span>
                       <button 
                         type="button"
                         onClick={handleAddContact}
-                        className="flex items-center gap-1.5 px-3 py-1.5 bg-white/5 border border-white/10 rounded-lg text-[9px] font-mono uppercase text-white/90 hover:bg-white/10"
+                        className="flex items-center gap-1.5 px-3 py-1.5 bg-muted border border-border rounded-lg text-[9px] font-mono uppercase text-foreground/90 hover:bg-accent"
                       >
                         <Plus size={12} /> Add Contact
                       </button>
@@ -1263,12 +1275,12 @@ export default function CustomerCRMPage() {
 
                     <div className="space-y-4">
                       {formContacts.map((contact, idx) => (
-                        <div key={idx} className="p-5 rounded-2xl bg-[#080808] border border-white/10 relative space-y-4">
+                        <div key={idx} className="p-5 rounded-2xl bg-background border border-border relative space-y-4">
                           {formContacts.length > 1 && (
                             <button
                               type="button"
                               onClick={() => handleRemoveContact(idx)}
-                              className="absolute top-4 right-4 text-white/70 hover:text-rose-400 bg-transparent border-none cursor-pointer"
+                              className="absolute top-4 right-4 text-muted-foreground hover:text-rose-400 bg-transparent border-none cursor-pointer"
                             >
                               <X size={14} />
                             </button>
@@ -1276,43 +1288,43 @@ export default function CustomerCRMPage() {
                           
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div className="space-y-1">
-                              <label className="text-[8px] font-mono text-white/70 uppercase">Contact Name</label>
+                              <label className="text-[8px] font-mono text-muted-foreground uppercase">Contact Name</label>
                               <input 
                                 type="text"
                                 required
                                 value={contact.name}
                                 onChange={(e) => handleContactChange(idx, 'name', e.target.value)}
-                                className="w-full bg-[#0b0b0b] border border-white/10 rounded-lg p-2.5 text-xs text-white font-mono focus:outline-none"
+                                className="w-full bg-background border border-border rounded-lg p-2.5 text-xs text-foreground font-mono focus:outline-none"
                               />
                             </div>
                             <div className="space-y-1">
-                              <label className="text-[8px] font-mono text-white/70 uppercase">Corporate Role</label>
+                              <label className="text-[8px] font-mono text-muted-foreground uppercase">Corporate Role</label>
                               <input 
                                 type="text"
                                 value={contact.role}
                                 onChange={(e) => handleContactChange(idx, 'role', e.target.value)}
-                                className="w-full bg-[#0b0b0b] border border-white/10 rounded-lg p-2.5 text-xs text-white font-mono focus:outline-none"
+                                className="w-full bg-background border border-border rounded-lg p-2.5 text-xs text-foreground font-mono focus:outline-none"
                               />
                             </div>
                           </div>
 
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div className="space-y-1">
-                              <label className="text-[8px] font-mono text-white/70 uppercase">Email Address</label>
+                              <label className="text-[8px] font-mono text-muted-foreground uppercase">Email Address</label>
                               <input 
                                 type="email"
                                 value={contact.email}
                                 onChange={(e) => handleContactChange(idx, 'email', e.target.value)}
-                                className="w-full bg-[#0b0b0b] border border-white/10 rounded-lg p-2.5 text-xs text-white font-mono focus:outline-none"
+                                className="w-full bg-background border border-border rounded-lg p-2.5 text-xs text-foreground font-mono focus:outline-none"
                               />
                             </div>
                             <div className="space-y-1">
-                              <label className="text-[8px] font-mono text-white/70 uppercase">Mobile Number</label>
+                              <label className="text-[8px] font-mono text-muted-foreground uppercase">Mobile Number</label>
                               <input 
                                 type="text"
                                 value={contact.phone}
                                 onChange={(e) => handleContactChange(idx, 'phone', e.target.value)}
-                                className="w-full bg-[#0b0b0b] border border-white/10 rounded-lg p-2.5 text-xs text-white font-mono focus:outline-none"
+                                className="w-full bg-background border border-border rounded-lg p-2.5 text-xs text-foreground font-mono focus:outline-none"
                               />
                             </div>
                           </div>
@@ -1331,7 +1343,7 @@ export default function CustomerCRMPage() {
                               className="rounded accent-blue-500 cursor-pointer"
                               id={`contact-primary-${idx}`}
                             />
-                            <label htmlFor={`contact-primary-${idx}`} className="text-[9px] font-mono text-white/70 cursor-pointer">Mark as Primary Corporate Contact</label>
+                            <label htmlFor={`contact-primary-${idx}`} className="text-[9px] font-mono text-muted-foreground cursor-pointer">Mark as Primary Corporate Contact</label>
                           </div>
                         </div>
                       ))}
@@ -1339,11 +1351,11 @@ export default function CustomerCRMPage() {
                   </div>
                 )}
 
-                <div className="pt-6 border-t border-white/5 flex justify-end gap-4">
+                <div className="pt-6 border-t border-border flex justify-end gap-4">
                   <button 
                     type="button" 
                     onClick={() => setShowFormDrawer(false)}
-                    className="px-6 py-3 bg-white/5 border border-white/10 rounded-xl text-[10px] font-mono uppercase tracking-widest hover:bg-white/10 border-none cursor-pointer text-white"
+                    className="px-6 py-3 bg-muted border border-border rounded-xl text-[10px] font-mono uppercase tracking-widest hover:bg-accent border-none cursor-pointer text-foreground"
                   >
                     Cancel
                   </button>

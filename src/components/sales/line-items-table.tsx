@@ -106,13 +106,13 @@ export function LineItemsTable({
 
   if (!isEditing) {
     return (
-      <div className="glass p-8 rounded-4xl border border-white/5 space-y-6">
-        <h3 className="text-sm font-mono text-white/70 uppercase tracking-widest flex items-center gap-2 pb-4 border-b border-white/5">
+      <div className="glass p-8 rounded-4xl border border-border space-y-6">
+        <h3 className="text-sm font-mono text-muted-foreground uppercase tracking-widest flex items-center gap-2 pb-4 border-b border-border">
           <Box size={14} className="text-blue-400" /> Itemised Cargo Manifest
         </h3>
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs font-mono">
-            <thead className="text-white/70 uppercase tracking-wider border-b border-white/5">
+            <thead className="text-muted-foreground uppercase tracking-wider border-b border-border">
               <tr>
                 <th className="pb-4">Product SKU</th>
                 <th className="pb-4 text-right">Qty</th>
@@ -129,35 +129,35 @@ export function LineItemsTable({
                       {getProductName(item.productId) || item.name}
                     </Link>
                   </td>
-                  <td className="py-4 text-right text-white/90 font-bold">{item.quantity} MT</td>
-                  <td className="py-4 text-right text-white/90 font-bold">{formatCurrency(item.unitPrice)}</td>
-                  <td className="py-4 text-right text-white/90 font-bold">
+                  <td className="py-4 text-right text-foreground/90 font-bold">{item.quantity} MT</td>
+                  <td className="py-4 text-right text-foreground/90 font-bold">{formatCurrency(item.unitPrice)}</td>
+                  <td className="py-4 text-right text-foreground/90 font-bold">
                     {item.taxId ? (taxes?.find(t => t.id === item.taxId)?.name || 'Tax') : '-'} 
                     {item.taxAmount ? ` (${formatCurrency(item.taxAmount)})` : ''}
                   </td>
-                  <td className="py-4 text-right text-white font-bold">{formatCurrency(item.totalPrice || item.total)}</td>
+                  <td className="py-4 text-right text-foreground font-bold">{formatCurrency(item.totalPrice || item.total)}</td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
-        <div className="border-t border-white/5 pt-6 flex justify-end">
+        <div className="border-t border-border pt-6 flex justify-end">
           <div className="w-full max-w-xs space-y-2 font-mono text-xs">
             {(!isPurchaseOrder && marginPercentage > 0) && (
-              <div className="flex justify-between text-white/70">
+              <div className="flex justify-between text-muted-foreground">
                 <span>Margin</span><span>{marginPercentage}%</span>
               </div>
             )}
-            <div className="flex justify-between font-bold text-base border-t border-white/5 pt-2">
-              <span className="text-white/80">Untaxed Amount</span>
-              <span className="text-white font-sans text-lg">{formatCurrency(untaxedAmount)}</span>
+            <div className="flex justify-between font-bold text-base border-t border-border pt-2">
+              <span className="text-muted-foreground">Untaxed Amount</span>
+              <span className="text-foreground font-sans text-lg">{formatCurrency(untaxedAmount)}</span>
             </div>
-            <div className="flex justify-between font-bold text-base border-t border-white/5 pt-2">
-              <span className="text-white/80">Total Tax</span>
-              <span className="text-white/60 font-sans text-lg">{formatCurrency(totalTaxAmount)}</span>
+            <div className="flex justify-between font-bold text-base border-t border-border pt-2">
+              <span className="text-muted-foreground">Total Tax</span>
+              <span className="text-muted-foreground/60 font-sans text-lg">{formatCurrency(totalTaxAmount)}</span>
             </div>
-            <div className="flex justify-between font-bold text-base border-t border-white/5 pt-2">
-              <span className="text-white/80">{isPurchaseOrder ? 'Procurement Total (Gross)' : 'Contract Total (Gross)'}</span>
+            <div className="flex justify-between font-bold text-base border-t border-border pt-2">
+              <span className="text-muted-foreground">{isPurchaseOrder ? 'Procurement Total (Gross)' : 'Contract Total (Gross)'}</span>
               <span className="text-blue-400 font-sans text-xl">{formatCurrency(totalValue)}</span>
             </div>
           </div>
@@ -169,22 +169,22 @@ export function LineItemsTable({
   return (
     <div className="space-y-6">
       <div>
-        <div className="pb-4 border-b border-white/5 flex items-center justify-between">
+        <div className="pb-4 border-b border-border flex items-center justify-between">
           <h2 className="text-xs font-mono font-bold uppercase tracking-widest text-blue-400 flex items-center gap-2">
             <Calculator size={14} /> Line Items
           </h2>
         </div>
         
-        <div className="overflow-x-auto min-h-[300px]">
+        <div className="overflow-x-auto min-h-75">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="border-b border-white/5 bg-white/2">
-                <th className="py-3 px-6 text-[10px] font-mono uppercase tracking-widest text-white/40 w-12">#</th>
-                <th className="py-3 px-6 text-[10px] font-mono uppercase tracking-widest text-white/40">SKU / Variant</th>
-                <th className="py-3 px-6 text-[10px] font-mono uppercase tracking-widest text-white/40 w-40 min-w-[160px]">Qty</th>
-                <th className="py-3 px-6 text-[10px] font-mono uppercase tracking-widest text-white/40 w-40 min-w-[160px]">Unit Price</th>
-                <th className="py-3 px-6 text-[10px] font-mono uppercase tracking-widest text-white/40 w-32 min-w-[140px]">Tax</th>
-                <th className="py-3 px-6 text-[10px] font-mono uppercase tracking-widest text-white/40 w-32">Total</th>
+              <tr className="border-b border-border bg-white/2">
+                <th className="py-3 px-6 text-[10px] font-mono uppercase tracking-widest text-muted-foreground/40 w-12">#</th>
+                <th className="py-3 px-6 text-[10px] font-mono uppercase tracking-widest text-muted-foreground/40">SKU / Variant</th>
+                <th className="py-3 px-6 text-[10px] font-mono uppercase tracking-widest text-muted-foreground/40 w-40 min-w-40">Qty</th>
+                <th className="py-3 px-6 text-[10px] font-mono uppercase tracking-widest text-muted-foreground/40 w-40 min-w-40">Unit Price</th>
+                <th className="py-3 px-6 text-[10px] font-mono uppercase tracking-widest text-muted-foreground/40 w-32 min-w-35">Tax</th>
+                <th className="py-3 px-6 text-[10px] font-mono uppercase tracking-widest text-muted-foreground/40 w-32">Total</th>
                 <th className="py-3 px-4 w-12"></th>
               </tr>
             </thead>
@@ -203,17 +203,17 @@ export function LineItemsTable({
                       placeholder="Select Product..."
                     />
                     {item.variantId && item.productId && (
-                      <p className="text-[9px] text-white/40 mt-1 pl-1">
+                      <p className="text-[9px] text-muted-foreground/40 mt-1 pl-1">
                         SKU: {products.find((p: any) => p.id === item.productId)?.variants?.find((v: any) => v.id === item.variantId)?.sku || 'N/A'}
                       </p>
                     )}
                   </td>
                   <td className="py-3 px-6">
-                    <div className="flex items-center bg-white/5 border border-white/10 rounded-xl px-2 focus-within:border-blue-500/50 transition-all">
+                    <div className="flex items-center bg-muted border border-border rounded-xl px-2 focus-within:border-blue-500/50 transition-all">
                       <input 
                         type="number" min="1" 
                         value={item.quantity} onChange={e => updateItem(i, 'quantity', parseInt(e.target.value) || 0)}
-                        className="w-full min-w-0 flex-1 bg-transparent py-2.5 text-sm text-white/90 outline-none font-mono"
+                        className="w-full min-w-0 flex-1 bg-transparent py-2.5 text-sm text-foreground/90 outline-none font-mono"
                       />
                       <span className="text-xs text-white/30 font-mono ml-2 shrink-0">{item.uom || 'MT'}</span>
                     </div>
@@ -224,7 +224,7 @@ export function LineItemsTable({
                       <input 
                         type="number" min="0" step="0.01"
                         value={item.unitPrice} onChange={e => updateItem(i, 'unitPrice', parseFloat(e.target.value) || 0)}
-                        className="w-full min-w-0 flex-1 bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white/90 outline-none focus:border-blue-500/50 transition-all font-mono"
+                        className="w-full min-w-0 flex-1 bg-muted border border-border rounded-xl px-3 py-2.5 text-sm text-foreground/90 outline-none focus:border-blue-500/50 transition-all font-mono"
                       />
                     </div>
                   </td>
@@ -232,7 +232,7 @@ export function LineItemsTable({
                     <select
                       value={item.taxId || ''}
                       onChange={e => updateItem(i, 'taxId', e.target.value)}
-                      className="w-full bg-white/5 border border-white/10 rounded-xl px-2 py-2.5 text-xs text-white/90 outline-none focus:border-blue-500/50 transition-all font-mono"
+                      className="w-full bg-muted border border-border rounded-xl px-2 py-2.5 text-xs text-foreground/90 outline-none focus:border-blue-500/50 transition-all font-mono"
                     >
                       <option value="">No Tax</option>
                       {taxes?.map(t => (
@@ -240,10 +240,10 @@ export function LineItemsTable({
                       ))}
                     </select>
                     {item.taxAmount > 0 && (
-                      <div className="text-[10px] text-white/40 mt-1 text-right">{formatCurrency(item.taxAmount)}</div>
+                      <div className="text-[10px] text-muted-foreground/40 mt-1 text-right">{formatCurrency(item.taxAmount)}</div>
                     )}
                   </td>
-                  <td className="py-3 px-6 text-sm text-white/70 font-mono">
+                  <td className="py-3 px-6 text-sm text-muted-foreground font-mono">
                     {formatCurrency(item.total || item.totalPrice)}
                   </td>
                   <td className="py-3 px-6 text-right">
@@ -266,14 +266,14 @@ export function LineItemsTable({
       </div>
 
       <div className="flex justify-end mt-8">
-        <div className="glass p-6 rounded-3xl border border-white/5 space-y-4 w-full md:w-1/2 lg:w-96">
-          <h3 className="text-[10px] font-mono uppercase tracking-widest text-white/50 flex items-center gap-2 mb-4">
+        <div className="glass p-6 rounded-3xl border border-border space-y-4 w-full md:w-1/2 lg:w-96">
+          <h3 className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground/50 flex items-center gap-2 mb-4">
             <TrendingUp size={12} /> {isPurchaseOrder ? 'Procurement Engine' : 'Pricing Engine'}
           </h3>
           
           {!isPurchaseOrder && (
             <div className="space-y-1">
-              <label className="text-[10px] font-mono uppercase tracking-widest text-white/40">Apply Markup Margin (%)</label>
+              <label className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground/40">Apply Markup Margin (%)</label>
               <div className="flex items-center gap-3">
                 <input 
                   type="range" min="0" max="60" step="1"
@@ -286,30 +286,30 @@ export function LineItemsTable({
             </div>
           )}
 
-          <div className="pt-4 mt-4 border-t border-white/5 space-y-2">
+          <div className="pt-4 mt-4 border-t border-border space-y-2">
             {!isPurchaseOrder && (
               <>
                 <div className="flex justify-between text-xs">
-                  <span className="text-white/40">Cost of Goods:</span>
-                  <span className="font-mono text-white/70">{formatCurrency(costOfGoods)}</span>
+                  <span className="text-muted-foreground/40">Cost of Goods:</span>
+                  <span className="font-mono text-muted-foreground">{formatCurrency(costOfGoods)}</span>
                 </div>
                 <div className="flex justify-between text-xs">
                   <span className="text-emerald-400/70">Est. Gross Profit:</span>
                   <span className="font-mono text-emerald-400">+{formatCurrency(grossProfit)}</span>
                 </div>
                 <div className="flex justify-between text-xs">
-                  <span className="text-white/40">Untaxed Amount:</span>
-                  <span className="font-mono text-white/70">{formatCurrency(untaxedAmount)}</span>
+                  <span className="text-muted-foreground/40">Untaxed Amount:</span>
+                  <span className="font-mono text-muted-foreground">{formatCurrency(untaxedAmount)}</span>
                 </div>
                 <div className="flex justify-between text-xs">
-                  <span className="text-white/40">Total Tax:</span>
-                  <span className="font-mono text-white/70">{formatCurrency(totalTaxAmount)}</span>
+                  <span className="text-muted-foreground/40">Total Tax:</span>
+                  <span className="font-mono text-muted-foreground">{formatCurrency(totalTaxAmount)}</span>
                 </div>
               </>
             )}
-            <div className="flex justify-between items-center text-lg pt-2 mt-2 border-t border-white/5">
-              <span className="text-white/70 font-bold whitespace-nowrap mr-4">{isPurchaseOrder ? 'Total Procurement Cost:' : 'Total (Gross):'}</span>
-              <span className="font-mono text-white font-bold">{formatCurrency(totalValue)}</span>
+            <div className="flex justify-between items-center text-lg pt-2 mt-2 border-t border-border">
+              <span className="text-muted-foreground font-bold whitespace-nowrap mr-4">{isPurchaseOrder ? 'Total Procurement Cost:' : 'Total (Gross):'}</span>
+              <span className="font-mono text-foreground font-bold">{formatCurrency(totalValue)}</span>
             </div>
           </div>
         </div>

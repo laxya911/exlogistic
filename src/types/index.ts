@@ -246,11 +246,14 @@ export interface Forwarder extends BaseEntity {
   website?: string;
   taxId?: string;
 
-  // Shipping details
-  rating: number; // 1.0 to 5.0
-  preferredPorts: string[]; // Port IDs from ports index
+  // Performance & Compliance
+  performanceRating: number; // 1.0 to 5.0
+  averageLeadTime: number; // days
+  certifications: string[];
   
   // Relationships
+  paymentTerms: string;
+  preferredPorts: string[]; // Port IDs from ports index
   documents: DocumentRef[];
   timeline: ForwarderTimelineEvent[];
 }
