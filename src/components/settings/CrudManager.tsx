@@ -126,7 +126,7 @@ export function CrudManager({ title, endpoint, icon: Icon, fields }: CrudManager
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {isAdding && (
-              <div className="p-4 rounded-xl bg-black/20 border border-emerald-500/30 space-y-3">
+              <div className="p-4 rounded-xl bg-(--background) shadow-inner border border-emerald-500/30 space-y-3">
                 {fields.map(f => (
                   <div key={f.key}>
                     <label className="text-[10px] font-mono text-muted-foreground/50 uppercase">{f.label}</label>
@@ -141,7 +141,7 @@ export function CrudManager({ title, endpoint, icon: Icon, fields }: CrudManager
                       <select
                         value={newItem[f.key] || ''}
                         onChange={e => setNewItem({...newItem, [f.key]: e.target.value})}
-                        className="w-full bg-background border border-border rounded-lg py-1.5 px-3 text-sm focus:outline-none focus:border-emerald-500/50 mt-1"
+                        className="w-full bg-(--surface-hover) border border-(--border) rounded-lg py-1.5 px-3 text-sm text-(--text-primary) focus:outline-none focus:border-emerald-500/50 mt-1"
                       >
                         <option value="">Select...</option>
                         {f.options?.map(opt => (
@@ -153,7 +153,7 @@ export function CrudManager({ title, endpoint, icon: Icon, fields }: CrudManager
                         type={f.type === 'number' ? 'number' : 'text'}
                         value={newItem[f.key] || ''}
                         onChange={e => setNewItem({...newItem, [f.key]: f.type === 'number' ? Number(e.target.value) : e.target.value})}
-                        className="w-full bg-muted border border-border rounded-lg py-1.5 px-3 text-sm focus:outline-none focus:border-emerald-500/50 mt-1"
+                        className="w-full bg-(--surface-hover) border border-(--border) rounded-lg py-1.5 px-3 text-sm text-(--text-primary) focus:outline-none focus:border-emerald-500/50 mt-1"
                         placeholder={`Enter ${f.label.toLowerCase()}`}
                       />
                     )}
@@ -171,7 +171,7 @@ export function CrudManager({ title, endpoint, icon: Icon, fields }: CrudManager
             )}
 
             {items.map(item => (
-              <div key={item.id} className="p-4 rounded-xl bg-white/2 border border-border hover:bg-muted transition-colors group relative">
+              <div key={item.id} className="p-4 rounded-xl bg-(--background) shadow-sm border border-(--border) hover:bg-(--surface-hover) transition-colors group relative">
                 
                 {editingId === item.id ? (
                   <div className="space-y-3">
@@ -189,7 +189,7 @@ export function CrudManager({ title, endpoint, icon: Icon, fields }: CrudManager
                           <select
                             value={editItem[f.key] || ''}
                             onChange={e => setEditItem({...editItem, [f.key]: e.target.value})}
-                            className="w-full bg-muted border border-border rounded-lg py-1.5 px-3 text-sm focus:outline-none focus:border-blue-500/50 mt-1 appearance-none"
+                            className="w-full bg-(--surface-hover) border border-(--border) rounded-lg py-1.5 px-3 text-sm text-(--text-primary) focus:outline-none focus:border-blue-500/50 mt-1 appearance-none"
                           >
                             <option value="">Select...</option>
                             {f.options?.map(opt => (
@@ -201,7 +201,7 @@ export function CrudManager({ title, endpoint, icon: Icon, fields }: CrudManager
                             type={f.type === 'number' ? 'number' : 'text'}
                             value={editItem[f.key] || ''}
                             onChange={e => setEditItem({...editItem, [f.key]: f.type === 'number' ? Number(e.target.value) : e.target.value})}
-                            className="w-full bg-muted border border-border rounded-lg py-1.5 px-3 text-sm focus:outline-none focus:border-blue-500/50 mt-1"
+                            className="w-full bg-(--surface-hover) border border-(--border) rounded-lg py-1.5 px-3 text-sm text-(--text-primary) focus:outline-none focus:border-blue-500/50 mt-1"
                             placeholder={`Enter ${f.label.toLowerCase()}`}
                           />
                         )}
@@ -221,14 +221,14 @@ export function CrudManager({ title, endpoint, icon: Icon, fields }: CrudManager
                     <div className="absolute top-3 right-3 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                       <button 
                         onClick={() => { setEditingId(item.id); setEditItem(item); }}
-                        className="text-white/20 hover:text-blue-400 transition-colors"
+                        className="text-muted-foreground/40 hover:text-blue-500 transition-colors"
                         title="Edit"
                       >
                         <Edit2 size={14} />
                       </button>
                       <button 
                         onClick={() => handleDelete(item.id)}
-                        className="text-white/20 hover:text-red-400 transition-colors"
+                        className="text-muted-foreground/40 hover:text-red-500 transition-colors"
                         title="Delete"
                       >
                         <Trash2 size={14} />
@@ -237,7 +237,7 @@ export function CrudManager({ title, endpoint, icon: Icon, fields }: CrudManager
                     <div className="space-y-1">
                       {fields.map((f, i) => (
                         <div key={f.key} className={i === 0 ? "font-medium text-blue-400" : "text-sm text-muted-foreground/60"}>
-                          {i !== 0 && <span className="text-[10px] uppercase font-mono mr-2 text-white/30">{f.label}:</span>}
+                          {i !== 0 && <span className="text-[10px] uppercase font-mono mr-2 text-muted-foreground/50">{f.label}:</span>}
                           {f.type === 'boolean' 
                             ? (item[f.key] ? 'Yes' : 'No')
                             : f.type === 'select'

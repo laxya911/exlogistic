@@ -103,7 +103,12 @@ export class DashboardService {
       recentQuotations: quotations.slice(0, 5),
       recentShipments: shipments.slice(0, 5),
       pendingTasks: tasks.filter(t => !t.isCompleted).slice(0, 5),
-      auditLogs: allLogs.slice(0, 5), // Keep all logs to show recent system activity regardless of TF
+      auditLogs: allLogs.slice(0, 5).map((log: any) => ({
+        createdAt: log.timestamp || log.createdAt,
+        userName: log.user?.name || log.userName || 'System',
+        action: log.action || 'UPDATE',
+        details: log.details || `${log.entityType} record was ${log.action ? log.action.toLowerCase() : 'modified'}`
+      })),
       pipeline,
       charts: {
         revenueTrend: monthlyData,

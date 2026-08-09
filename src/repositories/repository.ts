@@ -63,7 +63,10 @@ export const quotationRepository = useMock ? new MockRepository(db.quotations) :
 export const salesOrderRepository = useMock ? new MockRepository(db.salesOrders) : new PrismaRepository('salesOrder', { items: { include: { variant: { include: { product: true } } } } });
 export const purchaseOrderRepository = useMock ? new MockRepository(db.purchaseOrders) : new PrismaRepository('purchaseOrder', { items: { include: { variant: { include: { product: true } } } } });
 export const shipmentRepository = useMock ? new MockRepository(db.shipments) : new PrismaRepository('shipment', { items: { include: { variant: { include: { product: true } } } } });
-export const auditLogRepository = useMock ? new MockRepository(db.auditLogs) : new PrismaRepository('auditLog');
+export const auditLogRepository = useMock ? new MockRepository(db.auditLogs) : new PrismaRepository('auditLog', { user: true });
+export const userRepository = new PrismaRepository('user', { department: true, roles: true });
+export const roleRepository = new PrismaRepository('role', { permissions: true });
+export const departmentRepository = new PrismaRepository('department');
 
 // Models not currently in Prisma schema
 export const taskRepository = new MockRepository(db.tasks);

@@ -4,7 +4,19 @@ import { SystemPreference } from '@generated/client';
 export const preferenceRepository = {
   get: async () => {
     // Assuming single-tenant ERP for now
-    return prisma.systemPreference.findFirst();
+    let prefs = await prisma.systemPreference.findFirst();
+    if (!prefs) {
+      prefs = await prisma.systemPreference.create({
+        data: {
+          theme: 'dark',
+          quotePrefix: '2025-',
+          soPrefix: 'SO-',
+          poPrefix: 'PO-',
+          shpPrefix: 'SHP-'
+        }
+      });
+    }
+    return prefs;
   },
 
   update: async (id: string, data: Partial<SystemPreference>) => {

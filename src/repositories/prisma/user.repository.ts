@@ -9,6 +9,7 @@ export const userRepository = {
         department: true,
         team: true,
         position: true,
+        roles: true,
       },
       orderBy: { name: 'asc' },
     });
@@ -21,7 +22,17 @@ export const userRepository = {
         department: true,
         team: true,
         position: true,
+        roles: true,
       },
+    });
+  },
+
+  findByEmail: async (email: string) => {
+    return prisma.user.findUnique({
+      where: { email },
+      include: {
+        roles: true,
+      }
     });
   },
 
@@ -36,6 +47,10 @@ export const userRepository = {
         ...data,
         password,
       },
+      include: {
+        department: true,
+        roles: true,
+      }
     });
   },
 
@@ -51,6 +66,10 @@ export const userRepository = {
     return prisma.user.update({
       where: { id },
       data,
+      include: {
+        department: true,
+        roles: true,
+      }
     });
   },
 

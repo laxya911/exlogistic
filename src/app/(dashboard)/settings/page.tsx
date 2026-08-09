@@ -32,6 +32,7 @@ import { CrudManager } from '@/components/settings/CrudManager';
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState('organization');
   const [isSaving, setIsSaving] = useState(false);
+  const [initialState, setInitialState] = useState<any>(null);
 
   // Form States (Simulated)
   const [orgData, setOrgData] = useState({
@@ -79,55 +80,81 @@ export default function SettingsPage() {
           fetch('/api/preferences')
         ]);
         
+        let fetchedOrgData = orgData;
+        let fetchedPrefs = { sysPrefs, prefixes, rules, notifications };
+
         if (compRes.ok) {
           const comp = await compRes.json();
           if (comp) {
-            setOrgData({
+            fetchedOrgData = {
               id: comp.id,
               name: comp.name || '',
               taxId: comp.taxId || '',
               address: (comp.branches && comp.branches[0]?.address) || '',
               timezone: comp.timezone || '',
               currency: comp.currency || ''
-            });
+            };
+            setOrgData(fetchedOrgData);
           }
         }
         
         if (prefRes.ok) {
           const pref = await prefRes.json();
           if (pref) {
-            setSysPrefs({
+            fetchedPrefs.sysPrefs = {
               id: pref.id,
               theme: pref.theme || 'dark',
               compactMode: pref.compactMode || false,
               dateFormat: pref.dateFormat || 'YYYY-MM-DD'
-            });
-            setPrefixes({
+            };
+            setSysPrefs(fetchedPrefs.sysPrefs);
+            
+            fetchedPrefs.prefixes = {
               quote: pref.quotePrefix || '',
               so: pref.soPrefix || '',
               po: pref.poPrefix || '',
               shp: pref.shpPrefix || ''
-            });
-            setRules({
+            };
+            setPrefixes(fetchedPrefs.prefixes);
+            
+            fetchedPrefs.rules = {
               quoteApproval: pref.quoteApproval ?? true,
               autoPoGen: pref.autoPoGen ?? true,
               marginAlert: pref.marginAlert ?? false,
               requireInsurance: pref.requireInsurance ?? true
-            });
-            setNotifications({
+            };
+            setRules(fetchedPrefs.rules);
+            fetchedPrefs.notifications = {
               emailPO: pref.emailPO ?? true,
               emailSO: pref.emailSO ?? true,
               pushShipment: pref.pushShipment ?? true,
               emailDailyReport: pref.emailDailyReport ?? false
-            });
+            };
+            setNotifications(fetchedPrefs.notifications);
           }
         }
+
+        setInitialState({
+          orgData: fetchedOrgData,
+          sysPrefs: fetchedPrefs.sysPrefs,
+          prefixes: fetchedPrefs.prefixes,
+          rules: fetchedPrefs.rules,
+          notifications: fetchedPrefs.notifications
+        });
       } catch (error) {
         console.error('Error fetching settings:', error);
       }
     };
     fetchSettings();
   }, []);
+
+  const isDirty = initialState ? JSON.stringify({
+    orgData,
+    sysPrefs,
+    prefixes,
+    rules,
+    notifications
+  }) !== JSON.stringify(initialState) : false;
 
   const tabs = [
     { id: 'organization', label: 'Organization', icon: Building2 },
@@ -148,6 +175,7 @@ export default function SettingsPage() {
         taxId: orgData.taxId,
         timezone: orgData.timezone,
         currency: orgData.currency,
+        branches: [{ name: 'HQ', address: orgData.address }]
       };
       
       const prefPayload = {
@@ -181,6 +209,13 @@ export default function SettingsPage() {
           body: JSON.stringify(prefPayload)
         })
       ]);
+      setInitialState({
+        orgData,
+        sysPrefs,
+        prefixes,
+        rules,
+        notifications
+      });
       toast.success('Configuration synchronized to core matrix');
     } catch (error) {
       toast.error('Failed to synchronize configuration');
@@ -214,11 +249,11 @@ export default function SettingsPage() {
           <div className="pt-8">
             <button 
               onClick={handleSave}
-              disabled={isSaving}
-              className="w-full flex items-center justify-center gap-2 px-6 py-4 rounded-2xl text-[10px] font-mono font-bold uppercase tracking-widest transition-all bg-emerald-500 text-black hover:bg-emerald-400 cursor-pointer border-none disabled:opacity-50"
+              disabled={isSaving || !isDirty}
+              className="w-full flex items-center justify-center gap-2 px-6 py-4 rounded-2xl text-[10px] font-mono font-bold uppercase tracking-widest transition-all bg-emerald-500 text-black hover:bg-emerald-400 cursor-pointer border-none disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isSaving ? <span className="animate-spin text-lg">⟳</span> : <Save size={16} />}
-              {isSaving ? 'Syncing...' : 'Commit Changes'}
+              {isSaving ? 'Syncing...' : (isDirty ? 'Commit Changes' : 'Saved')}
             </button>
           </div>
         </div>
@@ -410,33 +445,7 @@ export default function SettingsPage() {
                 </div>
               )}
 
-              {/* Financial & Taxes Tab */}
-              {activeTab === 'financials' && (
-                <div className="space-y-6">
-                  <ReferenceManager 
-                    title="Currencies"
-                    type="currencies"
-                    icon={Coins}
-                    fields={[
-                      { key: 'code', label: 'Code', type: 'text' },
-                      { key: 'symbol', label: 'Symbol', type: 'text' },
-                      { key: 'exchangeRate', label: 'Exchange Rate', type: 'number' },
-                      { key: 'isDefault', label: 'Is Default', type: 'boolean' },
-                    ]}
-                  />
-
-                  <ReferenceManager 
-                    title="Tax Settings"
-                    type="taxes"
-                    icon={Receipt}
-                    fields={[
-                      { key: 'name', label: 'Name', type: 'text' },
-                      { key: 'ratePercentage', label: 'Rate %', type: 'number' },
-                      { key: 'includedInPrice', label: 'Included In Price', type: 'boolean' },
-                    ]}
-                  />
-                </div>
-              )}
+              {/* Removed duplicated Financial & Taxes Tab */}
 
               {/* System Prefs Tab */}
               {activeTab === 'system' && (
@@ -590,7 +599,7 @@ export default function SettingsPage() {
                         </div>
                         <p className="text-xs text-muted-foreground/60 mt-1">Department-level manager with elevated privileges.</p>
                       </div>
-                      <button className="text-xs text-blue-400 hover:text-blue-300 font-medium">Edit Permissions</button>
+                      <button onClick={() => toast.info('Advanced RBAC mapping is managed in the Security Module')} className="text-xs text-blue-400 hover:text-blue-300 font-medium cursor-pointer">Edit Permissions</button>
                     </div>
 
                     <div className="p-6 rounded-2xl bg-white/2 border border-border flex items-center justify-between">
@@ -601,7 +610,7 @@ export default function SettingsPage() {
                         </div>
                         <p className="text-xs text-muted-foreground/60 mt-1">General operational staff with standard access.</p>
                       </div>
-                      <button className="text-xs text-blue-400 hover:text-blue-300 font-medium">Edit Permissions</button>
+                      <button onClick={() => toast.info('Advanced RBAC mapping is managed in the Security Module')} className="text-xs text-blue-400 hover:text-blue-300 font-medium cursor-pointer">Edit Permissions</button>
                     </div>
                   </div>
                 </div>
@@ -617,21 +626,21 @@ export default function SettingsPage() {
                     fields={[
                       { key: 'name', label: 'Tax Name', type: 'text' },
                       { key: 'ratePercentage', label: 'Rate (%)', type: 'number' },
+                      { key: 'includedInPrice', label: 'Included In Price', type: 'boolean' },
                       { key: 'type', label: 'Tax Type', type: 'select', options: [
                         { label: 'National', value: 'NATIONAL' },
                         { label: 'International', value: 'INTERNATIONAL' }
                       ]},
                     ]}
                   />
-                  <ReferenceManager 
+                  <CrudManager 
                     title="Currencies"
-                    type="currencies"
+                    endpoint="/api/reference/currencies"
                     icon={Coins}
                     fields={[
                       { key: 'code', label: 'Code (e.g. USD)', type: 'text' },
                       { key: 'symbol', label: 'Symbol (e.g. $)', type: 'text' },
-                      { key: 'exchangeRate', label: 'Exchange Rate to Base', type: 'number' },
-                      { key: 'isDefault', label: 'Base Currency', type: 'boolean' }
+                      { key: 'exchangeRate', label: 'Exchange Rate to Base', type: 'number' }
                     ]}
                   />
                 </div>

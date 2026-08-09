@@ -9,7 +9,10 @@ import {
   User,
   Hexagon,
   Sun,
-  Moon
+  Moon,
+  LogOut,
+  Settings,
+  Shield
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
@@ -98,6 +101,9 @@ export function MasterPage({ children }: MasterPageProps) {
   const { title: pageTitle, subtitle } = usePageHeader();
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
+  
+  // Avatar Dropdown State
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -105,9 +111,14 @@ export function MasterPage({ children }: MasterPageProps) {
 
   const isLauncher = pathname === '/launcher';
 
+  const isAdmin = (session?.user as any)?.isAdmin;
+  const accessibleModules = useMemo(() => {
+    return isAdmin ? MODULES : MODULES.filter(m => m.id !== 'settings');
+  }, [isAdmin]);
+
   const activeModule = useMemo(() => {
-    return MODULES.find(m => m.triggerPaths.some(p => pathname.startsWith(p))) || MODULES[0];
-  }, [pathname]);
+    return accessibleModules.find(m => m.triggerPaths.some(p => pathname.startsWith(p))) || accessibleModules[0];
+  }, [pathname, accessibleModules]);
 
   return (
     <div className="h-screen w-full bg-(--background) text-(--text-primary) flex flex-col font-sans overflow-hidden selection:bg-blue-500/30">
@@ -161,10 +172,57 @@ export function MasterPage({ children }: MasterPageProps) {
             )}
           </button>
           <NotificationBell />
-          <div className="w-8 h-8 rounded-full bg-linear-to-tr from-blue-500 to-indigo-600 p-0.5 shadow-lg relative cursor-pointer" onClick={() => signOut({ callbackUrl: '/login' })}>
-            <div className="w-full h-full bg-(--background) rounded-full flex items-center justify-center overflow-hidden">
-              <User size={14} className="text-(--text-secondary)" />
+          {/* Avatar Dropdown */}
+          <div className="relative">
+            <div 
+              className="w-8 h-8 rounded-full bg-linear-to-tr from-blue-500 to-indigo-600 p-0.5 shadow-lg relative cursor-pointer" 
+              onClick={() => setIsProfileOpen(!isProfileOpen)}
+            >
+              <div className="w-full h-full bg-(--background) rounded-full flex items-center justify-center overflow-hidden text-[10px] font-bold font-mono text-(--text-primary)">
+                {session?.user?.name ? (
+                  session.user.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()
+                ) : (
+                  <User size={14} className="text-(--text-secondary)" />
+                )}
+              </div>
             </div>
+
+            <AnimatePresence>
+              {isProfileOpen && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setIsProfileOpen(false)} />
+                  <motion.div 
+                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                    className="absolute right-0 top-full mt-3 w-56 glass border border-(--border) rounded-2xl shadow-xl z-50 overflow-hidden"
+                  >
+                    <div className="p-4 border-b border-(--border) bg-white/5">
+                      <p className="text-sm font-sans font-bold text-(--text-primary) truncate">{session?.user?.name || 'User'}</p>
+                      <p className="text-[10px] font-mono text-(--text-secondary) truncate">{session?.user?.email}</p>
+                    </div>
+                    <div className="p-2 space-y-1">
+                      <Link href="/profile" onClick={() => setIsProfileOpen(false)} className="flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-(--surface-hover) text-xs font-mono text-(--text-secondary) hover:text-(--text-primary) transition-colors cursor-pointer">
+                        <Settings size={14} /> Profile Settings
+                      </Link>
+                      {isAdmin && (
+                        <Link href="/settings/users" onClick={() => setIsProfileOpen(false)} className="flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-(--surface-hover) text-xs font-mono text-(--text-secondary) hover:text-(--text-primary) transition-colors cursor-pointer">
+                          <Shield size={14} /> Administration
+                        </Link>
+                      )}
+                    </div>
+                    <div className="p-2 border-t border-(--border)">
+                      <button 
+                        onClick={() => signOut({ callbackUrl: '/login' })}
+                        className="w-full flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-rose-500/10 text-xs font-mono text-rose-400 transition-colors border-none cursor-pointer bg-transparent"
+                      >
+                        <LogOut size={14} /> Log Out
+                      </button>
+                    </div>
+                  </motion.div>
+                </>
+              )}
+            </AnimatePresence>
           </div>
         </div>
       </header>
@@ -175,27 +233,24 @@ export function MasterPage({ children }: MasterPageProps) {
         <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-indigo-600/5 blur-[120px] rounded-full pointer-events-none"></div>
         
         <div className="flex-1 overflow-y-auto custom-scrollbar p-(--page-padding) relative z-0 min-h-0">
-          <AnimatePresence mode="wait">
-              <motion.div
-                key={pathname}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                transition={{ duration: 0.2 }}
-                className="max-w-360 mx-auto min-h-full"
-              >
-                {!isLauncher && pageTitle && (
-                  <div className="mb-8 flex justify-between items-end">
-                    <div>
-                      <p className="text-[10px] font-mono text-blue-500 uppercase tracking-[0.3em] mb-2">{activeModule.label} / {pageTitle}</p>
-                      <h2 className="text-3xl font-display font-medium tracking-tight mb-1">{pageTitle}</h2>
-                      {subtitle && <p className="text-sm text-(--text-secondary)">{subtitle}</p>}
-                    </div>
-                  </div>
-                )}
-                {children}
-              </motion.div>
-          </AnimatePresence>
+          <motion.div
+            key={pathname}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.2 }}
+            className="max-w-360 mx-auto min-h-full"
+          >
+            {!isLauncher && pageTitle && (
+              <div className="mb-8 flex justify-between items-end">
+                <div>
+                  <p className="text-[10px] font-mono text-blue-500 uppercase tracking-[0.3em] mb-2">{activeModule.label} / {pageTitle}</p>
+                  <h2 className="text-3xl font-display font-medium tracking-tight mb-1">{pageTitle}</h2>
+                  {subtitle && <p className="text-sm text-(--text-secondary)">{subtitle}</p>}
+                </div>
+              </div>
+            )}
+            {children}
+          </motion.div>
         </div>
       </main>
     </div>

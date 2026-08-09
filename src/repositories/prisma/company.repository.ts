@@ -7,7 +7,17 @@ import { authOptions } from '@/lib/auth';
 export const companyRepository = {
   get: async () => {
     // Assuming single-tenant ERP for now
-    return prisma.company.findFirst();
+    let company = await prisma.company.findFirst();
+    if (!company) {
+      company = await prisma.company.create({
+        data: {
+          name: 'ExLogis Default',
+          currency: 'USD',
+          timezone: 'UTC',
+        }
+      });
+    }
+    return company;
   },
 
   update: async (id: string, data: Partial<Company>) => {

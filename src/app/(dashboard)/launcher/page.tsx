@@ -2,6 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
+import { useSession } from 'next-auth/react';
 import { motion } from 'motion/react';
 import { 
   LayoutDashboard,
@@ -18,6 +19,8 @@ import { usePageHeader } from '@/components/layout/page-context';
 
 export default function LauncherPage() {
   const { setTitle, setSubtitle } = usePageHeader();
+  const { data: session } = useSession();
+  const isAdmin = (session?.user as any)?.isAdmin;
 
   React.useEffect(() => {
     setTitle('ExLogis Global');
@@ -32,8 +35,11 @@ export default function LauncherPage() {
     { name: 'Logistics', icon: Ship, href: '/shipments', color: 'from-cyan-400 to-cyan-600', shadow: 'shadow-cyan-500/20' },
     { name: 'CRM', icon: Users, href: '/customers', color: 'from-amber-400 to-orange-600', shadow: 'shadow-orange-500/20' },
     { name: 'Documents', icon: FileText, href: '/documents', color: 'from-slate-400 to-slate-600', shadow: 'shadow-slate-500/20' },
-    { name: 'Settings', icon: Settings, href: '/settings', color: 'from-zinc-500 to-zinc-700', shadow: 'shadow-zinc-500/20' },
   ];
+
+  if (isAdmin) {
+    apps.push({ name: 'Settings', icon: Settings, href: '/settings', color: 'from-zinc-500 to-zinc-700', shadow: 'shadow-zinc-500/20' });
+  }
 
   return (
     <div className="flex flex-col items-center justify-center min-h-[60vh]">

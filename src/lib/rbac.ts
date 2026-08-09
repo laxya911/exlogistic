@@ -3,9 +3,6 @@ import { authOptions } from './auth';
 import { prisma } from '@/repositories/prisma.client';
 
 export async function hasPermission(requiredPermission: string): Promise<boolean> {
-  // Temporary bypass during development since the Roles UI is not yet fully implemented
-  if (process.env.NODE_ENV !== 'production') return true;
-
   const session = await getServerSession(authOptions);
   
   if (!session?.user?.email) {
@@ -29,8 +26,8 @@ export async function hasPermission(requiredPermission: string): Promise<boolean
 
   // Check if any of the user's roles have the required permission
   for (const role of user.roles) {
-    // Super Admin has all permissions automatically by convention (or by explicitly linking them)
-    if (role.name === 'Super Admin') return true;
+    // Super Admin and Admin have all permissions automatically by convention
+    if (role.name === 'SUPERADMIN' || role.name === 'ADMIN') return true;
     
     for (const permission of role.permissions) {
       if (permission.action === requiredPermission || permission.action === '*') {
