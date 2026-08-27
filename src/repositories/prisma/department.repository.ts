@@ -1,5 +1,5 @@
 import { prisma } from '../prisma.client';
-import { Department } from '@prisma/client';
+import { Department } from '@generated/client';
 
 export const departmentRepository = {
   findAll: async () => {

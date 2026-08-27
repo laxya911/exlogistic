@@ -36,6 +36,10 @@ export function useCustomers() {
   // Undo stack
   const [undoStack, setUndoStack] = useState<Customer[]>([]);
 
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 15;
+
   useEffect(() => {
     fetchCustomers();
   }, []);
@@ -84,7 +88,8 @@ export function useCustomers() {
       if (!res.ok) throw new Error(data.error || 'Failed to update client');
 
       toast.success(`Client ${data.name} profile updated`);
-      await fetchCustomers();
+      setCustomers(prev => prev.map(c => c.id === id ? data : c));
+      fetchCustomers();
       return { success: true, data };
     } catch (e: any) {
       toast.error(e.message || 'Update failed');
@@ -103,7 +108,8 @@ export function useCustomers() {
       if (!res.ok) throw new Error(data.error || 'Archive failed');
 
       toast.success(`Client ${data.name} account archived`);
-      await fetchCustomers();
+      setCustomers(prev => prev.map(c => c.id === id ? data : c));
+      fetchCustomers();
     } catch (e: any) {
       toast.error(e.message);
     }
@@ -120,7 +126,8 @@ export function useCustomers() {
       if (!res.ok) throw new Error(data.error || 'Restore failed');
 
       toast.success(`Client ${data.name} account restored`);
-      await fetchCustomers();
+      setCustomers(prev => prev.map(c => c.id === id ? data : c));
+      fetchCustomers();
     } catch (e: any) {
       toast.error(e.message);
     }
@@ -327,6 +334,18 @@ export function useCustomers() {
     return result;
   }, [customers, searchQuery, searchField, filters, sortBy, sortOrder]);
 
+  // Reset to page 1 on filter/search change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, searchField, filters, sortBy, sortOrder]);
+
+  const paginatedCustomers = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return processedCustomers.slice(start, start + pageSize);
+  }, [processedCustomers, currentPage]);
+
+  const totalPages = Math.ceil(processedCustomers.length / pageSize);
+
   const filterOptions = useMemo(() => {
     const countries = Array.from(new Set(customers.map(c => c.country)));
     const segments = Array.from(new Set(customers.map(c => c.segment)));
@@ -347,9 +366,13 @@ export function useCustomers() {
   };
 
   return {
-    customers: processedCustomers,
+    customers: paginatedCustomers,
+    allProcessedCustomers: processedCustomers,
     rawCustomers: customers,
     loading,
+    currentPage,
+    setCurrentPage,
+    totalPages,
     searchQuery,
     setSearchQuery,
     searchField,

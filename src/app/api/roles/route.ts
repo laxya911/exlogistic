@@ -32,3 +32,22 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Failed to create role' }, { status: 500 });
   }
 }
+
+export async function PUT(req: Request) {
+  try {
+    const isAllowed = await hasPermission('roles:manage');
+    if (!isAllowed) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
+    const data = await req.json();
+    const { id, ...updateData } = data;
+    if (!id) return NextResponse.json({ error: 'Missing ID' }, { status: 400 });
+
+    const record = await roleRepository.update(id, updateData);
+    return NextResponse.json(record);
+  } catch (error) {
+    return NextResponse.json({ error: 'Failed to update role' }, { status: 500 });
+  }
+}
+

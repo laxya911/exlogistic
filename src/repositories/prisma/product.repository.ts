@@ -27,13 +27,16 @@ export class PrismaProductRepository {
       brand: p.brand?.name || '',
       
       category: p.categories?.[0]?.category?.name || 'Uncategorized',
+      categories: p.categories || [],
       
       variants: p.variants || [],
       
       // Backward compatibility mapped from default variant
       sku: defaultVariant?.sku || '',
-      purchasePrice: defaultVariant?.purchasePrice || 0,
-      sellingPrice: defaultVariant?.sellingPrice || 0,
+      basePurchasePrice: p.basePurchasePrice || 0,
+      baseSellingPrice: p.baseSellingPrice || 0,
+      purchasePrice: defaultVariant?.purchasePrice || p.basePurchasePrice || 0,
+      sellingPrice: defaultVariant?.sellingPrice || p.baseSellingPrice || 0,
       currency: defaultVariant?.currency || 'USD',
       grossWeight: defaultVariant?.grossWeight || 0,
       netWeight: defaultVariant?.netWeight || 0,
@@ -45,10 +48,11 @@ export class PrismaProductRepository {
       supplierId: supplier?.supplierId || '',
       moq: supplier?.moq || 0,
       leadTime: supplier?.leadTime || 0,
-      unitsPerCarton: 1, // Add mapped defaults
-      containerLoadingCapacity: 800,
-      shelfLife: '12 Months',
-      storageConditions: 'Standard',
+      unitsPerCarton: p.unitsPerCarton ?? 1,
+      containerLoadingCapacity: p.containerLoadingCapacity ?? 800,
+      shelfLife: p.shelfLife || '12 Months',
+      storageConditions: p.storageConditions || 'Standard',
+      japanImportNotes: p.japanImportNotes || '',
       
       images: p.defaultImage ? [p.defaultImage] : (defaultVariant?.images?.map((i:any) => i.url) || []),
       documents: p.documents || [],
@@ -58,7 +62,9 @@ export class PrismaProductRepository {
       purchaseHistory: [],
       sellingHistory: [],
       inventorySummary: [],
-      pricingHistory: []
+      pricingHistory: [],
+      totalOnHand: p.variants?.reduce((sum: number, v: any) => sum + (v.inventory?.reduce((invSum: number, inv: any) => invSum + (inv.quantityOnHand || 0), 0) || 0), 0) || 0,
+      totalAllocated: p.variants?.reduce((sum: number, v: any) => sum + (v.inventory?.reduce((invSum: number, inv: any) => invSum + (inv.quantityAllocated || 0), 0) || 0), 0) || 0,
     } as Product;
   }
 
@@ -68,7 +74,7 @@ export class PrismaProductRepository {
       include: {
         brand: true,
         categories: { include: { category: true } },
-        variants: { include: { images: true } },
+        variants: { include: { images: true, inventory: true, attributes: { include: { attributeValue: { include: { attribute: true } } } } } },
         suppliers: true,
         documents: true,
         certifications: true,
@@ -84,7 +90,7 @@ export class PrismaProductRepository {
       include: {
         brand: true,
         categories: { include: { category: true } },
-        variants: { include: { images: true } },
+        variants: { include: { images: true, inventory: true, attributes: { include: { attributeValue: { include: { attribute: true } } } } } },
         suppliers: true,
         documents: true,
         certifications: true,
@@ -93,11 +99,91 @@ export class PrismaProductRepository {
     return p ? this.mapToFrontend(p) : null;
   }
 
-  async create(data: Partial<Product>): Promise<Product> {
-    // For creation, we assume the frontend sends a mix of flat data (for default variant) 
-    // and parent data. We need to normalize it for Prisma.
-    
-    // In a real robust implementation, we would extract variant specific data
+  
+  async create(data: any): Promise<Product> {
+    // 1. Process attributes & values if provided
+    const attributeMapping: Record<string, string> = {}; // key: "Color:Red", value: attributeValueId
+
+    if (data.attributes && data.attributes.length > 0) {
+      for (const attr of data.attributes) {
+        // Upsert Attribute
+        const dbAttr = await prisma.attribute.upsert({
+          where: { name: attr.name },
+          update: {},
+          create: { name: attr.name }
+        });
+
+        // Upsert Attribute Values
+        for (const val of attr.values) {
+          const dbVal = await prisma.attributeValue.findFirst({
+            where: { attributeId: dbAttr.id, value: val }
+          });
+          
+          if (dbVal) {
+            attributeMapping[`${attr.name}:${val}`] = dbVal.id;
+          } else {
+            const newVal = await prisma.attributeValue.create({
+              data: { attributeId: dbAttr.id, value: val }
+            });
+            attributeMapping[`${attr.name}:${val}`] = newVal.id;
+          }
+        }
+      }
+    }
+
+    // 2. Prepare variants payload
+    const variantsPayload = data.variants?.length ? data.variants.map((v: any, index: number) => {
+      // Connect VariantAttributes
+      const varAttrs = [];
+      if (v.attributeValues) {
+        // attributeValues looks like: { "Color": "Red", "Size": "1KG" }
+        for (const [attrName, attrVal] of Object.entries(v.attributeValues)) {
+          const valId = attributeMapping[`${attrName}:${attrVal}`];
+          if (valId) {
+            varAttrs.push({ attributeValue: { connect: { id: valId } } });
+          }
+        }
+      }
+
+      return {
+        sku: v.sku || `${data.sku}-${index}`,
+        title: v.title || 'Default',
+        isDefault: index === 0,
+        extraPurchasePrice: Number(v.extraPurchasePrice) || 0,
+        extraSellingPrice: Number(v.extraSellingPrice) || 0,
+        purchasePrice: (Number(data.basePurchasePrice) || 0) + (Number(v.extraPurchasePrice) || 0),
+        sellingPrice: (Number(data.baseSellingPrice) || 0) + (Number(v.extraSellingPrice) || 0),
+        salesTaxId: v.salesTaxId || undefined,
+        purchaseTaxId: v.purchaseTaxId || undefined,
+        currency: v.currency || 'USD',
+        grossWeight: Number(v.weight) || data.grossWeight || 0,
+        netWeight: Number(v.netWeight) || data.netWeight || 0,
+        volumeCBM: Number(v.cbm) || data.cbm || 0,
+        packagingType: v.packageType || data.packageType || 'PP Woven Bag',
+        images: v.images && v.images.length ? {
+          create: v.images.map((imgStr: string, i: number) => ({ url: typeof imgStr === 'string' ? imgStr : (imgStr as any).url, isPrimary: i === 0 }))
+        } : (v.imageUrl ? { create: [{ url: v.imageUrl, isPrimary: true }] } : undefined),
+        attributes: { create: varAttrs }
+      };
+    }) : [{
+      sku: data.sku!,
+      title: 'Default',
+      isDefault: true,
+      extraPurchasePrice: 0,
+      extraSellingPrice: 0,
+      purchasePrice: Number(data.basePurchasePrice) || 0,
+      sellingPrice: Number(data.baseSellingPrice) || 0,
+      currency: data.currency || 'USD',
+      grossWeight: data.grossWeight || 0,
+      netWeight: data.netWeight || 0,
+      volumeCBM: data.cbm || 0,
+      packagingType: data.packageType || 'PP Woven Bag',
+      images: data.images?.length ? {
+        create: data.images.map((url: string, i: number) => ({ url, isPrimary: i === 0 }))
+      } : undefined
+    }];
+
+    // 3. Create Product
     const product = await prisma.product.create({
       data: {
         name: data.name!,
@@ -105,55 +191,238 @@ export class PrismaProductRepository {
         shortDescription: data.description,
         hsnCode: data.hsnCode,
         countryOfOrigin: data.countryOfOrigin,
+        unitsPerCarton: data.unitsPerCarton ? Number(data.unitsPerCarton) : undefined,
+        containerLoadingCapacity: data.containerLoadingCapacity ? Number(data.containerLoadingCapacity) : undefined,
+        shelfLife: data.shelfLife,
+        storageConditions: data.storageConditions,
+        japanImportNotes: data.japanImportNotes,
+        basePurchasePrice: Number(data.basePurchasePrice) || 0,
+        baseSellingPrice: Number(data.baseSellingPrice) || 0,
         
-        // Ensure default variant is created
+        brand: data.brandId ? { connect: { id: data.brandId } } : undefined,
+        
+        categories: data.categoryIds?.length > 0 ? {
+          create: data.categoryIds.map((id: string) => ({
+            category: { connect: { id } }
+          }))
+        } : undefined,
+
+        suppliers: data.supplierId ? {
+          create: [{ supplier: { connect: { id: data.supplierId } } }]
+        } : undefined,
+
+        certifications: data.certifications?.length > 0 ? {
+          create: data.certifications.map((name: string) => ({ name }))
+        } : undefined,
+
         variants: {
-          create: {
-            sku: data.sku!,
-            title: 'Default',
-            isDefault: true,
-            purchasePrice: data.purchasePrice || 0,
-            sellingPrice: data.sellingPrice || 0,
-            currency: data.currency || 'USD',
-            grossWeight: data.grossWeight,
-            netWeight: data.netWeight,
-            volumeCBM: data.cbm,
-            packagingType: data.packageType,
-          }
+          create: variantsPayload
         }
       },
       include: {
         brand: true,
         categories: { include: { category: true } },
-        variants: { include: { images: true } },
+        variants: { include: { images: true, attributes: { include: { attributeValue: { include: { attribute: true } } } } } },
         suppliers: true,
       }
     });
-    
+
     return this.mapToFrontend(product);
   }
 
-  async update(id: string, data: Partial<Product>): Promise<Product | null> {
-    // A simplified update that only updates parent fields for now
-    // In production, we'd do a deep nested update or separate variant endpoints
-    const product = await prisma.product.update({
-      where: { id },
-      data: {
-        name: data.name,
-        shortDescription: data.description,
-        hsnCode: data.hsnCode,
-        countryOfOrigin: data.countryOfOrigin,
-        status: data.entityStatus as any,
-      },
-      include: {
-        brand: true,
-        categories: { include: { category: true } },
-        variants: { include: { images: true } },
-        suppliers: true,
+
+  
+  
+  async update(id: string, data: any): Promise<Product> {
+    // 1. Process attributes & values if provided
+    const attributeMapping: Record<string, string> = {};
+    if (data.attributes && data.attributes.length > 0) {
+      for (const attr of data.attributes) {
+        const dbAttr = await prisma.attribute.upsert({
+          where: { name: attr.name }, update: {}, create: { name: attr.name }
+        });
+        for (const val of attr.values) {
+          const dbVal = await prisma.attributeValue.findFirst({ where: { attributeId: dbAttr.id, value: val } });
+          if (dbVal) { attributeMapping[`${attr.name}:${val}`] = dbVal.id; }
+          else {
+            const newVal = await prisma.attributeValue.create({ data: { attributeId: dbAttr.id, value: val } });
+            attributeMapping[`${attr.name}:${val}`] = newVal.id;
+          }
+        }
       }
+    }
+
+    const updatePayload: any = {
+      name: data.name,
+      shortDescription: data.description,
+      hsnCode: data.hsnCode,
+      countryOfOrigin: data.countryOfOrigin,
+      unitsPerCarton: data.unitsPerCarton ? Number(data.unitsPerCarton) : undefined,
+      containerLoadingCapacity: data.containerLoadingCapacity ? Number(data.containerLoadingCapacity) : undefined,
+      shelfLife: data.shelfLife,
+      storageConditions: data.storageConditions,
+      japanImportNotes: data.japanImportNotes,
+      entityStatus: data.entityStatus,
+    };
+
+    if (data.brandId) updatePayload.brand = { connect: { id: data.brandId } };
+    
+    if (data.supplierId) {
+      updatePayload.suppliers = {
+        deleteMany: {},
+        create: [{ supplier: { connect: { id: data.supplierId } } }]
+      };
+    }
+    
+    if (data.categoryIds !== undefined) {
+      updatePayload.categories = {
+        deleteMany: {},
+        create: data.categoryIds.map((id: string) => ({
+          category: { connect: { id } }
+        }))
+      };
+    }
+    
+    if (data.certifications !== undefined) {
+      updatePayload.certifications = {
+        deleteMany: {},
+        create: data.certifications.map((name: string) => ({ name }))
+      };
+    }
+    // We will do a transaction to handle the complex variant upsert logic manually 
+    // to avoid foreign key violations on deletion.
+    return await prisma.$transaction(async (tx) => {
+      // 1. Update Product Parent
+      const p = await tx.product.update({
+        where: { id },
+        data: updatePayload
+      });
+
+      // 2. Handle variants
+      if (data.variants && Array.isArray(data.variants)) {
+        const payloadSkus = new Set(data.variants.map((v: any) => v.sku));
+        const existingVariants = await tx.productVariant.findMany({ where: { productId: id } });
+        
+        // Deactivate variants not in payload (Soft Delete)
+        for (const ev of existingVariants) {
+          if (!payloadSkus.has(ev.sku)) {
+            await tx.productVariant.update({
+              where: { id: ev.id },
+              data: { status: 'INACTIVE' }
+            });
+          }
+        }
+
+        // Upsert variants from payload
+        for (const [index, v] of data.variants.entries()) {
+          const sku = v.sku || `${data.sku}-${index}`;
+          const varAttrs = [];
+          if (v.attributeValues) {
+            for (const [attrName, attrVal] of Object.entries(v.attributeValues)) {
+              const valId = attributeMapping[`${attrName}:${attrVal}`];
+              if (valId) varAttrs.push({ attributeValue: { connect: { id: valId } } });
+            }
+          }
+
+          const variantData = {
+            title: v.title || 'Default',
+            isDefault: index === 0,
+            extraPurchasePrice: Number(v.extraPurchasePrice) || 0,
+            extraSellingPrice: Number(v.extraSellingPrice) || 0,
+            purchasePrice: (Number(data.basePurchasePrice) || 0) + (Number(v.extraPurchasePrice) || 0),
+            sellingPrice: (Number(data.baseSellingPrice) || 0) + (Number(v.extraSellingPrice) || 0),
+            salesTaxId: v.salesTaxId || null,
+            purchaseTaxId: v.purchaseTaxId || null,
+            currency: v.currency || 'USD',
+            grossWeight: Number(v.weight) || data.grossWeight || 0,
+            netWeight: Number(v.netWeight) || data.netWeight || 0,
+            volumeCBM: Number(v.cbm) || data.cbm || 0,
+            packagingType: v.packageType || data.packageType || 'PP Woven Bag',
+            status: 'ACTIVE' as const
+          };
+
+          const existingVar = existingVariants.find(ev => ev.sku === sku);
+          if (existingVar) {
+            await tx.productVariant.update({
+              where: { id: existingVar.id },
+              data: {
+                ...variantData,
+                images: v.images && v.images.length ? {
+                  deleteMany: {},
+                  create: v.images.map((imgStr: string, i: number) => ({ url: typeof imgStr === 'string' ? imgStr : (imgStr as any).url, isPrimary: i === 0 }))
+                } : (v.imageUrl ? { deleteMany: {}, create: [{ url: v.imageUrl, isPrimary: true }] } : undefined),
+                attributes: {
+                  deleteMany: {},
+                  create: varAttrs
+                }
+              }
+            });
+          } else {
+            await tx.productVariant.create({
+              data: {
+                productId: id,
+                sku,
+                ...variantData,
+                images: v.images && v.images.length ? {
+                  create: v.images.map((imgStr: string, i: number) => ({ url: typeof imgStr === 'string' ? imgStr : (imgStr as any).url, isPrimary: i === 0 }))
+                } : (v.imageUrl ? { create: [{ url: v.imageUrl, isPrimary: true }] } : undefined),
+                attributes: {
+                  create: varAttrs
+                }
+              }
+            });
+          }
+        }
+      } else {
+        // Recalculate existing variants if base prices changed
+        const existingVariants = await tx.productVariant.findMany({ where: { productId: id } });
+        if (existingVariants.length === 0) {
+           // Ensure default variant exists
+           await tx.productVariant.create({
+             data: {
+               productId: id,
+               sku: data.sku || `DEFAULT-${id}`,
+               title: 'Default',
+               isDefault: true,
+               extraPurchasePrice: 0,
+               extraSellingPrice: 0,
+               purchasePrice: Number(data.basePurchasePrice || p.basePurchasePrice) || 0,
+               sellingPrice: Number(data.baseSellingPrice || p.baseSellingPrice) || 0,
+               currency: 'USD',
+               status: 'ACTIVE'
+             }
+           });
+        } else {
+           for (const ev of existingVariants) {
+             await tx.productVariant.update({
+               where: { id: ev.id },
+               data: {
+                 purchasePrice: (Number(data.basePurchasePrice || p.basePurchasePrice) || 0) + (Number(ev.extraPurchasePrice) || 0),
+                 sellingPrice: (Number(data.baseSellingPrice || p.baseSellingPrice) || 0) + (Number(ev.extraSellingPrice) || 0)
+               }
+             });
+           }
+        }
+      }
+
+      // 3. Re-fetch full product tree
+      const finalProduct = await tx.product.findUniqueOrThrow({
+        where: { id },
+        include: {
+          brand: true,
+          categories: { include: { category: true } },
+          variants: { 
+            where: { status: { not: 'INACTIVE' } },
+            include: { images: true, attributes: { include: { attributeValue: { include: { attribute: true } } } } } 
+          },
+          suppliers: true,
+        }
+      });
+
+      return this.mapToFrontend(finalProduct);
     });
-    return this.mapToFrontend(product);
   }
+
 
   async delete(id: string): Promise<boolean> {
     await prisma.product.update({

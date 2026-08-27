@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { quotationRepository } from '@/repositories/repository';
 import { quotationService } from '@/services/quotation.service';
-import { workflowService } from '@/services/workflow.service';
+import { WorkflowEngine } from '@/services/workflow.service';
 
 export async function GET(
   request: Request,
@@ -37,16 +37,16 @@ export async function PUT(
     // Handle Custom Actions
     if (action) {
       if (action === 'approve') {
-        const so = await workflowService.approveQuotation(id);
+        const oldStatus = existingQuotation.status;
+        existingQuotation.status = 'APPROVED';
         
-        // Reload quotation to update timeline log
-        const updatedQuote = await quotationRepository.getById(id);
-        if (updatedQuote) {
-          quotationService.logEvent(updatedQuote, 'APPROVED', 'Proposal Approved & Confirmed', `Proposal approved and converted to Sales Order: ${so.orderNo}.`);
-          await quotationRepository.update(id, updatedQuote);
-        }
+        quotationService.logEvent(existingQuotation, 'APPROVED', 'Proposal Approved & Confirmed', `Proposal approved.`);
+        const updatedQuote = await quotationRepository.update(id, existingQuotation);
+        
+        // Trigger generic workflow engine
+        await WorkflowEngine.evaluateRules('Quotation', id, 'APPROVED', oldStatus);
 
-        return NextResponse.json({ message: 'Quotation approved and Sales Order created', salesOrder: so });
+        return NextResponse.json({ message: 'Quotation approved. Workflows triggered.', quotation: updatedQuote });
       }
 
       if (action === 'reject') {
@@ -83,6 +83,12 @@ export async function PUT(
       if (action === 'restore') {
         existingQuotation.entityStatus = 'ACTIVE';
         quotationService.logEvent(existingQuotation, 'RESTORED', 'Proposal Restored', 'Restored to active commercial catalog.');
+        const updated = await quotationRepository.update(id, existingQuotation);
+        return NextResponse.json(updated);
+      }
+
+      if (action === 'log_note') {
+        existingQuotation.timeline = data.timeline;
         const updated = await quotationRepository.update(id, existingQuotation);
         return NextResponse.json(updated);
       }

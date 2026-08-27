@@ -1,0 +1,883 @@
+'use client';
+
+import React, { useState, useEffect, use } from 'react';
+import { useRouter } from 'next/navigation';
+import { PageHeaderUpdater } from '@/components/layout/page-context';
+import { ArrowLeft, Save, Package, Layers, ShoppingCart, Plus, Trash2 } from 'lucide-react';
+import { SearchableSelect } from '@/components/ui/searchable-select';
+import { QuickAddModal } from '@/components/ui/quick-add-modal';
+
+export default function ProductDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const router = useRouter();
+  const { id } = use(params);
+  const isNew = id === 'new';
+
+  const [loading, setLoading] = useState(!isNew);
+  const [activeTab, setActiveTab] = useState<'general' | 'variants' | 'packaging' | 'compliance' | 'inventory'>('general');
+  const [errors, setErrors] = useState<string[]>([]);
+  const [saving, setSaving] = useState(false);
+
+  // DB Data for dropdowns
+  const [dbCategories, setDbCategories] = useState<any[]>([]);
+  const [dbBrands, setDbBrands] = useState<any[]>([]);
+  const [dbSuppliers, setDbSuppliers] = useState<any[]>([]);
+  const [dbForwarders, setDbForwarders] = useState<any[]>([]);
+  const [dbTaxes, setDbTaxes] = useState<any[]>([]);
+  const [dbAttributes, setDbAttributes] = useState<any[]>([]);
+
+  // Form State: General
+  const [name, setName] = useState('');
+  const [sku, setSku] = useState('');
+  const [description, setDescription] = useState('');
+  const [brandId, setBrandId] = useState('');
+  const [categoryIds, setCategoryIds] = useState<string[]>([]);
+  const [hsnCode, setHsnCode] = useState('');
+  const [countryOfOrigin, setCountryOfOrigin] = useState('India');
+  const [uom, setUom] = useState('BAG');
+  const [supplierId, setSupplierId] = useState('');
+  const [preferredForwarderId, setPreferredForwarderId] = useState('');
+
+  // Base Pricing
+  const [basePurchasePrice, setBasePurchasePrice] = useState<number>(0);
+  const [baseSellingPrice, setBaseSellingPrice] = useState<number>(0);
+
+  // Form State: Packaging
+  const [packageType, setPackageType] = useState('PP Woven Bag');
+  const [unitsPerCarton, setUnitsPerCarton] = useState(1);
+  const [grossWeight, setGrossWeight] = useState(25.2);
+  const [netWeight, setNetWeight] = useState(25.0);
+  const [cbm, setCbm] = useState(0.04);
+  const [containerLoadingCapacity, setContainerLoadingCapacity] = useState(800);
+
+  // Form State: Compliance
+  const [shelfLife, setShelfLife] = useState('24 Months');
+  const [storageConditions, setStorageConditions] = useState('Dry, Cool Ventilated Store');
+  const [certifications, setCertifications] = useState<string[]>(['FSSAI', 'HACCP']);
+  const [japanImportNotes, setJapanImportNotes] = useState('');
+  const [images, setImages] = useState<string[]>([]);
+
+  // Variants State
+  const [attributes, setAttributes] = useState<{name: string, values: string[]}[]>([]);
+  const [variants, setVariants] = useState<any[]>([]);
+  const [existingVariantsCount, setExistingVariantsCount] = useState(0);
+
+  const [quickAddType, setQuickAddType] = useState<'Category' | 'Brand' | 'Supplier' | null>(null);
+
+  // KPIs
+  const [totalOnHand, setTotalOnHand] = useState(0);
+  const [totalAllocated, setTotalAllocated] = useState(0);
+
+  const fetchDropdowns = () => {
+    Promise.all([
+      fetch('/api/categories').then(res => res.ok ? res.json() : []).catch(() => []),
+      fetch('/api/brands').then(res => res.ok ? res.json() : []).catch(() => []),
+      fetch('/api/suppliers').then(res => res.ok ? res.json() : []).catch(() => []),
+      fetch('/api/forwarders').then(res => res.ok ? res.json() : []).catch(() => []),
+      fetch('/api/reference/taxes').then(res => res.ok ? res.json() : []).catch(() => []),
+      fetch('/api/attributes').then(res => res.ok ? res.json() : []).catch(() => []),
+    ]).then(([cats, brands, suppliers, forwarders, taxes, attrs]) => {
+      setDbCategories(Array.isArray(cats) ? cats : []);
+      setDbBrands(Array.isArray(brands) ? brands : []);
+      setDbSuppliers(Array.isArray(suppliers) ? suppliers : []);
+      setDbForwarders(Array.isArray(forwarders) ? forwarders : []);
+      setDbTaxes(Array.isArray(taxes) ? taxes : []);
+      setDbAttributes(Array.isArray(attrs) ? attrs : []);
+    });
+  };
+
+  const fetchProductData = () => {
+    if (!isNew) {
+      fetch(`/api/products/${id}`)
+        .then(res => res.json())
+        .then(data => {
+          setName(data.name || '');
+          setSku(data.sku || '');
+          setDescription(data.description || '');
+          setBrandId(data.brandId || '');
+          setCategoryIds(data.categories?.map((c: any) => c.category?.id || c.categoryId) || []);
+          setHsnCode(data.hsnCode || '');
+          setCountryOfOrigin(data.countryOfOrigin || 'India');
+          setUom(data.uom || 'BAG');
+          setSupplierId(data.supplierId || '');
+          setPreferredForwarderId(data.preferredForwarderId || '');
+          
+          setBasePurchasePrice(data.basePurchasePrice || 0);
+          setBaseSellingPrice(data.baseSellingPrice || 0);
+
+          setPackageType(data.packageType || 'PP Woven Bag');
+          setUnitsPerCarton(data.unitsPerCarton || 1);
+          setGrossWeight(data.grossWeight || 25.2);
+          setNetWeight(data.netWeight || 25.0);
+          setCbm(data.cbm || 0.04);
+          setContainerLoadingCapacity(data.containerLoadingCapacity || 800);
+          
+          setShelfLife(data.shelfLife || '24 Months');
+          setStorageConditions(data.storageConditions || 'Dry, Cool Ventilated Store');
+          setCertifications(data.certifications || []);
+          setJapanImportNotes(data.japanImportNotes || '');
+          setImages(data.images || []);
+          
+          setExistingVariantsCount(data.variants?.length || 0);
+          if (data.variants && data.variants.length > 0) {
+            setVariants(data.variants);
+            
+            // Reconstruct attributes state from variant attributes for UI
+            const reconstructedAttrs: Record<string, Set<string>> = {};
+            data.variants.forEach((v: any) => {
+              if (v.attributes) {
+                v.attributes.forEach((va: any) => {
+                  const attrName = va.attributeValue?.attribute?.name;
+                  const attrVal = va.attributeValue?.value;
+                  if (attrName && attrVal) {
+                    if (!reconstructedAttrs[attrName]) reconstructedAttrs[attrName] = new Set();
+                    reconstructedAttrs[attrName].add(attrVal);
+                  }
+                });
+              }
+            });
+            
+            const newAttributesState = Object.keys(reconstructedAttrs).map(name => ({
+              name,
+              values: Array.from(reconstructedAttrs[name])
+            }));
+            
+            if (newAttributesState.length > 0) {
+              setAttributes(newAttributesState);
+            }
+          }
+          
+          setTotalOnHand(data.totalOnHand || 0);
+          setTotalAllocated(data.totalAllocated || 0);
+          
+          setLoading(false);
+        });
+    }
+  };
+
+  useEffect(() => {
+    fetchDropdowns();
+    fetchProductData();
+  }, [id, isNew]);
+
+  const generateVariants = () => {
+    const validAttrs = attributes.filter(a => a.name.trim() && a.values.length > 0);
+    if (validAttrs.length === 0) {
+      setVariants([{ title: 'Default', sku: sku || 'DEFAULT-SKU', purchasePrice: basePurchasePrice, sellingPrice: baseSellingPrice, attributeValues: {} }]);
+      return;
+    }
+
+    const arrays = validAttrs.map(a => a.values.map(v => v.trim()).filter(Boolean));
+    const cartesian = (...a: any[]) => a.reduce((a, b) => a.flatMap((d: any) => b.map((e: any) => [d, e].flat())));
+    
+    const combos = cartesian(...arrays);
+    const newVariants = (Array.isArray(combos[0]) ? combos : combos.map((c: any) => [c])).map((combo: any, i: number) => {
+      const attrVals: any = {};
+      validAttrs.forEach((attr, idx) => {
+        attrVals[attr.name] = combo[idx];
+      });
+      const partialMatch = variants.find(v => 
+        Object.entries(v.attributeValues || {}).every(([k, val]) => attrVals[k] === val)
+      );
+
+      const titleSuffix = combo.join(' - ');
+      return {
+        id: `NEW-${Math.random().toString(36).substr(2, 9)}`,
+        title: `${name} (${titleSuffix})`,
+        sku: `${sku || 'SKU'}-${combo.map((c: string) => c.substring(0,3).toUpperCase()).join('-')}`,
+        purchasePrice: partialMatch?.purchasePrice || basePurchasePrice,
+        sellingPrice: partialMatch?.sellingPrice || baseSellingPrice,
+        salesTaxId: partialMatch?.salesTaxId || '',
+        purchaseTaxId: partialMatch?.purchaseTaxId || '',
+        images: partialMatch?.images || [],
+        attributeValues: attrVals
+      };
+    });
+
+    setVariants(newVariants);
+  };
+
+  const addManualVariant = () => {
+    setVariants([...variants, {
+      id: `NEW-${Math.random().toString(36).substr(2, 9)}`,
+      title: `${name} - Custom Variant`,
+      sku: `${sku || 'SKU'}-CUSTOM`,
+      purchasePrice: basePurchasePrice,
+      sellingPrice: baseSellingPrice,
+      salesTaxId: '',
+      purchaseTaxId: '',
+      images: [],
+      attributeValues: {}
+    }]);
+  };
+
+  const handleQuickAdd = async (name: string) => {
+    let endpoint = '';
+    let payload: any = { name };
+    
+    if (quickAddType === 'Category') {
+      endpoint = '/api/categories';
+      payload = { name, description: '' };
+    } else if (quickAddType === 'Brand') {
+      endpoint = '/api/brands';
+      payload = { name, description: '' };
+    } else if (quickAddType === 'Supplier') {
+      endpoint = '/api/suppliers';
+      payload = { name, email: '', phone: '' };
+    }
+
+    const res = await fetch(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error || `Failed to add ${quickAddType}`);
+    }
+
+    const created = await res.json();
+    
+    if (quickAddType === 'Category') {
+      setCategoryIds([...categoryIds, created.id]);
+    } else if (quickAddType === 'Brand') {
+      setBrandId(created.id);
+    } else if (quickAddType === 'Supplier') {
+      setSupplierId(created.id);
+    }
+
+    fetchDropdowns();
+  };
+
+  const handleSave = async () => {
+    setSaving(true);
+    setErrors([]);
+    const payload = {
+      name, sku, description, brandId, categoryIds, hsnCode, countryOfOrigin, uom,
+      supplierId, preferredForwarderId,
+      basePurchasePrice, baseSellingPrice,
+      packageType, unitsPerCarton, grossWeight: Number(grossWeight), netWeight: Number(netWeight), 
+      cbm: Number(cbm), containerLoadingCapacity: Number(containerLoadingCapacity),
+      shelfLife, storageConditions, certifications, japanImportNotes,
+      images,
+      attributes: attributes.filter(a => a.name.trim()).map(a => ({
+        name: a.name.trim(),
+        values: a.values.map(v => v.trim()).filter(Boolean)
+      })),
+      variants
+    };
+
+    const url = isNew ? '/api/products' : `/api/products/${id}`;
+    const method = isNew ? 'POST' : 'PUT';
+
+    const res = await fetch(url, {
+      method,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+
+    if (res.ok) {
+      router.push('/products');
+    } else {
+      const err = await res.json();
+      setErrors([err.error || 'Failed to save product']);
+      setSaving(false);
+    }
+  };
+
+  if (loading) return <div className="p-8 text-foreground">Loading product details...</div>;
+
+  return (
+    <>
+      <PageHeaderUpdater title={isNew ? "New Product" : name} subtitle={isNew ? "Create new product template" : "Manage product and variants"} />
+      
+      <QuickAddModal 
+        title={`Add New ${quickAddType}`}
+        isOpen={quickAddType !== null}
+        onClose={() => setQuickAddType(null)}
+        onSave={handleQuickAdd}
+      />
+
+      <div className="space-y-6">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <button onClick={() => router.push('/products')}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-muted border border-border text-[10px] font-mono uppercase text-foreground/90 hover:bg-accent cursor-pointer">
+            <ArrowLeft size={12} /> Back to Products
+          </button>
+
+          {!isNew && (
+            <div className="flex gap-2">
+              <button 
+                onClick={() => router.push(`/products/${id}/variants`)}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-400 hover:bg-blue-500/20 transition-all font-mono text-[10px] uppercase cursor-pointer"
+              >
+                <Layers size={14} /> Variants ({existingVariantsCount})
+              </button>
+              <button className="flex items-center gap-2 px-4 py-2 rounded-xl bg-muted border border-border text-muted-foreground font-mono text-[10px] uppercase">
+                <Package size={14} /> On Hand ({totalOnHand})
+              </button>
+              <button className="flex items-center gap-2 px-4 py-2 rounded-xl bg-muted border border-border text-muted-foreground font-mono text-[10px] uppercase">
+                <ShoppingCart size={14} /> Sold ({totalAllocated})
+              </button>
+            </div>
+          )}
+        </div>
+
+        {errors.length > 0 && (
+          <div className="bg-red-500/10 border border-red-500/50 text-red-500 p-4 rounded-xl text-sm font-mono">
+            {errors.map((e, i) => <div key={i}>{e}</div>)}
+          </div>
+        )}
+
+        <div className="glass p-8 rounded-3xl border border-border">
+          <div className="flex items-center gap-2 mb-6 border-b border-border pb-4 overflow-x-auto">
+            <button 
+              className={`text-[11px] font-mono font-bold px-4 py-2 rounded-lg transition-colors whitespace-nowrap ${activeTab === 'general' ? 'bg-accent text-foreground' : 'text-muted-foreground/50 hover:text-muted-foreground'}`}
+              onClick={() => setActiveTab('general')}
+            >
+              General Information
+            </button>
+            <button 
+              className={`text-[11px] font-mono font-bold px-4 py-2 rounded-lg transition-colors whitespace-nowrap ${activeTab === 'variants' ? 'bg-accent text-foreground' : 'text-muted-foreground/50 hover:text-muted-foreground'}`}
+              onClick={() => setActiveTab('variants')}
+            >
+              Attributes & Variants
+            </button>
+            <button 
+              className={`text-[11px] font-mono font-bold px-4 py-2 rounded-lg transition-colors whitespace-nowrap ${activeTab === 'packaging' ? 'bg-accent text-foreground' : 'text-muted-foreground/50 hover:text-muted-foreground'}`}
+              onClick={() => setActiveTab('packaging')}
+            >
+              Logistics & Packaging
+            </button>
+            <button 
+              className={`text-[11px] font-mono font-bold px-4 py-2 rounded-lg transition-colors whitespace-nowrap ${activeTab === 'compliance' ? 'bg-accent text-foreground' : 'text-muted-foreground/50 hover:text-muted-foreground'}`}
+              onClick={() => setActiveTab('compliance')}
+            >
+              Compliance
+            </button>
+            {!isNew && (
+              <button 
+                className={`text-[11px] font-mono font-bold px-4 py-2 rounded-lg transition-colors whitespace-nowrap ${activeTab === 'inventory' ? 'bg-emerald-500/20 text-emerald-400' : 'text-muted-foreground/50 hover:text-emerald-400/80'}`}
+                onClick={() => setActiveTab('inventory')}
+              >
+                Stock Ledger
+              </button>
+            )}
+          </div>
+          
+          {activeTab === 'general' && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-4">
+                <div>
+                  <label className="text-[11px] font-mono text-muted-foreground uppercase tracking-wider block mb-1">Product Name *</label>
+                  <input className="w-full bg-background border border-border rounded-xl py-3 px-4 text-sm font-mono text-foreground focus:border-blue-500 focus:outline-none transition-colors" value={name} onChange={(e) => setName(e.target.value)} />
+                </div>
+                <div>
+                  <label className="text-[11px] font-mono text-muted-foreground uppercase tracking-wider block mb-1">Base SKU *</label>
+                  <input className="w-full bg-background border border-border rounded-xl py-3 px-4 text-sm font-mono text-foreground focus:border-blue-500 focus:outline-none transition-colors" value={sku} onChange={(e) => setSku(e.target.value)} />
+                </div>
+                <div>
+                  <label className="text-[11px] font-mono text-muted-foreground uppercase tracking-wider block mb-1">Description</label>
+                  <textarea rows={4} className="w-full bg-background border border-border rounded-xl py-3 px-4 text-sm font-mono text-foreground focus:border-blue-500 focus:outline-none transition-colors" value={description} onChange={(e) => setDescription(e.target.value)} />
+                </div>
+                
+                <div className="space-y-4 pt-6 border-t border-border">
+                  <h3 className="text-xs font-mono font-bold uppercase tracking-widest text-blue-400">Base Pricing</h3>
+                  
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground/50">Base Purchase Price (USD)</label>
+                      <input 
+                        type="number" step="0.01" min="0" value={basePurchasePrice} onChange={e => setBasePurchasePrice(parseFloat(e.target.value) || 0)}
+                        className="w-full bg-muted border border-border rounded-xl px-4 py-3 text-sm text-foreground outline-none focus:border-blue-500/50 transition-all font-mono"
+                        placeholder="e.g. 100.00"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground/50">Base Selling Price (USD)</label>
+                      <input 
+                        type="number" step="0.01" min="0" value={baseSellingPrice} onChange={e => setBaseSellingPrice(parseFloat(e.target.value) || 0)}
+                        className="w-full bg-muted border border-border rounded-xl px-4 py-3 text-sm text-foreground outline-none focus:border-blue-500/50 transition-all font-mono"
+                        placeholder="e.g. 150.00"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="space-y-4">
+                <div>
+                  <label className="text-[11px] font-mono text-muted-foreground uppercase tracking-wider block mb-1">Category *</label>
+                  <SearchableSelect 
+                    options={dbCategories.map(c => ({ id: c.id, label: c.name, value: c.id }))}
+                    value={categoryIds}
+                    onChange={(val) => setCategoryIds(val as string[])}
+                    placeholder="Select Categories"
+                    multiple={true}
+                    onAddNew={() => setQuickAddType('Category')}
+                  />
+                </div>
+                <div>
+                  <label className="text-[11px] font-mono text-muted-foreground uppercase tracking-wider block mb-1">Brand *</label>
+                  <SearchableSelect 
+                    options={dbBrands.map(b => ({ id: b.id, label: b.name, value: b.id }))}
+                    value={brandId}
+                    onChange={(val) => setBrandId(val as string)}
+                    placeholder="Select Brand"
+                    onAddNew={() => setQuickAddType('Brand')}
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-[11px] font-mono text-muted-foreground uppercase tracking-wider block mb-1">HSN Code</label>
+                    <input className="w-full bg-background border border-border rounded-xl py-3 px-4 text-sm font-mono text-foreground focus:border-blue-500 focus:outline-none transition-colors" value={hsnCode} onChange={(e) => setHsnCode(e.target.value)} />
+                  </div>
+                  <div>
+                    <label className="text-[11px] font-mono text-muted-foreground uppercase tracking-wider block mb-1">UOM</label>
+                    <select className="w-full bg-background border border-border rounded-xl py-3 px-4 text-sm font-mono text-foreground focus:border-blue-500 focus:outline-none" value={uom} onChange={(e) => setUom(e.target.value)}>
+                      <option value="BAG">BAG</option>
+                      <option value="KG">KG</option>
+                      <option value="MT">MT</option>
+                      <option value="L">L</option>
+                    </select>
+                  </div>
+                </div>
+                <div>
+                  <label className="text-[11px] font-mono text-muted-foreground uppercase tracking-wider block mb-1">Default Supplier</label>
+                  <SearchableSelect 
+                    options={dbSuppliers.map(s => ({ id: s.id, label: s.name, value: s.id }))}
+                    value={supplierId}
+                    onChange={(val) => setSupplierId(val as string)}
+                    placeholder="Select Supplier"
+                    onAddNew={() => setQuickAddType('Supplier')}
+                  />
+                </div>
+                <div>
+                  <label className="text-[11px] font-mono text-muted-foreground uppercase tracking-wider block mb-1">Country of Origin</label>
+                  <input className="w-full bg-background border border-border rounded-xl py-3 px-4 text-sm font-mono text-foreground focus:border-blue-500 focus:outline-none transition-colors" value={countryOfOrigin} onChange={(e) => setCountryOfOrigin(e.target.value)} />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'variants' && (
+            <div className="space-y-6">
+              <div className="flex justify-between items-center">
+                <h3 className="text-sm font-bold text-foreground">Variant Attributes</h3>
+                <button 
+                  onClick={() => setAttributes([...attributes, { name: '', values: [] }])}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-muted hover:bg-accent rounded-lg text-xs font-mono font-bold uppercase cursor-pointer"
+                >
+                  <Plus size={14} /> Add Attribute
+                </button>
+              </div>
+
+              <div className="space-y-3">
+                {attributes.map((attr, idx) => (
+                  <div key={idx} className="flex gap-4 items-start bg-black/20 p-4 rounded-xl border border-border">
+                    <div className="w-1/3">
+                      <label className="text-[10px] font-mono text-muted-foreground/50 uppercase mb-1 block">Attribute Name</label>
+                      <SearchableSelect 
+                        options={dbAttributes.map(a => ({ id: a.name, label: a.name, value: a.name }))}
+                        value={attr.name}
+                        onChange={(val) => {
+                          const newAttr = [...attributes];
+                          newAttr[idx].name = val as string;
+                          setAttributes(newAttr);
+                        }}
+                        placeholder="Select or Add Name"
+                        onAddClick={(val) => {
+                          if (val) {
+                            const newAttr = [...attributes];
+                            newAttr[idx].name = val;
+                            setAttributes(newAttr);
+                          }
+                        }}
+                      />
+                    </div>
+                    <div className="flex-1">
+                      <label className="text-[10px] font-mono text-muted-foreground/50 uppercase mb-1 block">Values (Select multiple)</label>
+                      <SearchableSelect 
+                        multiple
+                        options={
+                          (dbAttributes.find(a => a.name === attr.name)?.values || [])
+                          .map((v: any) => ({ id: v.value, label: v.value, value: v.value }))
+                        }
+                        value={attr.values}
+                        onChange={(val) => {
+                          const newAttr = [...attributes];
+                          newAttr[idx].values = val as string[];
+                          setAttributes(newAttr);
+                        }}
+                        placeholder="Select or Add Values"
+                        onAddClick={(val) => {
+                          if (val && !attr.values.includes(val)) {
+                            const newAttr = [...attributes];
+                            newAttr[idx].values = [...attr.values, val];
+                            setAttributes(newAttr);
+                          }
+                        }}
+                      />
+                    </div>
+                    <button 
+                      className="mt-6 p-2 text-red-400 hover:bg-red-500/10 rounded-lg cursor-pointer"
+                      onClick={() => setAttributes(attributes.filter((_, i) => i !== idx))}
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+
+              {attributes.length > 0 && (
+                <div className="flex justify-end">
+                  <button 
+                    onClick={generateVariants}
+                    className="px-4 py-2 bg-blue-500/20 text-blue-400 rounded-lg text-xs font-mono font-bold uppercase cursor-pointer hover:bg-blue-500/30"
+                  >
+                    Generate Variant Matrix
+                  </button>
+                </div>
+              )}
+
+              {variants.length > 0 && (
+                <div className="mt-8 border border-border rounded-xl overflow-x-auto">
+                  <table className="w-full text-left text-sm font-mono min-w-max">
+                    <thead className="bg-muted text-muted-foreground/50 text-[10px] uppercase">
+                      <tr>
+                        <th className="py-3 px-4">Variant Name</th>
+                        <th className="py-3 px-4">SKU</th>
+                        <th className="py-3 px-4">Extra Cost</th>
+                        <th className="py-3 px-4">Extra Price</th>
+                        <th className="py-3 px-4">Image URL</th>
+                        <th className="py-3 px-4">Sales Tax</th>
+                        <th className="py-3 px-4">Purchase Tax</th>
+                        <th className="py-3 px-4 w-8"></th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-white/5">
+                      {variants.map((v, i) => (
+                        <tr key={i} className="hover:bg-white/2">
+                          <td className="py-2 px-4">{v.title}</td>
+                          <td className="py-2 px-4">
+                            <input className="w-full bg-transparent border-none text-foreground focus:outline-none text-[11px]" value={v.sku} onChange={(e) => {
+                              const newV = [...variants]; newV[i].sku = e.target.value; setVariants(newV);
+                            }} />
+                          </td>
+                          <td className="py-2 px-4">
+                            <input type="number" step="0.01" className="w-full bg-transparent border-none text-foreground focus:outline-none text-[11px]" value={v.extraPurchasePrice || ''} placeholder="0.00" onChange={(e) => {
+                              const newV = [...variants]; newV[i].extraPurchasePrice = Number(e.target.value); setVariants(newV);
+                            }} />
+                          </td>
+                          <td className="py-2 px-4">
+                            <input type="number" step="0.01" className="w-full bg-transparent border-none text-foreground focus:outline-none text-[11px]" value={v.extraSellingPrice || ''} placeholder="0.00" onChange={(e) => {
+                              const newV = [...variants]; newV[i].extraSellingPrice = Number(e.target.value); setVariants(newV);
+                            }} />
+                          </td>
+                          <td className="py-2 px-4">
+                            <input className="w-full bg-transparent border-none text-foreground focus:outline-none text-[11px]" value={v.images?.[0] || ''} placeholder="Image URL" onChange={(e) => {
+                              const newV = [...variants]; newV[i].images = [e.target.value]; setVariants(newV);
+                            }} />
+                          </td>
+                          <td className="py-2 px-4">
+                            <select className="w-full bg-transparent border-none text-foreground focus:outline-none text-[11px] cursor-pointer" value={v.salesTaxId || ''} onChange={(e) => {
+                              const newV = [...variants]; newV[i].salesTaxId = e.target.value; setVariants(newV);
+                            }}>
+                              <option value="" className="bg-background">No Tax</option>
+                              {dbTaxes.map(t => <option key={t.id} value={t.id} className="bg-background">{t.name} ({t.ratePercentage}%)</option>)}
+                            </select>
+                          </td>
+                          <td className="py-2 px-4">
+                            <select className="w-full bg-transparent border-none text-foreground focus:outline-none text-[11px] cursor-pointer" value={v.purchaseTaxId || ''} onChange={(e) => {
+                              const newV = [...variants]; newV[i].purchaseTaxId = e.target.value; setVariants(newV);
+                            }}>
+                              <option value="" className="bg-background">No Tax</option>
+                              {dbTaxes.map(t => <option key={t.id} value={t.id} className="bg-background">{t.name} ({t.ratePercentage}%)</option>)}
+                            </select>
+                          </td>
+                          <td className="py-2 px-4 text-center">
+                            <button 
+                              onClick={() => {
+                                const newV = [...variants];
+                                newV.splice(i, 1);
+                                setVariants(newV);
+                              }}
+                              className="text-white/30 hover:text-red-400 cursor-pointer"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+              
+              <div className="mt-4">
+                <button 
+                  onClick={addManualVariant}
+                  className="px-4 py-2 bg-muted text-muted-foreground rounded-lg text-xs font-mono uppercase cursor-pointer hover:bg-accent"
+                >
+                  + Add Manual Variant
+                </button>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'packaging' && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+               <div className="space-y-4">
+                <div>
+                  <label className="text-[11px] font-mono text-muted-foreground uppercase tracking-wider block mb-1">Package Type</label>
+                  <input className="w-full bg-background border border-border rounded-xl py-3 px-4 text-sm font-mono text-foreground focus:border-blue-500 focus:outline-none transition-colors" value={packageType} onChange={(e) => setPackageType(e.target.value)} />
+                </div>
+                <div>
+                  <label className="text-[11px] font-mono text-muted-foreground uppercase tracking-wider block mb-1">Gross Weight (KG)</label>
+                  <input type="number" className="w-full bg-background border border-border rounded-xl py-3 px-4 text-sm font-mono text-foreground focus:border-blue-500 focus:outline-none transition-colors" value={grossWeight} onChange={(e) => setGrossWeight(Number(e.target.value))} />
+                </div>
+                <div>
+                  <label className="text-[11px] font-mono text-muted-foreground uppercase tracking-wider block mb-1">Net Weight (KG)</label>
+                  <input type="number" className="w-full bg-background border border-border rounded-xl py-3 px-4 text-sm font-mono text-foreground focus:border-blue-500 focus:outline-none transition-colors" value={netWeight} onChange={(e) => setNetWeight(Number(e.target.value))} />
+                </div>
+              </div>
+              <div className="space-y-4">
+                <div>
+                  <label className="text-[11px] font-mono text-muted-foreground uppercase tracking-wider block mb-1">Units per Carton</label>
+                  <input type="number" className="w-full bg-background border border-border rounded-xl py-3 px-4 text-sm font-mono text-foreground focus:border-blue-500 focus:outline-none transition-colors" value={unitsPerCarton} onChange={(e) => setUnitsPerCarton(Number(e.target.value))} />
+                </div>
+                <div>
+                  <label className="text-[11px] font-mono text-muted-foreground uppercase tracking-wider block mb-1">CBM</label>
+                  <input type="number" step="0.01" className="w-full bg-background border border-border rounded-xl py-3 px-4 text-sm font-mono text-foreground focus:border-blue-500 focus:outline-none transition-colors" value={cbm} onChange={(e) => setCbm(Number(e.target.value))} />
+                </div>
+                <div>
+                  <label className="text-[11px] font-mono text-muted-foreground uppercase tracking-wider block mb-1">Container Loading Capacity</label>
+                  <input type="number" className="w-full bg-background border border-border rounded-xl py-3 px-4 text-sm font-mono text-foreground focus:border-blue-500 focus:outline-none transition-colors" value={containerLoadingCapacity} onChange={(e) => setContainerLoadingCapacity(Number(e.target.value))} />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'compliance' && (
+            <div className="grid grid-cols-1 gap-6">
+              <div className="grid grid-cols-2 gap-6">
+                <div>
+                  <label className="text-[11px] font-mono text-muted-foreground uppercase tracking-wider block mb-1">Shelf Life</label>
+                  <input className="w-full bg-background border border-border rounded-xl py-3 px-4 text-sm font-mono text-foreground focus:border-blue-500 focus:outline-none transition-colors" value={shelfLife} onChange={(e) => setShelfLife(e.target.value)} />
+                </div>
+                <div>
+                  <label className="text-[11px] font-mono text-muted-foreground uppercase tracking-wider block mb-1">Storage Conditions</label>
+                  <input className="w-full bg-background border border-border rounded-xl py-3 px-4 text-sm font-mono text-foreground focus:border-blue-500 focus:outline-none transition-colors" value={storageConditions} onChange={(e) => setStorageConditions(e.target.value)} />
+                </div>
+              </div>
+              
+              <div>
+                <label className="text-[11px] font-mono text-muted-foreground uppercase tracking-wider block mb-1">Certifications</label>
+                <SearchableSelect 
+                  options={['FSSAI', 'HACCP', 'ISO 22000', 'FDA Approved', 'Halal Certified', 'Phytosanitary Certificate', 'Kosher', 'Organic', 'CE Marking', 'Fair Trade', 'GMP', 'BRCGS'].map(c => ({ label: c, value: c }))}
+                  value={certifications}
+                  onChange={(val) => setCertifications(val as string[])}
+                  placeholder="Select Certifications"
+                  multiple={true}
+                />
+              </div>
+              <div>
+                <label className="text-[11px] font-mono text-muted-foreground uppercase tracking-wider block mb-1">Japan Import Notes</label>
+                <textarea rows={4} className="w-full bg-background border border-border rounded-xl py-3 px-4 text-sm font-mono text-foreground focus:border-blue-500 focus:outline-none transition-colors" value={japanImportNotes} onChange={(e) => setJapanImportNotes(e.target.value)} />
+              </div>
+            </div>
+          )}
+          
+          <div className="mt-8 flex justify-end">
+            <button 
+              onClick={handleSave}
+              disabled={saving}
+              className="flex items-center gap-2 px-6 py-2 bg-blue-500 text-black font-bold text-sm rounded cursor-pointer hover:bg-blue-400"
+            >
+               <Save size={16} /> {saving ? 'Saving...' : 'Save Product'}
+            </button>
+          </div>
+          {activeTab === 'inventory' && !isNew && (
+            <InventoryLedgerTab variants={variants} onStockUpdated={fetchProductData} />
+          )}
+
+        </div>
+      </div>
+    </>
+  );
+}
+
+function InventoryLedgerTab({ variants, onStockUpdated }: { variants: any[], onStockUpdated: () => void }) {
+  const [selectedVariantId, setSelectedVariantId] = useState<string>(variants.length > 0 ? variants[0].id : '');
+  const [ledger, setLedger] = useState<any>(null);
+  const [loading, setLoading] = useState(false);
+  const [adjQty, setAdjQty] = useState(0);
+  const [adjRemarks, setAdjRemarks] = useState('');
+  
+  useEffect(() => {
+    if (selectedVariantId) {
+      setLoading(true);
+      fetch(`/api/inventory?variantId=${selectedVariantId}`)
+        .then(res => res.json())
+        .then(data => {
+          setLedger(data);
+          setLoading(false);
+        });
+    }
+  }, [selectedVariantId]);
+
+  const handleAdjustment = async () => {
+    if (adjQty === 0) return;
+    try {
+      const res = await fetch('/api/inventory', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          variantId: selectedVariantId,
+          quantity: adjQty,
+          type: 'ADJUSTMENT',
+          remarks: adjRemarks || 'Manual Override'
+        })
+      });
+      if (!res.ok) throw new Error('Failed to adjust stock');
+      
+      // Refresh
+      const data = await fetch(`/api/inventory?variantId=${selectedVariantId}`).then(r => r.json());
+      setLedger(data);
+      setAdjQty(0);
+      setAdjRemarks('');
+      onStockUpdated();
+      alert('Stock adjusted successfully');
+    } catch (e: any) {
+      alert(e.message);
+    }
+  };
+
+  if (!variants || variants.length === 0) return <div className="p-4 text-muted-foreground/50 text-xs font-mono uppercase">No variants found. Save product first.</div>;
+
+  return (
+    <div className="space-y-6 pt-4">
+      <div className="flex gap-4 items-center">
+        <label className="text-[11px] font-mono text-muted-foreground/50 uppercase">Select Variant to View Ledger:</label>
+        <select 
+          className="bg-muted border border-border rounded-lg px-4 py-2 text-sm text-foreground outline-none"
+          value={selectedVariantId}
+          onChange={e => setSelectedVariantId(e.target.value)}
+        >
+          {variants.map(v => (
+            <option key={v.id} value={v.id}>{v.sku} - {v.title}</option>
+          ))}
+        </select>
+      </div>
+
+      {loading && <div className="text-white/30 text-xs font-mono uppercase">Loading ledger...</div>}
+      
+      {!loading && ledger && (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="space-y-4">
+            <div className="bg-muted border border-border rounded-2xl p-6 space-y-4">
+              <h3 className="text-xs font-mono font-bold uppercase tracking-widest text-emerald-400">Current Stock</h3>
+              
+              <div className="flex justify-between items-center pb-2 border-b border-border">
+                <span className="text-xs text-muted-foreground/50 font-mono">On Hand:</span>
+                <span className="text-xl font-mono text-foreground">{ledger.inventory?.quantityOnHand || 0}</span>
+              </div>
+              <div className="flex justify-between items-center pb-2 border-b border-border">
+                <span className="text-xs text-muted-foreground/50 font-mono">Allocated (SO):</span>
+                <span className="text-sm font-mono text-muted-foreground">{ledger.inventory?.quantityAllocated || 0}</span>
+              </div>
+              <div className="flex justify-between items-center pb-2 border-b border-border">
+                <span className="text-xs text-muted-foreground/50 font-mono">On Order (PO):</span>
+                <span className="text-sm font-mono text-muted-foreground">{ledger.inventory?.quantityOnOrder || 0}</span>
+              </div>
+              <div className="flex justify-between items-center pt-2">
+                <span className="text-xs text-emerald-400/50 font-mono uppercase font-bold">Available to Sell:</span>
+                <span className="text-lg font-mono text-emerald-400 font-bold">
+                  {(ledger.inventory?.quantityOnHand || 0) - (ledger.inventory?.quantityAllocated || 0)}
+                </span>
+              </div>
+            </div>
+
+            <div className="bg-blue-500/10 border border-blue-500/20 rounded-2xl p-6 space-y-4">
+              <h3 className="text-xs font-mono font-bold uppercase tracking-widest text-blue-400">Manual Adjustment</h3>
+              <div className="space-y-2">
+                <label className="text-[10px] font-mono text-muted-foreground/50 uppercase">Quantity (Use - for deductions)</label>
+                <input 
+                  type="number" 
+                  value={adjQty} 
+                  onChange={e => setAdjQty(parseFloat(e.target.value) || 0)}
+                  className="w-full bg-black/40 border border-border rounded-lg px-3 py-2 text-sm font-mono text-foreground outline-none focus:border-blue-500/50" 
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-mono text-muted-foreground/50 uppercase">Reason / Remarks</label>
+                <input 
+                  type="text" 
+                  value={adjRemarks} 
+                  onChange={e => setAdjRemarks(e.target.value)}
+                  placeholder="e.g. Stock Count Discrepancy"
+                  className="w-full bg-black/40 border border-border rounded-lg px-3 py-2 text-sm text-foreground outline-none focus:border-blue-500/50" 
+                />
+              </div>
+              <button 
+                onClick={handleAdjustment}
+                className="w-full py-2 bg-blue-500 text-black text-xs font-mono font-bold uppercase rounded-lg hover:bg-blue-400 transition-colors"
+              >
+                Apply Adjustment
+              </button>
+            </div>
+          </div>
+
+          <div className="lg:col-span-2">
+            <div className="bg-muted border border-border rounded-2xl p-6 overflow-hidden">
+              <h3 className="text-xs font-mono font-bold uppercase tracking-widest text-muted-foreground mb-4">Transaction History</h3>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left">
+                  <thead>
+                    <tr className="border-b border-border text-[10px] font-mono uppercase text-white/30">
+                      <th className="pb-3 pr-4">Date</th>
+                      <th className="pb-3 pr-4">Type</th>
+                      <th className="pb-3 pr-4">Qty</th>
+                      <th className="pb-3 pr-4">Ref Type</th>
+                      <th className="pb-3 pr-4">Ref ID</th>
+                      <th className="pb-3">Remarks</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-white/5">
+                    {ledger.transactions?.map((tx: any) => (
+                      <tr key={tx.id} className="text-xs font-mono text-muted-foreground">
+                        <td className="py-3 pr-4 whitespace-nowrap">{new Date(tx.timestamp).toLocaleString()}</td>
+                        <td className="py-3 pr-4">
+                          <span className={`px-2 py-1 rounded-full text-[9px] font-bold ${
+                            tx.type === 'SHIPMENT' ? 'bg-rose-500/20 text-rose-400' :
+                            tx.type === 'RECEIPT' ? 'bg-emerald-500/20 text-emerald-400' :
+                            tx.type === 'ALLOCATE' ? 'bg-amber-500/20 text-amber-400' :
+                            'bg-blue-500/20 text-blue-400'
+                          }`}>
+                            {tx.type}
+                          </span>
+                        </td>
+                        <td className={`py-3 pr-4 font-bold ${tx.quantity > 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                          {tx.quantity > 0 ? '+' : ''}{tx.quantity}
+                        </td>
+                        <td className="py-3 pr-4 text-muted-foreground/40">{tx.referenceType || '-'}</td>
+                        <td className="py-3 pr-4 text-muted-foreground/40 truncate max-w-25" title={tx.referenceId}>{tx.referenceId ? tx.referenceId.substring(0,8)+'...' : '-'}</td>
+                        <td className="py-3 text-muted-foreground/50">{tx.remarks || '-'}</td>
+                      </tr>
+                    ))}
+                    {(!ledger.transactions || ledger.transactions.length === 0) && (
+                      <tr>
+                        <td colSpan={6} className="py-8 text-center text-white/30 text-[10px] uppercase font-mono tracking-widest">
+                          No transactions found
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

@@ -1,5 +1,5 @@
 import { prisma } from '../prisma.client';
-import { AuditLog } from '@prisma/client';
+import { AuditLog } from '@generated/client';
 
 export const auditRepository = {
   findAll: async () => {

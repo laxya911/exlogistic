@@ -88,7 +88,8 @@ export function useSuppliers() {
       if (!res.ok) throw new Error(data.error || 'Failed to update vendor');
 
       toast.success(`Vendor ${data.name} profile updated`);
-      await fetchSuppliers();
+      setSuppliers(prev => prev.map(s => s.id === id ? data : s));
+      fetchSuppliers();
       return { success: true, data };
     } catch (e: any) {
       toast.error(e.message || 'Update failed');
@@ -107,7 +108,8 @@ export function useSuppliers() {
       if (!res.ok) throw new Error(data.error || 'Archive failed');
 
       toast.success(`Vendor ${data.name} account archived`);
-      await fetchSuppliers();
+      setSuppliers(prev => prev.map(s => s.id === id ? data : s));
+      fetchSuppliers();
     } catch (e: any) {
       toast.error(e.message);
     }
@@ -124,7 +126,8 @@ export function useSuppliers() {
       if (!res.ok) throw new Error(data.error || 'Restore failed');
 
       toast.success(`Vendor ${data.name} account restored`);
-      await fetchSuppliers();
+      setSuppliers(prev => prev.map(s => s.id === id ? data : s));
+      fetchSuppliers();
     } catch (e: any) {
       toast.error(e.message);
     }

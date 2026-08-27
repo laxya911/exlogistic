@@ -1,11 +1,22 @@
 import { NextResponse } from 'next/server';
-import { notificationRepository } from '@/repositories/repository';
+import { notificationService } from '@/services/notification.service';
 
 export async function GET() {
   try {
-    let data = await notificationRepository.getAll();
-    data = data.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-    return NextResponse.json(data);
+    const unread = await notificationService.getUnread();
+    return NextResponse.json({ notifications: unread, unreadCount: unread.length });
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+}
+
+export async function POST(req: Request) {
+  try {
+    const body = await req.json();
+    const { type, title, message, actionUrl, userId } = body;
+    
+    await notificationService.send(type, title, message, actionUrl, userId);
+    return NextResponse.json({ success: true });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
@@ -14,16 +25,8 @@ export async function GET() {
 // Mark all as read
 export async function PUT(request: Request) {
   try {
-    const data = await notificationRepository.getAll();
-    
-    // Batch update simulation
-    const updates = data
-      .filter(n => !n.isRead)
-      .map(n => notificationRepository.update(n.id, { isRead: true, updatedAt: new Date().toISOString() }));
-      
-    await Promise.all(updates);
-    
-    return NextResponse.json({ success: true, count: updates.length });
+    await notificationService.markAllAsRead();
+    return NextResponse.json({ success: true });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }

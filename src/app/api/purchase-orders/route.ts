@@ -26,7 +26,16 @@ export async function POST(request: Request) {
     await purchaseOrderService.validate(data, false);
 
     const now = new Date().toISOString();
-    const poNo = data.poNo || numberingService.getPurchaseOrderNumber();
+    let poNo = data.poNo;
+    if (!poNo) {
+      const all = await purchaseOrderRepository.getAll();
+      const currentMax = all.reduce((max, po) => {
+        const parts = po.poNo.split('-');
+        const num = parseInt(parts[parts.length - 1], 10);
+        return !isNaN(num) && num > max ? num : max;
+      }, 0);
+      poNo = `PO-${new Date().getFullYear()}-${(currentMax + 1).toString().padStart(4, '0')}`;
+    }
 
     const payload = {
       ...data,

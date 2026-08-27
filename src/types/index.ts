@@ -37,6 +37,7 @@ export interface ProductVariant extends BaseEntity {
   title: string; // e.g., "Black / 256GB"
   slug?: string;
   isDefault: boolean;
+  inventory?: number;
   
   // Dimensions & Weight
   weight?: number;
@@ -44,11 +45,15 @@ export interface ProductVariant extends BaseEntity {
   grossWeight?: number;
   volumeCBM?: number;
   packagingType?: string;
-  
   // Commercial
   purchasePrice: number;
   sellingPrice: number;
+  extraPurchasePrice: number;
+  extraSellingPrice: number;
   currency: string;
+  
+  salesTaxId?: string;
+  purchaseTaxId?: string;
   
   images: any[];
   attributes: any[];
@@ -82,6 +87,8 @@ export interface Product extends BaseEntity {
   description: string;
   hsnCode: string;
   countryOfOrigin: string;
+  basePurchasePrice: number;
+  baseSellingPrice: number;
   purchasePrice: number;
   sellingPrice: number;
   currency: string;
@@ -109,6 +116,8 @@ export interface Product extends BaseEntity {
   inventorySummary: InventoryLocation[];
   pricingHistory: PricingHistoryEntry[];
   notes?: string;
+  totalOnHand?: number;
+  totalAllocated?: number;
 }
 
 export interface PurchaseHistoryEntry {
@@ -237,11 +246,14 @@ export interface Forwarder extends BaseEntity {
   website?: string;
   taxId?: string;
 
-  // Shipping details
-  rating: number; // 1.0 to 5.0
-  preferredPorts: string[]; // Port IDs from ports index
+  // Performance & Compliance
+  performanceRating: number; // 1.0 to 5.0
+  averageLeadTime: number; // days
+  certifications: string[];
   
   // Relationships
+  paymentTerms: string;
+  preferredPorts: string[]; // Port IDs from ports index
   documents: DocumentRef[];
   timeline: ForwarderTimelineEvent[];
 }
@@ -300,6 +312,8 @@ export interface Quotation extends BaseEntity {
   destinationPortId: string;
   containerType: '20GP' | '40GP' | '40HQ';
   items: QuotationItem[];
+  untaxedAmount?: number;
+  totalTaxAmount?: number;
   totalValue: number;
   marginPercentage: number;
   status: QuotationStatus;
@@ -310,18 +324,25 @@ export interface Quotation extends BaseEntity {
 }
 
 export interface QuotationItem {
+  id?: string;
   productId: string;
+  variantId?: string;
+  variant?: any;
   quantity: number;
   unitPrice: number;
+  taxId?: string;
+  taxRate?: number;
+  taxAmount?: number;
+  tax?: any;
   totalPrice: number;
 }
 
-export type SalesOrderStatus = 'PENDING' | 'CONFIRMED' | 'PRODUCTION' | 'READY' | 'SHIPPED' | 'CANCELLED';
+export type SalesOrderStatus = 'DRAFT' | 'PENDING' | 'CONFIRMED' | 'PRODUCTION' | 'READY' | 'SHIPPED' | 'IN_TRANSIT' | 'DELIVERED' | 'CANCELLED';
 
 export interface SalesOrderTimelineEvent {
   id: string;
   date: string;
-  type: 'CREATED' | 'CONFIRMED' | 'PRODUCTION_STARTED' | 'READY_FOR_SHIPMENT' | 'SHIPPED' | 'CANCELLED' | 'UPDATED' | 'DOCUMENT_ADDED' | 'NOTE_ADDED' | 'ARCHIVED' | 'RESTORED';
+  type: 'CREATED' | 'CONFIRMED' | 'PRODUCTION_STARTED' | 'READY_FOR_SHIPMENT' | 'SHIPPED' | 'IN_TRANSIT' | 'DELIVERED' | 'CANCELLED' | 'UPDATED' | 'DOCUMENT_ADDED' | 'NOTE_ADDED' | 'ARCHIVED' | 'RESTORED';
   title: string;
   description: string;
   userId: string;
@@ -334,6 +355,8 @@ export interface SalesOrder extends BaseEntity {
   date: string;
   expectedShipmentDate: string;
   items: QuotationItem[];
+  untaxedAmount?: number;
+  totalTaxAmount?: number;
   totalValue: number;
   marginPercentage?: number;
   currency?: string;
@@ -369,10 +392,12 @@ export interface PurchaseOrder extends BaseEntity {
   actualDeliveryDate?: string;
   items: QuotationItem[];
   totalValue: number;
+  untaxedAmount?: number;
+  totalTaxAmount?: number;
   currency?: string;
   exchangeRate?: number;
   paymentTerms?: string;
-  deliveryTerms?: string;     // e.g. Ex-Factory, FOR, CIF
+  incoterm?: string;     // e.g. Ex-Factory, FOR, CIF
   qualitySpec?: string;       // brief quality / grade notes
   packagingSpec?: string;     // packaging instructions
   status: PurchaseOrderStatus;
@@ -465,15 +490,18 @@ export interface CalendarEvent extends BaseEntity {
 }
 
 // Sprint 8: Notifications & Audit
+export type NotificationType = 'INFO' | 'SUCCESS' | 'WARNING' | 'ERROR' | 'QUOTATION_EXPIRING' | 'SHIPMENT_DELAYED' | 'APPROVAL_REQUIRED' | 'PO_OVERDUE' | 'TASK_ASSIGNED';
+
 export interface Notification extends BaseEntity {
   title: string;
   message: string;
-  type: 'INFO' | 'SUCCESS' | 'WARNING' | 'ERROR';
-  priority: 'LOW' | 'MEDIUM' | 'HIGH';
+  type: NotificationType;
+  priority?: 'LOW' | 'MEDIUM' | 'HIGH';
   isRead: boolean;
   relatedId?: string;
   relatedType?: string;
   actionUrl?: string;
+  userId?: string;
 }
 
 export interface AuditLog extends BaseEntity {
@@ -527,6 +555,13 @@ export interface CostingScenarioItem {
   quantity: number;
   unitPurchasePrice: number;
   totalProductCost: number;
+  
+  // Computed values
+  volumeCBM: number;
+  grossWeight: number;
+  landedCostPerUnit?: number;
+  targetSellingPricePerUnit?: number;
+  grossProfitPerUnit?: number;
 }
 
 export interface CostingScenarioFreight {
@@ -538,6 +573,8 @@ export interface CostingScenarioFreight {
   originHandling: number;
   destinationHandling: number;
   totalFreight: number;
+  totalVolumeCBM?: number;
+  totalWeightKG?: number;
 }
 
 export interface CostingScenarioCosts {
@@ -580,3 +617,4 @@ export interface CostingScenario extends BaseEntity {
   tags?: string[];
   isFavourite?: boolean;
 }
+

@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
 import { salesOrderRepository } from '@/repositories/repository';
 import { salesOrderService } from '@/services/sales-order.service';
-import { workflowService } from '@/services/workflow.service';
+import { inventoryService } from '@/services/inventory.service';
+import { WorkflowEngine } from '@/services/workflow.service';
 
 export async function GET(
   request: Request,
@@ -37,17 +38,55 @@ export async function PUT(
     // Custom workflow actions
     if (action) {
       if (action === 'book_shipment') {
-        const shipment = await workflowService.createShipmentFromOrder(id);
+        const oldStatus = existingOrder.status;
         existingOrder.status = 'SHIPPED';
-        salesOrderService.logEvent(existingOrder, 'SHIPPED', 'Cargo Dispatched — Shipment Booked', `Shipment ${shipment.shipmentNo} registered and cargo dispatched.`);
-        await salesOrderRepository.update(id, existingOrder);
-        return NextResponse.json({ message: 'Shipment booking created', shipment, order: existingOrder });
+        salesOrderService.logEvent(existingOrder, 'SHIPPED', 'Cargo Dispatched — Shipment Booked', `Shipment process initiated.`);
+        const updated = await salesOrderRepository.update(id, existingOrder);
+        
+        // Trigger generic workflow engine
+        await WorkflowEngine.evaluateRules('SalesOrder', id, 'SHIPPED', oldStatus);
+
+        // Inventory logic: Deduct stock for each line item (it was previously allocated)
+        if (updated && updated.items) {
+          for (const item of updated.items) {
+            if (item.variantId) {
+              await inventoryService.adjustStock(item.variantId, item.quantity, 'SHIPMENT', 'SALES_ORDER', id, 'Sales Order Shipped');
+            }
+          }
+        }
+        
+        return NextResponse.json({ message: 'Shipment booking triggered', order: updated });
       }
 
       if (action === 'confirm') {
         existingOrder.status = 'CONFIRMED';
         salesOrderService.logEvent(existingOrder, 'CONFIRMED', 'Order Confirmed', 'Export contract confirmed. Procurement team notified.');
         const updated = await salesOrderRepository.update(id, existingOrder);
+
+        // Inventory logic: Allocate stock for each line item
+        if (updated && updated.items) {
+          for (const item of updated.items) {
+            if (item.variantId) {
+              await inventoryService.adjustStock(item.variantId, item.quantity, 'ALLOCATE', 'SALES_ORDER', id, 'Sales Order Confirmed');
+            }
+          }
+        }
+        return NextResponse.json(updated);
+      }
+
+      if (action === 'revert_to_draft') {
+        existingOrder.status = 'DRAFT' as any;
+        salesOrderService.logEvent(existingOrder, 'UPDATED', 'Reverted to Draft', 'Order status reverted to Draft for modifications.');
+        const updated = await salesOrderRepository.update(id, existingOrder);
+
+        // Inventory logic: Unallocate stock
+        if (updated && updated.items) {
+          for (const item of updated.items) {
+            if (item.variantId) {
+              await inventoryService.adjustStock(item.variantId, item.quantity, 'UNALLOCATE', 'SALES_ORDER', id, 'Sales Order Reverted to Draft');
+            }
+          }
+        }
         return NextResponse.json(updated);
       }
 
@@ -65,11 +104,44 @@ export async function PUT(
         return NextResponse.json(updated);
       }
 
+      if (action === 'in_transit') {
+        existingOrder.status = 'IN_TRANSIT';
+        salesOrderService.logEvent(existingOrder, 'IN_TRANSIT', 'Order In Transit', 'Cargo has departed origin port.');
+        const updated = await salesOrderRepository.update(id, existingOrder);
+
+        // Inventory logic: Deduct stock permanently on SHIPMENT/IN_TRANSIT
+        // Note: we're using IN_TRANSIT as the shipping trigger since the pipeline is SHIPPED -> IN_TRANSIT
+        if (updated && updated.items) {
+          for (const item of updated.items) {
+            if (item.variantId) {
+              await inventoryService.adjustStock(item.variantId, item.quantity, 'SHIPMENT', 'SALES_ORDER', id, 'Sales Order In Transit');
+            }
+          }
+        }
+        return NextResponse.json(updated);
+      }
+
+      if (action === 'delivered') {
+        existingOrder.status = 'DELIVERED';
+        salesOrderService.logEvent(existingOrder, 'DELIVERED', 'Order Delivered', 'Cargo has arrived at destination and is delivered.');
+        const updated = await salesOrderRepository.update(id, existingOrder);
+        return NextResponse.json(updated);
+      }
+
       if (action === 'cancel') {
         existingOrder.status = 'CANCELLED';
         existingOrder.entityStatus = 'INACTIVE';
         salesOrderService.logEvent(existingOrder, 'CANCELLED', 'Order Cancelled', 'Sales order cancelled and deactivated.');
         const updated = await salesOrderRepository.update(id, existingOrder);
+
+        // Inventory logic: Unallocate stock if it was previously confirmed
+        if (updated && updated.items) {
+          for (const item of updated.items) {
+            if (item.variantId) {
+              await inventoryService.adjustStock(item.variantId, item.quantity, 'UNALLOCATE', 'SALES_ORDER', id, 'Sales Order Cancelled');
+            }
+          }
+        }
         return NextResponse.json(updated);
       }
 

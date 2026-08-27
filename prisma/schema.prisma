@@ -4,6 +4,7 @@ datasource db {
 
 generator client {
   provider = "prisma-client-js"
+  output   = "../src/generated/client"
 }
 
 // ---------------------------------------------------------------------------
@@ -21,8 +22,16 @@ enum TransactionStatus {
   PENDING
   CONFIRMED
   SHIPPED
+  IN_TRANSIT
+  DELIVERED
   CANCELLED
   COMPLETED
+  BOOKING
+  STUFFING
+  CUSTOMS
+  ON_VESSEL
+  ARRIVED
+  TRANSIT
 }
 
 enum ImageType {
@@ -93,6 +102,17 @@ model Product {
   isPublished      Boolean      @default(false)
   isFeatured       Boolean      @default(false)
   status           EntityStatus @default(ACTIVE)
+
+  // Base Pricing
+  basePurchasePrice Float @default(0)
+  baseSellingPrice  Float @default(0)
+
+  // Logistics & Compliance
+  unitsPerCarton           Int?
+  containerLoadingCapacity Int?
+  shelfLife                String?
+  storageConditions        String?
+  japanImportNotes         String?
 
   brandId String?
   brand   Brand?  @relation(fields: [brandId], references: [id], onDelete: Restrict)
@@ -172,13 +192,21 @@ model ProductVariant {
   // Base Pricing (advanced pricing models can be spun off later)
   purchasePrice Float
   sellingPrice  Float
+  extraPurchasePrice Float @default(0)
+  extraSellingPrice  Float @default(0)
   currency      String
 
   status EntityStatus @default(ACTIVE)
 
-  product    Product            @relation(fields: [productId], references: [id], onDelete: Cascade)
-  images     VariantImage[]
-  attributes VariantAttribute[]
+  salesTaxId    String?
+  purchaseTaxId String?
+
+  product     Product            @relation(fields: [productId], references: [id], onDelete: Cascade)
+  salesTax    TaxSetting?        @relation("VariantSalesTax", fields: [salesTaxId], references: [id], onDelete: SetNull)
+  purchaseTax TaxSetting?        @relation("VariantPurchaseTax", fields: [purchaseTaxId], references: [id], onDelete: SetNull)
+  
+  images      VariantImage[]
+  attributes  VariantAttribute[]
 
   // Transactions (Every order points to variant)
   inventory             Inventory[]
@@ -259,6 +287,49 @@ model Supplier {
   productLinks   ProductSupplier[]
   purchaseOrders PurchaseOrder[]
 
+  performanceRating Float?
+  categories        Json?
+  contacts          Json?
+  incoterms         Json?
+  paymentTerms      Json?
+  notes             String?
+  website           String?
+  taxId             String?
+  averageLeadTime   Float?
+  certifications    Json?
+  documents         Json?
+  timeline          Json?
+
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+  deletedAt DateTime?
+  status    EntityStatus @default(ACTIVE)
+  version   Int          @default(1)
+}
+
+model Forwarder {
+  id      String  @id @default(uuid())
+  name    String
+  slug    String? @unique
+  email   String  @unique
+  phone   String
+  address String
+  country String
+
+  shipments Shipment[]
+
+  performanceRating Float?
+  averageLeadTime   Float?
+  certifications    Json?
+  contacts          Json?
+  paymentTerms      Json?
+  notes             String?
+  website           String?
+  taxId             String?
+  documents         Json?
+  timeline          Json?
+  preferredPorts    Json?
+
   createdAt DateTime     @default(now())
   updatedAt DateTime     @updatedAt
   deletedAt DateTime?
@@ -293,6 +364,19 @@ model Customer {
   salesOrders SalesOrder[]
   quotations  Quotation[]
 
+  creditLimit  Float?
+  segment      String?
+  contacts     Json?
+  incoterms    Json?
+  paymentTerms Json?
+  notes                    String?
+  website                  String?
+  taxId                    String?
+  accountManagerId         String?
+  preferredDischargePortId String?
+  documents                Json?
+  timeline                 Json?
+
   createdAt DateTime     @default(now())
   updatedAt DateTime     @updatedAt
   deletedAt DateTime?
@@ -314,20 +398,26 @@ model Warehouse {
 }
 
 model Inventory {
-  id          String    @id @default(uuid())
-  variantId   String
-  warehouseId String
-  quantity    Float     @default(0)
-  reservedQty Float     @default(0)
-  lotNumber   String?
-  batchNumber String?
-  expiryDate  DateTime?
+  id                String    @id @default(uuid())
+  variantId         String
+  warehouseId       String
+  quantity          Float     @default(0)
+  reservedQty       Float     @default(0)
+  quantityOnHand    Float     @default(0)
+  quantityAllocated Float     @default(0)
+  quantityOnOrder   Float     @default(0)
+  minimumStock      Float     @default(0)
+  lotNumber         String?
+  batchNumber       String?
+  expiryDate        DateTime?
 
   variant      ProductVariant         @relation(fields: [variantId], references: [id], onDelete: Restrict)
   warehouse    Warehouse              @relation(fields: [warehouseId], references: [id], onDelete: Restrict)
   transactions InventoryTransaction[]
 
+  // Allow nulls for unique constraints so simple queries work
   @@unique([variantId, warehouseId, lotNumber, batchNumber])
+  @@unique([variantId, warehouseId], name: "variantId_warehouseId")
   @@index([variantId])
 }
 
@@ -336,9 +426,12 @@ model InventoryTransaction {
   inventoryId    String
   variantId      String
   warehouseId    String
-  quantityChange Float
-  referenceType  String // e.g., "PURCHASE_ORDER", "SALES_ORDER", "ADJUSTMENT"
+  quantityChange Float    @default(0)
+  quantity       Float    @default(0)
+  type           String   @default("UNKNOWN") // "RECEIPT", "SHIPMENT", "ADJUSTMENT", "RETURN"
+  referenceType  String? // e.g., "PURCHASE_ORDER", "SALES_ORDER", "ADJUSTMENT"
   referenceId    String?
+  remarks        String?
   timestamp      DateTime @default(now())
   userId         String?
 
@@ -358,10 +451,24 @@ model Quotation {
   id           String            @id @default(uuid())
   quotationNo  String            @unique
   customerId   String
-  date         DateTime
-  validityDate DateTime
-  totalValue   Float
-  status       TransactionStatus
+  date             DateTime
+  validityDate     DateTime
+  totalValue       Float    // Represents the Gross Total (incl. tax)
+  untaxedAmount    Float    @default(0)
+  totalTaxAmount   Float    @default(0)
+  status           TransactionStatus
+  incoterm         String?
+  paymentTerms     String?
+  currency         String?
+  exchangeRate     Float?
+  marginPercentage Float?
+  container        String?
+  expectedShipment  DateTime?
+  remarks           String?
+  originPortId      String?
+  destinationPortId String?
+  timeline          Json?
+  documents         Json?
 
   customer    Customer        @relation(fields: [customerId], references: [id], onDelete: Restrict)
   items       QuotationItem[]
@@ -369,6 +476,7 @@ model Quotation {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  version   Int      @default(1)
 }
 
 model QuotationItem {
@@ -377,9 +485,13 @@ model QuotationItem {
   variantId   String
   quantity    Float
   unitPrice   Float
+  taxId       String?
+  taxRate     Float?
+  taxAmount   Float?
 
   quotation Quotation      @relation(fields: [quotationId], references: [id], onDelete: Cascade)
   variant   ProductVariant @relation(fields: [variantId], references: [id], onDelete: Restrict)
+  tax       TaxSetting?    @relation("QuotationItemTax", fields: [taxId], references: [id], onDelete: SetNull)
 }
 
 model SalesOrder {
@@ -387,9 +499,20 @@ model SalesOrder {
   orderNo     String            @unique
   customerId  String
   quotationId String?
-  date        DateTime
-  totalValue  Float
-  status      TransactionStatus
+  date             DateTime
+  totalValue       Float
+  untaxedAmount    Float    @default(0)
+  totalTaxAmount   Float    @default(0)
+  status           TransactionStatus
+  incoterm         String?
+  paymentTerms     String?
+  currency         String?
+  marginPercentage Float?
+  container        String?
+  expectedShipment DateTime?
+  remarks          String?
+  timeline         Json?
+  documents        Json?
 
   customer       Customer         @relation(fields: [customerId], references: [id], onDelete: Restrict)
   quotation      Quotation?       @relation(fields: [quotationId], references: [id], onDelete: SetNull)
@@ -407,9 +530,13 @@ model SalesOrderItem {
   variantId    String
   quantity     Float
   unitPrice    Float
+  taxId        String?
+  taxRate      Float?
+  taxAmount    Float?
 
   salesOrder SalesOrder     @relation(fields: [salesOrderId], references: [id], onDelete: Cascade)
   variant    ProductVariant @relation(fields: [variantId], references: [id], onDelete: Restrict)
+  tax        TaxSetting?    @relation("SalesOrderItemTax", fields: [taxId], references: [id], onDelete: SetNull)
 }
 
 model PurchaseOrder {
@@ -417,9 +544,20 @@ model PurchaseOrder {
   poNo         String            @unique
   supplierId   String
   salesOrderId String?
-  date         DateTime
-  totalValue   Float
-  status       TransactionStatus
+  date                 DateTime
+  totalValue           Float
+  untaxedAmount        Float    @default(0)
+  totalTaxAmount       Float    @default(0)
+  status               TransactionStatus
+  incoterm             String?
+  paymentTerms         String?
+  currency             String?
+  marginPercentage     Float?
+  container            String?
+  expectedDeliveryDate DateTime?
+  remarks              String?
+  timeline             Json?
+  documents            Json?
 
   supplier   Supplier            @relation(fields: [supplierId], references: [id], onDelete: Restrict)
   salesOrder SalesOrder?         @relation(fields: [salesOrderId], references: [id], onDelete: SetNull)
@@ -435,9 +573,13 @@ model PurchaseOrderItem {
   variantId       String
   quantity        Float
   unitPrice       Float
+  taxId           String?
+  taxRate         Float?
+  taxAmount       Float?
 
   purchaseOrder PurchaseOrder  @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
   variant       ProductVariant @relation(fields: [variantId], references: [id], onDelete: Restrict)
+  tax           TaxSetting?    @relation("PurchaseOrderItemTax", fields: [taxId], references: [id], onDelete: SetNull)
 }
 
 model Shipment {
@@ -448,9 +590,35 @@ model Shipment {
   destinationPortId String
   etd               DateTime
   eta               DateTime
+  atd               DateTime?
+  ata               DateTime?
   status            TransactionStatus
+  timeline          Json?
+  documents         Json?
+  
+  // Logistics Fields
+  containerNo       String?
+  bookingNo         String?
+  mbl               String?
+  hbl               String?
+  shippingLineId    String?
+  vesselName        String?
+  voyageNo          String?
+  forwarderId       String?
+  forwarderRefNo    String?
+  containerType     String?
+  grossWeight       Float?
+  netWeight         Float?
+  cbm               Float?
+  packageCount      Int?
+  sealNo            String?
+  hazmat            Boolean   @default(false)
+  freightCost       Json?
+  totalFreightCost  Float?
+  remarks           String?
 
   salesOrder SalesOrder     @relation(fields: [salesOrderId], references: [id], onDelete: Restrict)
+  forwarder  Forwarder?     @relation(fields: [forwarderId], references: [id], onDelete: SetNull)
   items      ShipmentItem[]
 
   createdAt DateTime @default(now())
@@ -466,6 +634,34 @@ model ShipmentItem {
   shipment Shipment       @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
   variant  ProductVariant @relation(fields: [variantId], references: [id], onDelete: Restrict)
 }
+
+// ---------------------------------------------------------------------------
+// Document Management
+// ---------------------------------------------------------------------------
+
+model Document {
+  id           String   @id @default(uuid())
+  name         String
+  type         String   // "Commercial Invoice", "Packing List", etc.
+  url          String
+  size         String?
+  status       String   // "DRAFT", "SIGNED", "ACTIVE", "OBSOLETE"
+  relatedId    String
+  relatedType  String   // "SALES_ORDER", "PURCHASE_ORDER", etc.
+  shipper      String?
+  consignee    String?
+  consigneeAddress String?
+  items        Json?
+  totalValue   Float?
+  currency     String?
+  incoterm     String?
+  paymentTerms String?
+  containerType String?
+  entityStatus String   @default("ACTIVE")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
 
 // ---------------------------------------------------------------------------
 // Audit & System
@@ -690,12 +886,21 @@ model Currency {
 }
 
 model TaxSetting {
-  id             String   @id @default(uuid())
-  name           String   @unique // e.g. GST, VAT
-  ratePercentage Float    @default(0.0)
-  isActive       Boolean  @default(true)
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  id              String   @id @default(uuid())
+  name            String   @unique // e.g. GST, VAT
+  ratePercentage  Float    @default(0.0)
+  type            String   @default("NATIONAL") // "NATIONAL" or "INTERNATIONAL"
+  includedInPrice Boolean  @default(false)
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Reverse relations
+  salesVariants      ProductVariant[]    @relation("VariantSalesTax")
+  purchaseVariants   ProductVariant[]    @relation("VariantPurchaseTax")
+  quotationItems     QuotationItem[]     @relation("QuotationItemTax")
+  salesOrderItems    SalesOrderItem[]    @relation("SalesOrderItemTax")
+  purchaseOrderItems PurchaseOrderItem[] @relation("PurchaseOrderItemTax")
 }
 
 model ContainerType {
@@ -726,4 +931,44 @@ model MeasurementUnit {
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+// ---------------------------------------------------------------------------
+// Automation & Workflow Engine
+// ---------------------------------------------------------------------------
+
+model WorkflowRule {
+  id               String   @id @default(uuid())
+  name             String
+  description      String?
+  triggerEntity    String   // e.g. "Quotation", "Shipment"
+  triggerCondition Json     // e.g. { "status": "APPROVED" }
+  action           String   // e.g. "CREATE_SALES_ORDER"
+  actionPayload    Json?    // Template data to pass to action
+  isActive         Boolean  @default(true)
+  
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  
+  @@index([triggerEntity, isActive])
+}
+
+// ---------------------------------------------------------------------------
+// Costing & Estimations
+// ---------------------------------------------------------------------------
+
+model CostingScenario {
+  id              String   @id @default(uuid())
+  name            String
+  description     String?
+  items           Json     // Array of items { productId, qty, unitPrice, ... }
+  freightSettings Json     // { originPort, destPort, containerType, ... }
+  costs           Json     // { productCost, freightCost, totalLanded, ... }
+  metrics         Json     // { totalCBM, totalWeight, margin, ... }
+  
+  isTemplate      Boolean  @default(false)
+  userId          String?
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 }

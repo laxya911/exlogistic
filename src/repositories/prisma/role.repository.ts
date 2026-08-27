@@ -1,5 +1,5 @@
 import { prisma } from '../prisma.client';
-import { Role } from '@prisma/client';
+import { Role } from '@generated/client';
 
 export const roleRepository = {
   findAll: async () => {

@@ -1,5 +1,5 @@
 import { prisma } from '../prisma.client';
-import { Company } from '@prisma/client';
+import { Company } from '@generated/client';
 import { auditLogger } from '@/lib/audit';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
@@ -7,7 +7,17 @@ import { authOptions } from '@/lib/auth';
 export const companyRepository = {
   get: async () => {
     // Assuming single-tenant ERP for now
-    return prisma.company.findFirst();
+    let company = await prisma.company.findFirst();
+    if (!company) {
+      company = await prisma.company.create({
+        data: {
+          name: 'ExLogis Default',
+          currency: 'USD',
+          timezone: 'UTC',
+        }
+      });
+    }
+    return company;
   },
 
   update: async (id: string, data: Partial<Company>) => {

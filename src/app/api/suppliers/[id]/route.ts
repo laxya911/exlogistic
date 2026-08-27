@@ -63,7 +63,17 @@ export async function PUT(
       return NextResponse.json({ error: 'Invalid custom action specified' }, { status: 400 });
     }
 
-    // Normal Supplier Edit
+    // Detect partial update — e.g. just saving timeline (communication note)
+    const isPartialUpdate = !data.name && !data.email;
+
+    if (isPartialUpdate) {
+      // Merge provided fields onto existing and save — no validation needed
+      const merged = { ...existingSupplier, ...data };
+      const updated = await supplierRepository.update(id, merged);
+      return NextResponse.json(updated);
+    }
+
+    // Full profile edit — run validation
     data.id = id;
     await supplierService.validate(data, true);
 

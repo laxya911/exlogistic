@@ -70,7 +70,7 @@ export function ReferenceManager({ title, type, icon: Icon, fields }: ReferenceM
   };
 
   return (
-    <div className="glass p-8 lg:p-10 rounded-[2.5rem] border border-white/5 flex flex-col h-full">
+    <div className="bg-(--surface) p-8 lg:p-10 rounded-[2.5rem] border border-(--surface-border) flex flex-col h-full shadow-sm">
       <div className="flex justify-between items-center mb-8">
         <h3 className="text-xl font-display font-medium flex items-center gap-3">
           <Icon className="text-blue-500/80" size={24} />
@@ -86,14 +86,14 @@ export function ReferenceManager({ title, type, icon: Icon, fields }: ReferenceM
 
       <div className="space-y-4 flex-1">
         {loading ? (
-          <div className="text-sm text-white/40 animate-pulse">Loading {title.toLowerCase()}...</div>
+          <div className="text-sm text-muted-foreground/40 animate-pulse">Loading {title.toLowerCase()}...</div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {isAdding && (
-              <div className="p-4 rounded-xl bg-black/20 border border-emerald-500/30 space-y-3">
+              <div className="p-4 rounded-xl bg-(--background) border border-emerald-500/30 space-y-3 shadow-inner">
                 {fields.map(f => (
                   <div key={f.key}>
-                    <label className="text-[10px] font-mono text-white/50 uppercase">{f.label}</label>
+                    <label className="text-[10px] font-mono text-muted-foreground/50 uppercase">{f.label}</label>
                     {f.type === 'boolean' ? (
                       <input 
                         type="checkbox"
@@ -105,8 +105,12 @@ export function ReferenceManager({ title, type, icon: Icon, fields }: ReferenceM
                       <input 
                         type={f.type === 'number' ? 'number' : 'text'}
                         value={newItem[f.key] || ''}
-                        onChange={e => setNewItem({...newItem, [f.key]: f.type === 'number' ? parseFloat(e.target.value) : e.target.value})}
-                        className="w-full bg-white/5 border border-white/10 rounded-lg p-2 text-xs text-white focus:outline-none focus:border-blue-500/50 mt-1"
+                        onChange={e => {
+                          const val = e.target.value;
+                          const parsed = f.type === 'number' ? (val === '' ? undefined : parseFloat(val)) : val;
+                          setNewItem({...newItem, [f.key]: parsed});
+                        }}
+                        className="w-full bg-(--surface-hover) border border-(--border) rounded-lg p-2 text-xs text-(--text-primary) focus:outline-none focus:border-blue-500/50 mt-1"
                       />
                     )}
                   </div>
@@ -123,7 +127,7 @@ export function ReferenceManager({ title, type, icon: Icon, fields }: ReferenceM
             )}
             
             {items.map(item => (
-              <div key={item.id} className="group relative p-4 rounded-xl bg-white/5 border border-white/5 hover:border-white/10 transition-colors">
+              <div key={item.id} className="group relative p-4 rounded-xl bg-(--background) border border-(--surface-border) hover:border-blue-500/30 transition-colors shadow-sm">
                 <button 
                   onClick={() => handleDelete(item.id)}
                   className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 p-1 text-red-400 hover:bg-red-500/20 rounded cursor-pointer transition-all"
@@ -132,8 +136,8 @@ export function ReferenceManager({ title, type, icon: Icon, fields }: ReferenceM
                 </button>
                 {fields.map(f => (
                   <div key={f.key} className="mb-1 last:mb-0">
-                    <span className="text-[10px] font-mono text-white/40 uppercase mr-2">{f.label}:</span>
-                    <span className="text-xs text-white/90">
+                    <span className="text-[10px] font-mono text-muted-foreground/40 uppercase mr-2">{f.label}:</span>
+                    <span className="text-xs text-foreground/90">
                       {f.type === 'boolean' ? (item[f.key] ? 'Yes' : 'No') : item[f.key]}
                     </span>
                   </div>

@@ -9,8 +9,10 @@ export async function hasPermission(requiredPermission: string): Promise<boolean
     return false;
   }
 
+  const email = session.user.email as string;
+
   const user = await prisma.user.findUnique({
-    where: { email: session.user.email },
+    where: { email },
     include: {
       roles: {
         include: {
@@ -24,8 +26,8 @@ export async function hasPermission(requiredPermission: string): Promise<boolean
 
   // Check if any of the user's roles have the required permission
   for (const role of user.roles) {
-    // Super Admin has all permissions automatically by convention (or by explicitly linking them)
-    if (role.name === 'Super Admin') return true;
+    // Super Admin and Admin have all permissions automatically by convention
+    if (role.name === 'SUPERADMIN' || role.name === 'ADMIN') return true;
     
     for (const permission of role.permissions) {
       if (permission.action === requiredPermission || permission.action === '*') {

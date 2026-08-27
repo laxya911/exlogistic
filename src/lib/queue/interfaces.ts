@@ -10,7 +10,9 @@ export type JobType =
   | 'CURRENCY_SYNC'
   | 'DAILY_BACKUP'
   | 'SCHEDULED_REPORT'
-  | 'REMINDER_TASK';
+  | 'REMINDER_TASK'
+  | 'WORKFLOW_EXECUTE'
+  | 'SEND_NOTIFICATION';
 
 // Specific Payloads for Strict Typing
 export interface EmailPayload {
@@ -34,6 +36,14 @@ export interface GenericPayload {
   [key: string]: any;
 }
 
+export interface WorkflowPayload {
+  ruleId: string;
+  triggerEntity: string;
+  entityId: string;
+  action: string;
+  actionPayload?: Record<string, any>;
+}
+
 // Discriminated Union for Payload
 export type JobDataMap = {
   EMAIL_SEND: EmailPayload;
@@ -43,6 +53,8 @@ export type JobDataMap = {
   DAILY_BACKUP: GenericPayload;
   SCHEDULED_REPORT: GenericPayload;
   REMINDER_TASK: GenericPayload;
+  WORKFLOW_EXECUTE: WorkflowPayload;
+  SEND_NOTIFICATION: { type: string; title: string; message: string; userId?: string };
 };
 
 // Queue Options (supports native cron schedules as per best practice)

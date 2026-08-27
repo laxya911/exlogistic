@@ -361,9 +361,9 @@ export function useQuotations() {
   const totalPages = Math.ceil(processedQuotations.length / pageSize);
 
   const filterOptions = useMemo(() => {
-    const customerIds = Array.from(new Set(quotations.map(q => q.customerId)));
-    const statuses = Array.from(new Set(quotations.map(q => q.status)));
-    const incoterms = Array.from(new Set(quotations.map(q => q.incoterm)));
+    const customerIds = Array.from(new Set(quotations.map(q => q.customerId).filter(Boolean)));
+    const statuses = Array.from(new Set(quotations.map(q => q.status).filter(Boolean)));
+    const incoterms = Array.from(new Set(quotations.map(q => q.incoterm).filter(Boolean)));
 
     return { customerIds, statuses, incoterms };
   }, [quotations]);

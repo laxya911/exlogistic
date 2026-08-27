@@ -1,5 +1,5 @@
 import { prisma } from '../prisma.client';
-import { Position } from '@prisma/client';
+import { Position } from '@generated/client';
 
 export const positionRepository = {
   findAll: async () => {

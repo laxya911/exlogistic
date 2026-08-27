@@ -13,7 +13,11 @@ export class CustomerService {
     if (!customer.name?.trim()) errors.push('Company identity name is required');
     if (!customer.email?.trim()) errors.push('Contact email is required');
     if (!customer.country?.trim()) errors.push('Country of origin/dispatch is required');
-    if (!customer.paymentTerms?.trim()) errors.push('Payment terms are required');
+    // paymentTerms may be a string or JSON object from DB — normalize to string
+    const paymentTermsStr = typeof customer.paymentTerms === 'string' 
+      ? customer.paymentTerms 
+      : (customer.paymentTerms ? JSON.stringify(customer.paymentTerms) : '');
+    if (!paymentTermsStr.trim()) errors.push('Payment terms are required');
     if (!customer.segment) errors.push('Customer segment is required');
     if (!customer.preferredDischargePortId) errors.push('Preferred Port of Discharge is required');
 
@@ -47,7 +51,7 @@ export class CustomerService {
 
     if (customer.taxId?.trim()) {
       const existing = await customerRepository.find(c => 
-        c.taxId!.toLowerCase() === customer.taxId!.trim().toLowerCase() && 
+        (c.taxId || '').toLowerCase() === customer.taxId!.trim().toLowerCase() && 
         c.entityStatus !== 'DELETED' &&
         (!isUpdate || c.id !== customer.id)
       );

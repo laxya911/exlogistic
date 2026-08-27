@@ -1,7 +1,9 @@
-import { PrismaClient, EntityStatus, TransactionStatus } from '@prisma/client';
+import 'dotenv/config';
+import { PrismaClient, EntityStatus, TransactionStatus } from '@generated/client';
 import { Pool } from 'pg';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { db } from '../../lib/db';
+import bcrypt from 'bcryptjs';
 
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 const adapter = new PrismaPg(pool);
@@ -12,7 +14,18 @@ async function main() {
 
   // 0. Clear Existing Data
   console.log('Clearing database...');
-  await prisma.$executeRawUnsafe(`TRUNCATE TABLE "Supplier", "Customer", "Brand", "Category", "Product", "ProductVariant", "ProductCategory", "ProductSupplier", "Quotation", "SalesOrder", "PurchaseOrder", "Shipment" CASCADE`);
+  await prisma.$executeRawUnsafe(`TRUNCATE TABLE "Supplier", "Customer", "Brand", "Category", "Product", "ProductVariant", "ProductCategory", "ProductSupplier", "Quotation", "SalesOrder", "PurchaseOrder", "Shipment", "User", "Forwarder", "CostingScenario" CASCADE`);
+
+  console.log('Seeding Users...');
+  const hashedPassword = await bcrypt.hash('password123', 10);
+  await prisma.user.create({
+    data: {
+      email: 'admin@exlogis.com',
+      name: 'Admin User',
+      password: hashedPassword,
+      status: EntityStatus.ACTIVE,
+    }
+  });
 
   // 1. Base / Lookups (Skipped Ports as they are not in schema)
 
@@ -29,7 +42,10 @@ async function main() {
         address: sup.address,
         country: sup.country,
         status: sup.entityStatus === 'ACTIVE' ? EntityStatus.ACTIVE : EntityStatus.INACTIVE,
-      },
+        performanceRating: (sup as any).performanceRating || 4.0,
+        contacts: (sup as any).contacts ? (sup as any).contacts : undefined,
+        paymentTerms: (sup as any).paymentTerms ? JSON.stringify((sup as any).paymentTerms) : undefined,
+      }
     });
   }
 
@@ -46,7 +62,11 @@ async function main() {
         address: cust.address,
         country: cust.country,
         status: cust.entityStatus === 'ACTIVE' ? EntityStatus.ACTIVE : EntityStatus.INACTIVE,
-      },
+        creditLimit: (cust as any).creditLimit || 50000,
+        segment: (cust as any).segment || 'STANDARD',
+        contacts: (cust as any).contacts ? (cust as any).contacts : undefined,
+        paymentTerms: (cust as any).paymentTerms ? JSON.stringify((cust as any).paymentTerms) : undefined,
+      }
     });
   }
 
@@ -168,6 +188,17 @@ async function main() {
         validityDate: new Date(quote.validityDate),
         totalValue: quote.totalValue,
         status: qStatusMap[quote.status] || TransactionStatus.DRAFT,
+        incoterm: (quote as any).incoterm || null,
+        paymentTerms: (quote as any).paymentTerms || null,
+        currency: (quote as any).currency || 'USD',
+        marginPercentage: (quote as any).marginPercentage || null,
+        container: (quote as any).container || (quote as any).containerType || null,
+        expectedShipment: (quote as any).expectedShipment ? new Date((quote as any).expectedShipment) : ((quote as any).expectedShipmentDate ? new Date((quote as any).expectedShipmentDate) : null),
+        remarks: (quote as any).remarks || null,
+        originPortId: (quote as any).originPortId || null,
+        destinationPortId: (quote as any).destinationPortId || null,
+        timeline: (quote as any).timeline ? JSON.stringify((quote as any).timeline) : undefined,
+        documents: (quote as any).documents ? JSON.stringify((quote as any).documents) : undefined,
         items: {
           create: quote.items.map(item => ({
             variantId: getVariantId(item.productId),
@@ -200,6 +231,13 @@ async function main() {
         date: new Date(so.date),
         totalValue: so.totalValue,
         status: soStatusMap[so.status] || TransactionStatus.PENDING,
+        incoterm: (so as any).incoterm || null,
+        paymentTerms: (so as any).paymentTerms || null,
+        currency: (so as any).currency || 'USD',
+        marginPercentage: (so as any).marginPercentage || null,
+        container: (so as any).container || (so as any).containerType || null,
+        expectedShipment: (so as any).expectedShipment ? new Date((so as any).expectedShipment) : ((so as any).expectedShipmentDate ? new Date((so as any).expectedShipmentDate) : null),
+        remarks: (so as any).remarks || null,
         items: {
           create: so.items.map(item => ({
             variantId: getVariantId(item.productId),
@@ -233,6 +271,13 @@ async function main() {
         date: new Date(po.date),
         totalValue: po.totalValue,
         status: poStatusMap[po.status] || TransactionStatus.DRAFT,
+        incoterm: (po as any).incoterm || null,
+        paymentTerms: (po as any).paymentTerms || null,
+        currency: (po as any).currency || 'USD',
+        marginPercentage: (po as any).marginPercentage || null,
+        container: (po as any).container || null,
+        expectedDeliveryDate: (po as any).expectedDeliveryDate ? new Date((po as any).expectedDeliveryDate) : null,
+        remarks: (po as any).remarks || null,
         items: {
           create: po.items.map(item => ({
             variantId: getVariantId(item.productId),
@@ -245,6 +290,109 @@ async function main() {
   }
 
   // 8. Shipments
+  console.log('Seeding Forwarders...');
+  const forwarder1 = await prisma.forwarder.create({
+    data: {
+      name: 'Global Freight Logistics',
+      email: 'ops@globalfreight.com',
+      phone: '+1-555-0198',
+      address: '100 Ocean Blvd',
+      country: 'USA',
+      slug: 'global-freight-logistics',
+      performanceRating: 4.5,
+      averageLeadTime: 21,
+    }
+  });
+
+  await prisma.forwarder.create({
+    data: {
+      name: 'Pacific Express Forwarding',
+      email: 'hello@pacificexpress.com',
+      phone: '+81-90-1234-5678',
+      address: 'Minato-ku, Tokyo',
+      country: 'Japan',
+      slug: 'pacific-express',
+      performanceRating: 4.8,
+      averageLeadTime: 18,
+    }
+  });
+
+  await prisma.forwarder.create({
+    data: {
+      name: 'Eurasia Cargo Solutions',
+      email: 'contact@eurasiacargo.com',
+      phone: '+65-6123-4567',
+      address: 'Marina Bay',
+      country: 'Singapore',
+      slug: 'eurasia-cargo',
+      performanceRating: 4.2,
+      averageLeadTime: 25,
+    }
+  });
+
+  console.log('Seeding Costing Scenarios...');
+  await prisma.costingScenario.create({
+    data: {
+      name: 'Japan Basmati Q4 2026',
+      description: 'Scenario for exporting premium Basmati to Tokyo',
+      items: [
+        { productId: 'mock-prod-1', quantity: 2500, unitPrice: 20, weight: 5, cbm: 0.1 }
+      ],
+      freightSettings: {
+        containerType: '20GP',
+        containerCount: 1,
+        oceanFrt: 3500,
+        originPort: 'INNHV',
+        destinationPort: 'JPTYO',
+        purchaseCurrency: 'USD',
+        targetCurrency: 'USD',
+      },
+      costs: {
+        productCost: 50000,
+        freightCost: 3500,
+        totalLandedCost: 55000,
+        customsDuty: 1500,
+      },
+      metrics: {
+        grossMarginPct: 25,
+        totalGrossProfit: 13750,
+        targetSellingPricePerUnit: 27.5,
+        breakEvenQty: 2000,
+      }
+    }
+  });
+
+  await prisma.costingScenario.create({
+    data: {
+      name: 'US Electronics Bulk H1',
+      description: 'Bulk electronics for LAX',
+      items: [
+        { productId: 'mock-prod-2', quantity: 1000, unitPrice: 150, weight: 2, cbm: 0.05 }
+      ],
+      freightSettings: {
+        containerType: '40HQ',
+        containerCount: 2,
+        oceanFrt: 8500,
+        originPort: 'CNYTN',
+        destinationPort: 'USLAX',
+        purchaseCurrency: 'USD',
+        targetCurrency: 'USD',
+      },
+      costs: {
+        productCost: 150000,
+        freightCost: 17000,
+        totalLandedCost: 175000,
+        customsDuty: 8000,
+      },
+      metrics: {
+        grossMarginPct: 30,
+        totalGrossProfit: 52500,
+        targetSellingPricePerUnit: 227.5,
+        breakEvenQty: 770,
+      }
+    }
+  });
+
   console.log('Seeding Shipments...');
   for (const shp of db.shipments) {
     const shpStatusMap: Record<string, TransactionStatus> = {
